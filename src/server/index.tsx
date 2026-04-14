@@ -15,6 +15,25 @@ const env = (k: string) => process.env[k];
 
 const app = new Hono();
 
+const ADMIN_ROLES = new Set(["owner", "director", "admin"]);
+
+async function requireAdmin(c: any) {
+  const auth = c.req.header("authorization");
+  if (!auth?.startsWith("Bearer ")) {
+    return { ok: false, response: c.json({ error: "Unauthorized" }, 401) };
+  }
+  try {
+    const { verifyBearer } = await import("./jwt.ts");
+    const payload = await verifyBearer(auth.slice(7));
+    if (!payload.role || !ADMIN_ROLES.has(payload.role)) {
+      return { ok: false, response: c.json({ error: "Forbidden" }, 403) };
+    }
+    return { ok: true, payload };
+  } catch {
+    return { ok: false, response: c.json({ error: "Unauthorized" }, 401) };
+  }
+}
+
 // Force redeploy: v10 - Production orders filtered to open deals only
 console.log("Server starting... v10");
 
@@ -73,6 +92,8 @@ app.post("/make-server-f9553289/company", async (c) => {
 
 // User management endpoints
 app.get("/make-server-f9553289/users", async (c) => {
+  const guard = await requireAdmin(c);
+  if (!guard.ok) return guard.response;
   try {
     const users = await kv.getByPrefix("user:");
     return c.json(users || []);
@@ -83,6 +104,8 @@ app.get("/make-server-f9553289/users", async (c) => {
 });
 
 app.post("/make-server-f9553289/users", async (c) => {
+  const guard = await requireAdmin(c);
+  if (!guard.ok) return guard.response;
   try {
     const body = await c.req.json();
     const { name, email, role, password } = body;
@@ -130,6 +153,8 @@ app.post("/make-server-f9553289/users", async (c) => {
 });
 
 app.put("/make-server-f9553289/users/:id", async (c) => {
+  const guard = await requireAdmin(c);
+  if (!guard.ok) return guard.response;
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
@@ -177,6 +202,8 @@ app.put("/make-server-f9553289/users/:id", async (c) => {
 });
 
 app.delete("/make-server-f9553289/users/:id", async (c) => {
+  const guard = await requireAdmin(c);
+  if (!guard.ok) return guard.response;
   try {
     const id = c.req.param("id");
     
@@ -207,16 +234,15 @@ app.delete("/make-server-f9553289/users/:id", async (c) => {
 
 // Reset password endpoint
 app.post("/make-server-f9553289/reset-password", async (c) => {
+  const guard = await requireAdmin(c);
+  if (!guard.ok) return guard.response;
   try {
     const body = await c.req.json();
-    const { userId } = body;
+    const { userId, newPassword } = body;
     
-    if (!userId) {
-      return c.json({ error: "User ID is required" }, 400);
+    if (!userId || !newPassword || String(newPassword).length < 8) {
+      return c.json({ error: "userId and newPassword (min 8 chars) are required" }, 400);
     }
-    
-    // Generate a new random password
-    const newPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
     
     if (!env("DATABASE_URL")) {
       return c.json({ error: "DATABASE_URL is not configured" }, 500);
@@ -225,7 +251,7 @@ app.post("/make-server-f9553289/reset-password", async (c) => {
     const db = createClient();
     
     // Update user password using admin API
-    const { data, error } = await db.auth.admin.updateUserById(
+    const { error } = await db.auth.admin.updateUserById(
       userId,
       { password: newPassword }
     );
@@ -235,7 +261,7 @@ app.post("/make-server-f9553289/reset-password", async (c) => {
       return c.json({ error: error.message }, 500);
     }
     
-    return c.json({ success: true, newPassword });
+    return c.json({ success: true });
   } catch (error: any) {
     console.error("Error resetting password:", error);
     return c.json({ error: error.message }, 500);
@@ -832,13 +858,16 @@ app.post("/make-server-f9553289/signup", async (c) => {
     if (!env("DATABASE_URL")) {
         return c.json({ error: "DATABASE_URL is not configured" }, 500);
     }
+    if (env("ALLOW_SELF_SIGNUP") !== "true") {
+      return c.json({ error: "Self-signup is disabled" }, 403);
+    }
 
     const db = createClient();
 
     const { data, error } = await db.auth.admin.createUser({
       email,
       password,
-      user_metadata: { name: name || email.split('@')[0] },
+      user_metadata: { name: name || email.split('@')[0], role: "manager" },
       email_confirm: true // Automatically confirm email
     });
 
@@ -1127,6 +1156,8 @@ app.delete("/make-server-f9553289/recipes/:id", async (c) => {
 
 // Email sending endpoint
 app.post("/make-server-f9553289/send-email", async (c) => {
+  const guard = await requireAdmin(c);
+  if (!guard.ok) return guard.response;
   try {
     const body = await c.req.json();
     const { to, subject, message, dealTitle } = body;
@@ -1190,6 +1221,16 @@ app.post("/make-server-f9553289/send-email", async (c) => {
 // Telegram Webhook Endpoint (PUBLIC - no auth required, Telegram can't send headers)
 app.post("/make-server-f9553289/telegram-webhook", async (c) => {
   try {
+    const expectedSecret = env("TELEGRAM_WEBHOOK_SECRET");
+    if (expectedSecret) {
+      const gotSecret =
+        c.req.header("X-Telegram-Bot-Api-Secret-Token") ||
+        c.req.header("x-telegram-bot-api-secret-token");
+      if (!gotSecret || gotSecret !== expectedSecret) {
+        return c.json({ error: "Unauthorized webhook source" }, 401);
+      }
+    }
+
     const body = await c.req.json();
     
     // Support various update types (messages, edits, channel posts)
@@ -1675,6 +1716,8 @@ app.get("/make-server-f9553289/stock-history/:article", async (c) => {
 
 // Get Webhook Debug Logs
 app.get("/make-server-f9553289/debug/logs", async (c) => {
+  const guard = await requireAdmin(c);
+  if (!guard.ok) return guard.response;
   try {
     const logs = await kv.get("system:webhook_logs") || [];
 
@@ -1714,6 +1757,8 @@ app.get("/make-server-f9553289/debug/logs", async (c) => {
 
 // Fix Webhook Endpoint
 app.post("/make-server-f9553289/debug/fix-webhook", async (c) => {
+  const guard = await requireAdmin(c);
+  if (!guard.ok) return guard.response;
   try {
     const kvCreds = await kv.get("integration:telegram");
     const botToken = kvCreds?.botToken || env("TELEGRAM_BOT_TOKEN");
@@ -1729,7 +1774,12 @@ app.post("/make-server-f9553289/debug/fix-webhook", async (c) => {
     const webhookRes = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: webhookUrl })
+        body: JSON.stringify({
+          url: webhookUrl,
+          ...(env("TELEGRAM_WEBHOOK_SECRET")
+            ? { secret_token: env("TELEGRAM_WEBHOOK_SECRET") }
+            : {}),
+        })
     });
     
     const data = await webhookRes.json();
@@ -1741,6 +1791,8 @@ app.post("/make-server-f9553289/debug/fix-webhook", async (c) => {
 
 // Get Integration Status
 app.get("/make-server-f9553289/integrations/status", async (c) => {
+  const guard = await requireAdmin(c);
+  if (!guard.ok) return guard.response;
   const googleKv = await kv.get("integration:google");
   const telegramKv = await kv.get("integration:telegram");
   const resendKv = await kv.get("integration:resend");
@@ -1764,6 +1816,8 @@ app.get("/make-server-f9553289/integrations/status", async (c) => {
 
 // Save Integration Credentials
 app.post("/make-server-f9553289/integrations", async (c) => {
+  const guard = await requireAdmin(c);
+  if (!guard.ok) return guard.response;
   try {
     const body = await c.req.json();
     const { type, credentials } = body;
@@ -1784,7 +1838,12 @@ app.post("/make-server-f9553289/integrations", async (c) => {
              const webhookRes = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ url: webhookUrl })
+                 body: JSON.stringify({
+                   url: webhookUrl,
+                   ...(env("TELEGRAM_WEBHOOK_SECRET")
+                     ? { secret_token: env("TELEGRAM_WEBHOOK_SECRET") }
+                     : {}),
+                 })
              });
              
              const webhookData = await webhookRes.json();
@@ -1807,6 +1866,8 @@ app.post("/make-server-f9553289/integrations", async (c) => {
 
 // Delete Integration
 app.delete("/make-server-f9553289/integrations/:type", async (c) => {
+  const guard = await requireAdmin(c);
+  if (!guard.ok) return guard.response;
   try {
     const type = c.req.param("type");
     await kv.del(`integration:${type}`);

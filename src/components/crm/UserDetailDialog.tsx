@@ -149,6 +149,12 @@ export function UserDetailDialog({
   if (!user) return null;
 
   const handleResetPassword = async () => {
+    const newPassword = window.prompt("Введите новый пароль (минимум 8 символов):", "");
+    if (!newPassword) return;
+    if (newPassword.length < 8) {
+      toast.error("Пароль должен быть не короче 8 символов");
+      return;
+    }
     setIsResetting(true);
     try {
       const response = await fetch(
@@ -159,7 +165,7 @@ export function UserDetailDialog({
             'Content-Type': 'application/json',
             ...authHeaders(false),
           },
-          body: JSON.stringify({ userId: user.id }),
+          body: JSON.stringify({ userId: user.id, newPassword }),
         }
       );
 
@@ -168,15 +174,7 @@ export function UserDetailDialog({
         throw new Error(error);
       }
 
-      const data = await response.json();
-      
-      // Копируем новый пароль в буфер обмена
-      await navigator.clipboard.writeText(data.newPassword);
-      
-      toast.success(`Пароль сброшен успешно!`, {
-        description: `Новый пароль скопирован в буфер обмена: ${data.newPassword}`,
-        duration: 10000,
-      });
+      toast.success(`Пароль успешно обновлён`);
     } catch (error) {
       console.error('Ошибка при сбросе пароля:', error);
       toast.error('Не удалось сбросить пароль', {
