@@ -2,15 +2,14 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { createClient } from "./serviceDb.ts";
-import { getPool } from "./dbPool.ts";
 import * as kv from "./kv_store.ts";
 import { processNexusRequest } from "./nexus.ts";
 import { generateSystemPrompt } from "./system_prompt.tsx";
 import { SignJWT, importPKCS8 } from "jose";
-import { signUserToken, verifyBearer } from "./jwt.ts";
-import { handleSiteWebhook } from "./siteWebhook.ts";
-import fs from "node:fs";
-import path from "node:path";
+import { registerAuthRoutes } from "./routes/authRoutes.ts";
+import { registerAuthMiddleware } from "./middleware/authMiddleware.ts";
+import { registerCrmRunRoute } from "./routes/crmRunRoute.ts";
+import { registerPublicRoutes } from "./routes/publicRoutes.ts";
 
 const env = (k: string) => process.env[k];
 
@@ -34,198 +33,11 @@ app.use(
   }),
 );
 
-app.get("/make-server-f9553289/static-uploads/:name", async (c) => {
-  try {
-    const name = c.req.param("name");
-    const safe = path.basename(name);
-    const fp = path.join(process.cwd(), "data", "uploads", safe);
-    if (!fs.existsSync(fp)) return c.body(null, 404);
-    const buf = await fs.promises.readFile(fp);
-    const ext = safe.split(".").pop()?.toLowerCase();
-    const ct =
-      ext === "png"
-        ? "image/png"
-        : ext === "jpg" || ext === "jpeg"
-          ? "image/jpeg"
-          : "application/octet-stream";
-    return new Response(buf, { headers: { "Content-Type": ct } });
-  } catch {
-    return c.body(null, 500);
-  }
-});
+registerPublicRoutes(app, env);
 
-app.post("/make-server-f9553289/webhooks/site", async (c) => {
-  const secret = env("CRM_WEBHOOK_SECRET");
-  if (!secret) {
-    return c.json({ error: "CRM_WEBHOOK_SECRET not configured" }, 503);
-  }
-  const raw = await c.req.text();
-  const event = c.req.header("X-BTT-Event") || c.req.header("x-btt-event");
-  const signature = c.req.header("X-BTT-Signature") || c.req.header("x-btt-signature");
-  const schemaVersion = c.req.header("X-BTT-Schema-Version") || c.req.header("x-btt-schema-version");
-  const idempotencyKey =
-    c.req.header("X-BTT-Idempotency-Key") || c.req.header("x-btt-idempotency-key");
-  const r = await handleSiteWebhook({
-    rawBody: raw,
-    event,
-    schemaVersion,
-    idempotencyKey,
-    signature,
-    secret,
-  });
-  return c.json(r.body, r.status);
-});
-
-app.post("/make-server-f9553289/auth/login", async (c) => {
-  try {
-    const { email, password } = await c.req.json();
-    if (!email || !password) return c.json({ error: "Email and password required" }, 400);
-    const { verifyUserPassword } = await import("./authAdmin.ts");
-    const user = await verifyUserPassword(email, password);
-    if (!user) return c.json({ error: "Invalid credentials" }, 401);
-    const token = await signUserToken(user);
-    return c.json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        user_metadata: { name: user.name, role: user.role },
-      },
-    });
-  } catch (e: any) {
-    return c.json({ error: e.message }, 500);
-  }
-});
-
-app.get("/make-server-f9553289/auth/me", async (c) => {
-  try {
-    const auth = c.req.header("authorization");
-    if (!auth?.startsWith("Bearer ")) return c.json({ error: "Unauthorized" }, 401);
-    const payload = await verifyBearer(auth.slice(7));
-    return c.json({
-      user: {
-        id: payload.sub,
-        email: payload.email,
-        user_metadata: { name: payload.name, role: payload.role },
-      },
-    });
-  } catch {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-});
-
-app.use("/make-server-f9553289/*", async (c, next) => {
-  if (c.req.method === "OPTIONS") return next();
-  const p = c.req.path;
-  const pub =
-    p.includes("/health") ||
-    p.includes("/signup") ||
-    p.includes("/auth/login") ||
-    p.includes("/auth/me") ||
-    p.includes("/telegram-webhook") ||
-    p.includes("/webhooks/site") ||
-    p.includes("/static-uploads/");
-  if (pub) return next();
-  const auth = c.req.header("authorization");
-  if (!auth?.startsWith("Bearer ")) return c.json({ error: "Unauthorized" }, 401);
-  try {
-    await verifyBearer(auth.slice(7));
-  } catch {
-    return c.json({ error: "Invalid token" }, 401);
-  }
-  return next();
-});
-
-const CRM_TABLES = new Set([
-  "deals",
-  "companies",
-  "contacts",
-  "tasks",
-  "pipelines",
-  "stages",
-  "leads",
-  "calendar_events",
-]);
-
-app.post("/make-server-f9553289/crm/run", async (c) => {
-  try {
-    const body = await c.req.json();
-    if (!body?.table || !CRM_TABLES.has(body.table)) {
-      return c.json({ data: null, error: { message: "Invalid table" } }, 400);
-    }
-    const sb = createClient();
-    if (body.verb === "select") {
-      let q: any = sb.from(body.table).select(body.select || "*");
-      for (const f of body.filters || []) {
-        const [op, a, b] = f;
-        if (op === "eq") q = q.eq(a, b);
-        else if (op === "in") q = q.in(a, b);
-        else if (op === "gte") q = q.gte(a, b);
-        else if (op === "lte") q = q.lte(a, b);
-        else if (op === "neq") q = q.neq(a, b);
-      }
-      if (body.order) q = q.order(body.order.col, body.order.opts);
-      if (body.limit != null) q = q.limit(body.limit);
-      if (body.single === "one") q = q.single();
-      if (body.single === "maybe") q = q.maybeSingle();
-      return c.json(await q);
-    }
-    if (body.verb === "insert") {
-      const rows = Array.isArray(body.rows) ? body.rows : [body.rows];
-      let q: any = sb.from(body.table).insert(rows);
-      if (body.returning) q = q.select(body.returning);
-      if (body.single) q = q.single();
-      return c.json(await q);
-    }
-    if (body.verb === "update") {
-      let q: any = sb.from(body.table).update(body.patch);
-      for (const f of body.filters || []) {
-        const [op, a, b] = f;
-        if (op === "eq") q = q.eq(a, b);
-      }
-      return c.json(await q);
-    }
-    if (body.verb === "delete") {
-      let q: any = sb.from(body.table).delete();
-      for (const f of body.filters || []) {
-        const [op, a, b] = f;
-        if (op === "eq") q = q.eq(a, b);
-        else if (op === "neq") q = q.neq(a, b);
-      }
-      return c.json(await q);
-    }
-    if (body.verb === "count") {
-      const pool = getPool();
-      let sql = `SELECT COUNT(*)::int AS c FROM "${body.table}"`;
-      const vals: unknown[] = [];
-      const parts: string[] = [];
-      let i = 1;
-      for (const f of body.filters || []) {
-        const [op, col, val] = f;
-        if (op === "eq") {
-          parts.push(`"${col}" = $${i++}`);
-          vals.push(val);
-        } else if (op === "in") {
-          const arr = val as unknown[];
-          parts.push(`"${col}" IN (${arr.map(() => `$${i++}`).join(", ")})`);
-          vals.push(...arr);
-        }
-      }
-      if (parts.length) sql += ` WHERE ${parts.join(" AND ")}`;
-      const { rows } = await pool.query(sql, vals);
-      return c.json({ count: rows[0]?.c ?? 0, error: null });
-    }
-    return c.json({ data: null, error: { message: "Unknown verb" } }, 400);
-  } catch (e: any) {
-    return c.json({ data: null, error: { message: e.message || String(e) } }, 500);
-  }
-});
-
-// Health check endpoint
-app.get("/make-server-f9553289/health", (c) => {
-  console.log("Health check requested");
-  return c.json({ status: "ok", timestamp: new Date().toISOString(), version: "v8" });
-});
+registerAuthRoutes(app);
+registerAuthMiddleware(app);
+registerCrmRunRoute(app);
 
 // Company settings endpoints
 app.get("/make-server-f9553289/company", async (c) => {

@@ -5,6 +5,7 @@ import { getPool } from "./dbPool.ts";
 import * as authAdmin from "./authAdmin.ts";
 import fs from "node:fs";
 import path from "node:path";
+import { quoteIdent, sanitizeReturning } from "./sqlSafe.ts";
 
 const TABLES = new Set([
   "deals",
@@ -75,12 +76,20 @@ class BaseBuilder {
     const parts: string[] = [];
     let i = startIdx;
     for (const f of this.filters) {
+      const colName = quoteIdent(f.col);
       const col =
         f.col === "start" && this.table === "calendar_events"
           ? `${alias}.start_ts`
-          : `${alias}."${f.col}"`;
+          : `${alias}.${colName}`;
       if (f.op === "IN") {
         const arr = f.val as unknown[];
+        if (!Array.isArray(arr)) {
+          throw new Error(`IN expects array for column ${f.col}`);
+        }
+        if (arr.length === 0) {
+          parts.push("1 = 0");
+          continue;
+        }
         const ph = arr.map(() => `$${i++}`).join(", ");
         vals.push(...arr);
         parts.push(`${col} IN (${ph})`);
@@ -174,7 +183,7 @@ class SelectBuilder extends BaseBuilder {
         if (needStages) sql += ` LEFT JOIN stages st ON st.id = d.stage_id`;
         const { sql: w, vals } = this.buildWhere("d", 1);
         sql += w ? ` ${w}` : "";
-        if (this.orderCol) sql += ` ORDER BY d."${this.orderCol}" ${this.orderAsc ? "ASC" : "DESC"}`;
+        if (this.orderCol) sql += ` ORDER BY d.${quoteIdent(this.orderCol)} ${this.orderAsc ? "ASC" : "DESC"}`;
         if (this.limitN != null) sql += ` LIMIT ${this.limitN}`;
         const { rows } = await pool.query(sql, vals);
         return this.finishSelect(rows);
@@ -190,7 +199,7 @@ class SelectBuilder extends BaseBuilder {
       let sql = `SELECT ${cols} FROM "${this.table}" t`;
       const { sql: w, vals } = this.buildWhere("t", 1);
       sql += w ? ` ${w}` : "";
-      if (this.orderCol) sql += ` ORDER BY t."${this.orderCol}" ${this.orderAsc ? "ASC" : "DESC"}`;
+      if (this.orderCol) sql += ` ORDER BY t.${quoteIdent(this.orderCol)} ${this.orderAsc ? "ASC" : "DESC"}`;
       if (this.limitN != null) sql += ` LIMIT ${this.limitN}`;
       const { rows } = await pool.query(sql, vals);
       return this.finishSelect(rows);
@@ -229,10 +238,11 @@ class InsertBuilder extends BaseBuilder {
     }
     const row = this.rows[0]!;
     const keys = Object.keys(row).filter((k) => row[k] !== undefined);
+    for (const k of keys) quoteIdent(k);
     const vals = keys.map((k) => row[k]);
     const ph = keys.map((_, i) => `$${i + 1}`).join(", ");
-    const ret = this.returning ? `RETURNING ${this.returning === "*" ? "*" : this.returning}` : "RETURNING *";
-    const q = `INSERT INTO "${this.table}" (${keys.map((k) => `"${k}"`).join(", ")}) VALUES (${ph}) ${ret}`;
+    const ret = `RETURNING ${sanitizeReturning(this.returning)}`;
+    const q = `INSERT INTO "${this.table}" (${keys.map((k) => quoteIdent(k)).join(", ")}) VALUES (${ph}) ${ret}`;
     try {
       const { rows } = await pool.query(q, vals);
       const out = rows[0] ?? null;
@@ -271,8 +281,9 @@ class UpdateBuilder extends BaseBuilder {
     const pool = getPool();
     const keys = Object.keys(this.patch);
     if (!keys.length) return { data: null, error: null };
+    for (const k of keys) quoteIdent(k);
     const vals = keys.map((k) => this.patch[k]);
-    const sets = keys.map((k, i) => `"${k}" = $${i + 1}`);
+    const sets = keys.map((k, i) => `${quoteIdent(k)} = $${i + 1}`);
     const { sql: w, vals: wvals } = this.buildWhere("t", keys.length + 1);
     const q = `UPDATE "${this.table}" AS t SET ${sets.join(", ")} ${w}`;
     try {
