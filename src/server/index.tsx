@@ -121,6 +121,7 @@ app.use("/make-server-f9553289/*", async (c, next) => {
     p.includes("/health") ||
     p.includes("/signup") ||
     p.includes("/auth/login") ||
+    p.includes("/auth/me") ||
     p.includes("/telegram-webhook") ||
     p.includes("/webhooks/site") ||
     p.includes("/static-uploads/");

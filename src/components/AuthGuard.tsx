@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { crm } from "@/lib/crmClient.ts";
+import { crm } from "../lib/crmClient.ts";
 import { Loader2 } from 'lucide-react';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -9,21 +9,35 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const location = useLocation();
 
   useEffect(() => {
-    // Check active session
-    crm.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    let cancelled = false;
+    crm.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (!cancelled) {
+          setSession(session);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSession(null);
+          setLoading(false);
+        }
+      });
 
-    // Listen for changes
     const {
       data: { subscription },
     } = crm.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
+      if (!cancelled) {
+        setSession(session);
+        setLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) {

@@ -62,9 +62,13 @@ export default function Login() {
         if (error) throw error;
         navigate('/');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      toast.error(error.message || 'Ошибка авторизации');
+      const msg =
+        error && typeof error === "object" && "message" in error && typeof (error as { message: unknown }).message === "string"
+          ? (error as { message: string }).message
+          : "Ошибка авторизации";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

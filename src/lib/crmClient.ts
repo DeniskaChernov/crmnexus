@@ -1,12 +1,23 @@
 import { crmUrl, authHeaders } from "./crmApi.ts";
 
 async function crmRun(body: Record<string, unknown>) {
-  const res = await fetch(crmUrl("/crm/run"), {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify(body),
-  });
-  return res.json();
+  try {
+    const res = await fetch(crmUrl("/crm/run"), {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(body),
+    });
+    try {
+      return await res.json();
+    } catch {
+      return { data: null, error: { message: "Некорректный ответ сервера" } };
+    }
+  } catch (e) {
+    return {
+      data: null,
+      error: { message: e instanceof Error ? e.message : "Ошибка сети" },
+    };
+  }
 }
 
 class SelectChain {
@@ -189,15 +200,34 @@ export const crm = {
         const res = await fetch(crmUrl("/auth/me"), {
           headers: { ...authHeaders(false), Authorization: `Bearer ${t}` },
         });
-        if (!res.ok) return { data: { session: null } };
-        const { user } = await res.json();
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem("crm_token");
+            window.dispatchEvent(new Event("crm-auth"));
+          }
+          return { data: { session: null } };
+        }
+        let body: { user?: { id?: string; email?: string; user_metadata?: Record<string, unknown> } };
+        try {
+          body = await res.json();
+        } catch {
+          localStorage.removeItem("crm_token");
+          window.dispatchEvent(new Event("crm-auth"));
+          return { data: { session: null } };
+        }
+        const user = body.user;
+        if (!user?.id) {
+          localStorage.removeItem("crm_token");
+          window.dispatchEvent(new Event("crm-auth"));
+          return { data: { session: null } };
+        }
         return {
           data: {
             session: {
               user: {
                 id: user.id,
-                email: user.email,
-                user_metadata: user.user_metadata || {},
+                email: user.email ?? "",
+                user_metadata: (user.user_metadata || {}) as Record<string, unknown>,
               },
             },
           },
@@ -217,13 +247,25 @@ export const crm = {
       return { data: { subscription: { unsubscribe: () => window.removeEventListener("crm-auth", fn) } } };
     },
     async signInWithPassword(creds: { email: string; password: string }) {
-      const res = await fetch(crmUrl("/auth/login"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(creds),
-      });
-      const j = await res.json();
-      if (!res.ok) return { error: { message: j.error || "Login failed" } };
+      let res: Response;
+      try {
+        res = await fetch(crmUrl("/auth/login"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(creds),
+        });
+      } catch (e) {
+        return { error: { message: e instanceof Error ? e.message : "Ошибка сети" } };
+      }
+      let j: { error?: string; token?: string };
+      try {
+        j = await res.json();
+      } catch {
+        return { error: { message: "Некорректный ответ сервера" } };
+      }
+      if (!res.ok || !j.token) {
+        return { error: { message: j.error || "Ошибка входа" } };
+      }
       localStorage.setItem("crm_token", j.token);
       window.dispatchEvent(new Event("crm-auth"));
       return { error: null };
