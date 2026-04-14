@@ -3,7 +3,7 @@
 # Script to fix missing closing braces in index.tsx
 # This script adds two missing closing braces after line 2678
 
-FILE="/supabase/functions/server/index.tsx"
+FILE="src/server/index.tsx"
 
 # Create a backup
 cp "$FILE" "$FILE.backup"

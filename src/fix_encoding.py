@@ -54,8 +54,8 @@ FILES_TO_FIX = [
     "/components/Warehouse.tsx",
     "/pages/Reports.tsx", 
     "/components/crm/EditDealDialog.tsx",
-    "/supabase/functions/server/index.tsx",
-    "/supabase/functions/server/system_prompt.tsx",
+    "src/server/index.tsx",
+    "src/server/system_prompt.tsx",
     "/SYSTEM_ANALYSIS.md",
     "/BIZLY_WAREHOUSE_SETUP.md",
     "/TRANSFERS_FEATURE_DOCUMENTATION.md"

@@ -4,7 +4,7 @@ Script to fix missing closing braces in index.tsx
 Adds two missing closing braces after line 2678
 """
 
-file_path = '/supabase/functions/server/index.tsx'
+file_path = 'src/server/index.tsx'
 
 # Read the file
 with open(file_path, 'r', encoding='utf-8') as f:

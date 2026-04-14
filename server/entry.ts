@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { serve } from "@hono/node-server";
-import app from "../src/supabase/functions/server/index.tsx";
+import app from "../src/server/index.tsx";
 
 const port = Number(process.env["PORT"] || 4000);
 

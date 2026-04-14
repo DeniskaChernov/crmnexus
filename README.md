@@ -1,6 +1,6 @@
 # BTT Nexus
 
-CRM и внутренний портал: React (Vite) + API на Hono + Postgres (Railway).
+CRM и внутренний портал: React (Vite) + API на Hono + Postgres (Railway). Код HTTP API: каталог **`src/server/`** (точка входа `server/entry.ts`).
 
 ## Локальная разработка
 

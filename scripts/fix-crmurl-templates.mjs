@@ -8,7 +8,7 @@ function walk(dir, out = []) {
       if (e.name === "node_modules") continue;
       walk(p, out);
     } else if (/\.(tsx|ts)$/.test(e.name)) {
-      if (p.includes(`${path.sep}supabase${path.sep}functions`)) continue;
+      if (p.includes(`${path.sep}src${path.sep}server${path.sep}`)) continue;
       out.push(p);
     }
   }

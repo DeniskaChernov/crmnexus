@@ -1,5 +1,5 @@
 /**
- * PATCH для /crm/functions/server/index.tsx
+ * PATCH для src/server/index.tsx
  * 
  * Добавить этот код после строки 2534, между обработкой shipments и Won Deals
  * 

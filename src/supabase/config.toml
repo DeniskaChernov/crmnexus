@@ -1,5 +1,0 @@
-# Supabase Configuration
-
-[functions.server]
-# Disable JWT verification for the server function to allow Telegram webhooks
-verify_jwt = false

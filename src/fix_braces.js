@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const filePath = path.join(__dirname, 'crm', 'functions', 'server', 'index.tsx');
+const filePath = path.join(__dirname, 'server', 'index.tsx');
 
 console.log(`Reading file: ${filePath}`);
 

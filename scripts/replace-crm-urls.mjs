@@ -11,7 +11,7 @@ function walk(dir, out = []) {
       walk(p, out);
     } else if (/\.(tsx|ts)$/.test(e.name)) {
       if (p.includes(`${path.sep}lib${path.sep}crmApi.ts`)) continue;
-      if (p.includes(`${path.sep}supabase${path.sep}functions${path.sep}server`)) continue;
+      if (p.includes(`${path.sep}src${path.sep}server${path.sep}`)) continue;
       out.push(p);
     }
   }

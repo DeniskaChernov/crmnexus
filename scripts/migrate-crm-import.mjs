@@ -14,7 +14,7 @@ const root = process.cwd();
 const skip = (f) => {
   const u = f.replace(/\\/g, "/");
   return (
-    u.includes("src/supabase/functions/server/index") ||
+    u.includes("src/server/index") ||
     u.endsWith("serviceDb.ts")
   );
 };
