@@ -14,6 +14,10 @@ import { registerPublicRoutes } from "./routes/publicRoutes.ts";
 const env = (k: string) => process.env[k];
 
 const app = new Hono();
+const configuredCorsOrigins = (env("CORS_ORIGINS") || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 const ADMIN_ROLES = new Set(["owner", "director", "admin"]);
 
@@ -44,13 +48,29 @@ app.use('*', logger(console.log));
 app.use(
   "/*",
   cors({
-    origin: "*",
+    origin: (origin) => {
+      if (configuredCorsOrigins.length === 0) {
+        return origin || "*";
+      }
+      if (origin && configuredCorsOrigins.includes(origin)) {
+        return origin;
+      }
+      return configuredCorsOrigins[0]!;
+    },
     allowHeaders: ["Content-Type", "Authorization"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     exposeHeaders: ["Content-Length"],
     maxAge: 600,
   }),
 );
+
+app.use("/*", async (c, next) => {
+  await next();
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("X-Frame-Options", "DENY");
+  c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  c.header("X-XSS-Protection", "0");
+});
 
 registerPublicRoutes(app, env);
 

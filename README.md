@@ -18,6 +18,7 @@ CRM и внутренний портал: React (Vite) + API на Hono + Postgre
 - Сервис **Node** для API: корневая команда старта, например `npm run server`; переменные `JWT_SECRET`, `CRM_WEBHOOK_SECRET`, `PUBLIC_BASE_URL` (публичный URL этого сервиса), при необходимости `OPENAI_*`.
 - `ALLOW_SELF_SIGNUP=false` в проде. Для первоначального онбординга можно временно поставить `true`, зарегистрировать первый аккаунт и вернуть `false`.
 - Для Telegram webhook рекомендуется задать `TELEGRAM_WEBHOOK_SECRET` (проверка источника через `X-Telegram-Bot-Api-Secret-Token`).
+- Для прода обязательно задайте `CORS_ORIGINS` (comma-separated allowlist доменов фронта).
 - После деплоя выполните миграцию один раз (локально с тем же `DATABASE_URL` или через одноразовую команду в Railway): `npm run migrate`.
 
 ## Webhook с сайта (btt-site)
