@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 14px;
+  
+  /* "Sugar" Design System - Neumorphic/Soft UI */
+  
+  /* Base */
+  --background: #F0F2F5; /* Light Grey-Blue background from image */
+  --foreground: #1A1A1A; /* Near Black */
+  
+  /* Surface */
+  --card: #FFFFFF;
+  --card-foreground: #1A1A1A;
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1A1A;
+  
+  /* Primary - Black Pill style */
+  --primary: #000000;
+  --primary-foreground: #FFFFFF;
+  
+  /* Secondary */
+  --secondary: #F0F2F5;
+  --secondary-foreground: #1A1A1A;
+  
+  /* Muted */
+  --muted: #E4E7EB;
+  --muted-foreground: #6B7280;
+  
+  /* Accent */
+  --accent: #F0F2F5;
+  --accent-foreground: #1A1A1A;
+  
+  /* Functional Colors */
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --success: #10B981;
+  --warning: #F59E0B;
+  
+  /* Borders */
+  --border: #E5E7EB; /* Very subtle borders */
+  --input: #F0F2F5; /* Inputs match background often */
+  --ring: #000000;
+  
+  /* Data Visualization */
+  --chart-1: #000000;
+  --chart-2: #3B82F6;
+  --chart-3: #6366F1;
+  --chart-4: #10B981;
+  --chart-5: #F43F5E;
+  
+  /* Geometry - Large Radius */
+  --radius: 1.5rem; /* 24px - Matching the large card radius in image */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 8px);
+  
+  /* Elevation - Soft, diffuse shadows */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 2px 4px 0 rgb(0 0 0 / 0.02);
+  --shadow-md: 0 8px 16px -4px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 12px 24px -6px rgb(0 0 0 / 0.08);
+  --shadow-xl: 0 20px 40px -10px rgb(0 0 0 / 0.1);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-black selection:text-white font-sans;
+    /* Soften the background/text contrast */
+    color: #4b5563; /* Slate-600 mostly */
+  }
+
+  /* Headings are darker */
+  h1, h2, h3, h4, h5, h6 {
+    color: #111827; /* Slate-900 */
+    @apply font-bold tracking-tight; 
+  }
+}
+
+/* Utilities */
+.soft-card {
+  @apply bg-white rounded-3xl shadow-lg border-none;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+}
+
+.nav-pill-active {
+  @apply bg-black text-white rounded-full px-6 py-2 shadow-lg shadow-black/20;
+}
+
+.nav-pill-inactive {
+  @apply text-slate-500 hover:text-slate-900 px-4 py-2 transition-colors font-medium;
+}
+
+.glass-panel {
+  @apply bg-white/70 backdrop-blur-md border border-white/50 shadow-sm rounded-3xl;
+}
+
+/* Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+/* Animations */
+.fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
