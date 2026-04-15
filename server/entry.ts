@@ -1,4 +1,6 @@
 import "dotenv/config";
+import { validateServerEnv } from "../src/server/validateEnv.ts";
+validateServerEnv();
 import { serve } from "@hono/node-server";
 import app from "../src/server/index.tsx";
 

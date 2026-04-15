@@ -75,6 +75,7 @@
     "dev": "vite",
     "build": "vite build",
     "server": "tsx server/entry.ts",
-    "migrate": "node server/migrate.mjs"
+    "migrate": "node server/migrate.mjs",
+    "smoke": "node scripts/smoke.mjs"
   }
 }
