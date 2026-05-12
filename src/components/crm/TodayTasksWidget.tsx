@@ -82,19 +82,21 @@ export function TodayTasksWidget() {
 
   if (loading) {
     return (
-      <Card className="soft-card h-[300px] flex items-center justify-center">
-         <div className="text-slate-300 text-sm">Loading tasks...</div>
+      <Card className="nexus-card h-[300px] flex items-center justify-center">
+         <div className="text-slate-400 text-sm">Загрузка задач…</div>
       </Card>
     );
   }
 
   return (
-    <Card className="soft-card">
+    <Card className="nexus-card">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-             <div className="h-2 w-2 rounded-full bg-red-500"></div>
-             СЕГОДНЯ
+             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 ring-1 ring-amber-100/80">
+               <Calendar className="h-4 w-4 text-amber-700" />
+             </span>
+             Сегодня
           </CardTitle>
           {tasks.length > 0 && (
              <span className="text-xs font-bold text-slate-500">{tasks.length}</span>
@@ -116,9 +118,9 @@ export function TodayTasksWidget() {
                  <Checkbox 
                     checked={false} 
                     onCheckedChange={() => toggleTaskStatus(task.id)}
-                    className="h-5 w-5 rounded-full border-2 border-slate-200 data-[state=checked]:bg-slate-900 data-[state=checked]:border-slate-900 transition-all"
+                    className="h-5 w-5 rounded-full border-2 border-slate-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600 transition-all"
                  />
-                 <div className="flex-1 min-w-0 p-3 bg-slate-50 rounded-2xl group-hover:bg-slate-100 transition-colors">
+                 <div className="flex-1 min-w-0 p-3 bg-slate-50 rounded-2xl group-hover:bg-indigo-50/50 ring-1 ring-transparent group-hover:ring-indigo-100 transition-all">
                     <div className="flex items-center gap-2 mb-1">
                        {getTypeIcon(task.type)}
                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{task.priority}</span>
@@ -134,8 +136,8 @@ export function TodayTasksWidget() {
             ))}
             
             <Link to="/tasks" className="block pt-2">
-               <Button variant="ghost" className="w-full text-xs text-slate-400 hover:text-slate-900">
-                  Показать все задачи <ArrowRight className="h-3 w-3 ml-2" />
+               <Button variant="ghost" className="w-full text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50/60">
+                  Все задачи <ArrowRight className="h-3 w-3 ml-2" />
                </Button>
             </Link>
           </div>

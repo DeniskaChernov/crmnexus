@@ -1,10 +1,14 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { serveStatic } from "@hono/node-server/serve-static";
+import fs from "node:fs/promises";
 import { createClient } from "./serviceDb.ts";
+import { getPool } from "./dbPool.ts";
 import * as kv from "./kv_store.ts";
-import { processNexusRequest } from "./nexus.ts";
 import { generateSystemPrompt } from "./system_prompt.tsx";
+import { buildAiChatContext } from "./aiChatSnapshot.ts";
+import { sanitizeAiChatClientPayload } from "../lib/aiChatClientPayload.ts";
 import { SignJWT, importPKCS8 } from "jose";
 import { registerAuthRoutes } from "./routes/authRoutes.ts";
 import { registerAuthMiddleware } from "./middleware/authMiddleware.ts";
@@ -324,8 +328,32 @@ app.post("/make-server-f9553289/sales-plan", async (c) => {
 // Pipeline management endpoints
 app.get("/make-server-f9553289/pipelines", async (c) => {
   try {
-    const pipelines = await kv.getByPrefix("pipeline:");
-    return c.json(pipelines || []);
+    const pool = getPool();
+    const { rows } = await pool.query(
+      `SELECT
+        p.id,
+        p.name,
+        COALESCE(p.description, '') AS description,
+        p.is_default AS "isDefault",
+        p.created_at AS "createdAt",
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', s.id,
+              'name', s.name,
+              'order', s.order_index,
+              'color', COALESCE(s.color, '#94a3b8')
+            )
+            ORDER BY s.order_index
+          ) FILTER (WHERE s.id IS NOT NULL),
+          '[]'::json
+        ) AS stages
+       FROM pipelines p
+       LEFT JOIN stages s ON s.pipeline_id = p.id
+       GROUP BY p.id
+       ORDER BY p.is_default DESC, p.created_at ASC`,
+    );
+    return c.json(rows);
   } catch (error: any) {
     console.error("Error fetching pipelines:", error);
     return c.json({ error: error.message }, 500);
@@ -341,32 +369,50 @@ app.post("/make-server-f9553289/pipelines", async (c) => {
       return c.json({ error: "Pipeline name is required" }, 400);
     }
 
-    const id = `pipeline-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const pipeline = {
-      id,
-      name: name.trim(),
-      description: description?.trim() || '',
-      isDefault: isDefault || false,
-      createdAt: new Date().toISOString(),
-      stages: [
-        { id: `${id}-stage-1`, name: 'Новая', order: 1, color: '#3b82f6' },
-        { id: `${id}-stage-2`, name: 'Квалификация', order: 2, color: '#f59e0b' },
-        { id: `${id}-stage-3`, name: 'Переговоры', order: 3, color: '#8b5cf6' },
-        { id: `${id}-stage-4`, name: 'Закрыта', order: 4, color: '#10b981' },
-      ],
-    };
+    const pool = getPool();
+    const client = await pool.connect();
+    let pipeline: any;
 
-    // If this should be default, unset other defaults
-    if (isDefault) {
-      const allPipelines = await kv.getByPrefix("pipeline:");
-      for (const p of allPipelines) {
-        if (p.isDefault) {
-          await kv.set(`pipeline:${p.id}`, { ...p, isDefault: false });
-        }
+    try {
+      await client.query("BEGIN");
+
+      if (isDefault) {
+        await client.query(`UPDATE pipelines SET is_default = false`);
       }
+
+      const { rows } = await client.query(
+        `INSERT INTO pipelines (name, description, is_default)
+         VALUES ($1, $2, $3)
+         RETURNING id, name, COALESCE(description, '') AS description, is_default AS "isDefault", created_at AS "createdAt"`,
+        [name.trim(), description?.trim() || "", Boolean(isDefault)],
+      );
+
+      pipeline = { ...rows[0], stages: [] };
+      const defaultStages = [
+        { name: "Новая", order: 1, color: "#3b82f6" },
+        { name: "Квалификация", order: 2, color: "#f59e0b" },
+        { name: "Переговоры", order: 3, color: "#8b5cf6" },
+        { name: "Закрыта", order: 4, color: "#10b981" },
+      ];
+
+      for (const stage of defaultStages) {
+        const stageResult = await client.query(
+          `INSERT INTO stages (pipeline_id, name, order_index, color)
+           VALUES ($1, $2, $3, $4)
+           RETURNING id, name, order_index AS "order", color`,
+          [pipeline.id, stage.name, stage.order, stage.color],
+        );
+        pipeline.stages.push(stageResult.rows[0]);
+      }
+
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
     }
 
-    await kv.set(`pipeline:${id}`, pipeline);
     return c.json({ success: true, pipeline });
   } catch (error: any) {
     console.error("Error creating pipeline:", error);
@@ -411,30 +457,57 @@ app.put("/make-server-f9553289/pipelines/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
-    
-    const existingPipeline = await kv.get(`pipeline:${id}`);
-    if (!existingPipeline) {
-      return c.json({ error: "Pipeline not found" }, 404);
-    }
 
-    const updatedPipeline = {
-      ...existingPipeline,
-      ...body,
-      id, // Ensure ID doesn't change
-      updatedAt: new Date().toISOString(),
-    };
+    const pool = getPool();
+    const client = await pool.connect();
+    let updatedPipeline: any;
 
-    // If this should be default, unset other defaults
-    if (body.isDefault) {
-      const allPipelines = await kv.getByPrefix("pipeline:");
-      for (const p of allPipelines) {
-        if (p.id !== id && p.isDefault) {
-          await kv.set(`pipeline:${p.id}`, { ...p, isDefault: false });
-        }
+    try {
+      await client.query("BEGIN");
+
+      const existing = await client.query(`SELECT id FROM pipelines WHERE id = $1`, [id]);
+      if (existing.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return c.json({ error: "Pipeline not found" }, 404);
       }
+
+      if (body.isDefault) {
+        await client.query(`UPDATE pipelines SET is_default = false WHERE id <> $1`, [id]);
+      }
+
+      const { rows } = await client.query(
+        `UPDATE pipelines
+         SET
+           name = COALESCE($2, name),
+           description = COALESCE($3, description),
+           is_default = COALESCE($4, is_default)
+         WHERE id = $1
+         RETURNING id, name, COALESCE(description, '') AS description, is_default AS "isDefault", created_at AS "createdAt"`,
+        [
+          id,
+          typeof body.name === "string" && body.name.trim() ? body.name.trim() : null,
+          typeof body.description === "string" ? body.description.trim() : null,
+          typeof body.isDefault === "boolean" ? body.isDefault : null,
+        ],
+      );
+
+      const stagesResult = await client.query(
+        `SELECT id, name, order_index AS "order", COALESCE(color, '#94a3b8') AS color
+         FROM stages
+         WHERE pipeline_id = $1
+         ORDER BY order_index`,
+        [id],
+      );
+      updatedPipeline = { ...rows[0], stages: stagesResult.rows };
+
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
     }
 
-    await kv.set(`pipeline:${id}`, updatedPipeline);
     return c.json({ success: true, pipeline: updatedPipeline });
   } catch (error: any) {
     console.error("Error updating pipeline:", error);
@@ -445,18 +518,20 @@ app.put("/make-server-f9553289/pipelines/:id", async (c) => {
 app.delete("/make-server-f9553289/pipelines/:id", async (c) => {
   try {
     const id = c.req.param("id");
-    
-    const existingPipeline = await kv.get(`pipeline:${id}`);
+
+    const pool = getPool();
+    const { rows } = await pool.query(`SELECT is_default FROM pipelines WHERE id = $1`, [id]);
+    const existingPipeline = rows[0];
     if (!existingPipeline) {
       return c.json({ error: "Pipeline not found" }, 404);
     }
 
     // Prevent deleting default pipeline
-    if (existingPipeline.isDefault) {
+    if (existingPipeline.is_default) {
       return c.json({ error: "Cannot delete default pipeline. Please set another pipeline as default first." }, 400);
     }
 
-    await kv.del(`pipeline:${id}`);
+    await pool.query(`DELETE FROM pipelines WHERE id = $1`, [id]);
     return c.json({ success: true });
   } catch (error: any) {
     console.error("Error deleting pipeline:", error);
@@ -627,7 +702,8 @@ app.post("/make-server-f9553289/ai-chat", async (c) => {
     }
 
     const body = await c.req.json();
-    const { messages, userId } = body;
+    const { messages, userId, clientContext: rawClientContext } = body;
+    const clientContext = sanitizeAiChatClientPayload(rawClientContext);
 
     if (!messages || !Array.isArray(messages)) {
       return c.json({ error: "Invalid messages format" }, 400);
@@ -635,189 +711,22 @@ app.post("/make-server-f9553289/ai-chat", async (c) => {
 
     const db = createClient();
 
-    // Fetch ALL CRM data for comprehensive AI context
-    const { data: deals } = await db
-        .from('deals')
-        .select('id, amount, status, created_at, stage_id, stages(name), title, companies(name)')
-        .order('created_at', { ascending: false });
-    
-    const { data: tasks } = await db
-        .from('tasks')
-        .select('id, title, priority, status, due_date, assigned_to')
-        .order('due_date', { ascending: true });
-
-    const { data: companies } = await db
-        .from('companies')
-        .select('id, name, industry, phone, email, created_at')
-        .order('created_at', { ascending: false });
-
-    const { data: contacts } = await db
-        .from('contacts')
-        .select('id, name, position, phone, email, company_id, companies(name)')
-        .order('created_at', { ascending: false });
-
-    const { data: leads } = await db
-        .from('leads')
-        .select('id, name, phone, status, source, created_at')
-        .order('created_at', { ascending: false });
-
-    const { data: pipelines } = await db
-        .from('pipelines')
-        .select('id, name, stages(id, name, order)')
-        .order('created_at', { ascending: false });
-
-    const { data: events } = await db
-        .from('calendar_events')
-        .select('id, title, start, end, type')
-        .gte('start', new Date().toISOString())
-        .order('start', { ascending: true })
-        .limit(10);
-
-    // Get sales plan
-    const now = new Date();
-    const monthKey = `sales-plan-${now.getFullYear()}-${now.getMonth() + 1}`;
-    const salesPlan = await kv.get(monthKey);
-
-    // Get production recipes
-    const recipes = await kv.getByPrefix('recipe-');
-
-    // Summarize Data for context
-    const safeDeals = deals || [];
-    const totalDeals = safeDeals.length;
-    const totalAmount = safeDeals.reduce((sum, d) => sum + (d.amount || 0), 0);
-    const wonDeals = safeDeals.filter(d => d.status === 'won').length;
-    const lostDeals = safeDeals.filter(d => d.status === 'lost').length;
-    const openDeals = safeDeals.filter(d => d.status === 'open').length;
-    const avgDealSize = totalDeals > 0 ? Math.round(totalAmount / totalDeals) : 0;
-    const conversionRate = (wonDeals + lostDeals) > 0 ? Math.round((wonDeals / (wonDeals + lostDeals)) * 100) : 0;
-
-    // Detailed context for recent items
-    const recentOpenDeals = safeDeals.filter(d => d.status === 'open').slice(0, 5).map(d => 
-      `- ${d.title} (${d.companies?.name || 'Нет компании'}): ${d.amount?.toLocaleString('uz-UZ')} UZS, Этап: ${d.stages?.name || 'Неизвестно'}`
-    ).join('\n') || "Нет открытых сделок";
-
-    const safeTasks = tasks || [];
-    const highPriorityTasks = safeTasks.filter(t => t.status !== 'completed' && t.priority === 'high').slice(0, 5).map(t =>
-      `- [🔥] ${t.title} (Срок: ${t.due_date ? new Date(t.due_date).toLocaleDateString('ru-RU') : 'Нет'})`
-    ).join('\n') || "Нет в��жных задач";
-
-    const overdueTasks = safeTasks.filter(t => t.status !== 'completed' && t.due_date && new Date(t.due_date) < new Date()).length;
-    const safeCompanies = companies || [];
-    const totalCompanies = safeCompanies.length;
-
-    // Construct Prompt with Smart Search
     const lastMessage = messages[messages.length - 1];
     let lastUserText = "";
-    
-    if (typeof lastMessage.content === 'string') {
-        lastUserText = lastMessage.content;
+    if (typeof lastMessage.content === "string") {
+      lastUserText = lastMessage.content;
     } else if (Array.isArray(lastMessage.content)) {
-        // Handle OpenAI content array format
-        const textPart = lastMessage.content.find((c: any) => c.type === 'text');
-        if (textPart) {
-            lastUserText = textPart.text;
-        }
+      const textPart = lastMessage.content.find((c: any) => c.type === "text");
+      if (textPart) lastUserText = textPart.text;
     }
 
-    const searchTerms = lastUserText.toLowerCase().split(' ').filter((t: string) => t.length > 2);
+    const promptData = await buildAiChatContext(db, lastUserText, clientContext);
+    const systemPrompt = generateSystemPrompt(promptData);
     
-    let foundCompaniesStr = "";
-    if (searchTerms.length > 0) {
-       const found = safeCompanies.filter(c => 
-         searchTerms.some((term: string) => c.name.toLowerCase().includes(term))
-       );
-       if (found.length > 0) {
-         foundCompaniesStr = found.map(c => 
-           `- [НАЙДЕНО] ${c.name} (Тел: ${c.phone || 'нет'}, Email: ${c.email || 'нет'}, Индустрия: ${c.industry || 'нет'})`
-         ).join('\n');
-       }
-    }
+    const chatModel = env("OPENAI_CHAT_MODEL") || "gpt-4o-mini";
+    const maxTokRaw = parseInt(env("OPENAI_CHAT_MAX_TOKENS") || "4096", 10);
+    const max_tokens = Number.isFinite(maxTokRaw) ? Math.min(8192, Math.max(1024, maxTokRaw)) : 4096;
 
-    const recentCompanies = safeCompanies.slice(0, 10).map(c => `- ${c.name}`).join('\n') || "NONE";
-    const safeContacts = contacts || [];
-    const totalContacts = safeContacts.length;
-    const safeLeads = leads || [];
-    const totalLeads = safeLeads.length;
-    const newLeads = safeLeads.filter(l => l.status === 'new').length;
-    const qualifiedLeads = safeLeads.filter(l => l.status === 'qualified').length;
-    const recentLeads = safeLeads.slice(0, 5).map(l => `- ${l.name} (${l.phone})`).join('\n') || "NONE";
-    const safePipelines = pipelines || [];
-    const pipelinesList = safePipelines.map(p => `- ${p.name}`).join('\n') || "NONE";
-    const safeEvents = events || [];
-    const upcomingEvents = safeEvents.slice(0, 5).map(e => `- ${e.title}`).join('\n') || "NONE";
-    const planData = salesPlan as any;
-    const salesPlanSummary = planData ? `${planData.target || 0} / ${planData.actual || 0} UZS` : "NONE";
-    const safeRecipes = recipes || [];
-    const totalRecipes = safeRecipes.length;
-
-    // System prompt with ALL CRM DATA - using external function
-    const systemPrompt = generateSystemPrompt({
-      totalDeals,
-      totalAmount,
-      wonDeals,
-      lostDeals,
-      openDeals,
-      avgDealSize,
-      conversionRate,
-      recentOpenDeals,
-      tasksLength: tasks?.length || 0,
-      highPriorityTasks,
-      overdueTasks,
-      totalCompanies,
-      recentCompanies,
-      foundCompanies: foundCompaniesStr,
-      totalContacts,
-      totalLeads,
-      newLeads,
-      qualifiedLeads,
-      recentLeads,
-      pipelinesList,
-      upcomingEvents,
-      salesPlanSummary,
-      totalRecipes
-    });
-    
-    /* OLD PROMPT TEXT REMOVED - keeping for debugging */
-    /*
-
-    // Call OpenAI with conversation context ��ксперт по продажам и маркетингу, работающий как персональный консультант для узбекской CRM-системы. 
-
-ТВОИ НАВЫКИ:
-- Стратегическое планирование продаж и маркетинга
-- Анализ воронки продаж и оптимизация конверсии
-- Работа с лидами и управление сделками
-- Прогнозирование выручки
-- Разработка маркетинговых кампаний
-- Управление клиентскими отношениями
-
-ТЕКУЩИЕ ДАННЫЕ CRM:
-- Всего сделок: ${totalDeals}
-- Общая сумма в воронке: ${totalAmount.toLocaleString('uz-UZ')} UZS
-- Выигран��: ${wonDeals} | Проигр��но: ${lostDeals} | Открыто: ${openDeals}
-- Средний чек: ${avgDealSize.toLocaleString('uz-UZ')} UZS
-- Конверсия: ${conversionRate}%
-- Задач в систем��: ${tasks?.length || 0}
-
-АКТУАЛЬНЫЕ СДЕЛКИ (Топ-5 новых):
-${recentOpenDeals}
-
-ВАЖНЫЕ ЗАДАЧИ:
-${highPriorityTasks}
-
-СТИЛЬ ОБЩЕНИЯ:
-- Отвечай на русском языке профессионально, но ��ружелюбно
-- Давай конкретные, применимые советы
-- Используй эмодзи для визуальной структуры (📊 💰 🎯 ✅ ⚡)
-- Структурируй ответы с заголовками и списками
-- При анализе данных ссылайся на конкретные цифры
-- Предлагай практические действия, которые можн�� выполни��ь в CRM
-
-ВАЖНО: 
-- Валюта - узбекские сомы (UZS)
-- Фокус на B2B продажах
-- Учитывай специфику узбекского рынка
-- Ты умеешь анал����ировать ИЗОБРАЖЕНИЯ. Если пользователь прислал ��ото, проанализируй его.
-    */
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -825,13 +734,13 @@ ${highPriorityTasks}
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: chatModel,
         messages: [
           { role: "system", content: systemPrompt },
           ...messages
         ],
-        temperature: 0.8,
-        max_tokens: 1000,
+        temperature: 0.65,
+        max_tokens,
       }),
     });
 
@@ -5349,20 +5258,27 @@ app.get("/make-server-f9553289/warehouse/available-articles", async (c) => {
   }
 });
 
-// Nexus Brain Endpoint
-app.post("/make-server-f9553289/nexus", async (c) => {
-  try {
-    const body = await c.req.json();
-    const { transcript, context, userId } = body;
-    
-    // Basic validation
-    if (!transcript) return c.json({ error: "No input provided" }, 400);
+app.use(
+  "/assets/*",
+  serveStatic({
+    root: "./build",
+    onFound: (_path, c) => {
+      c.header("Cache-Control", "public, immutable, max-age=31536000");
+    },
+  }),
+);
+app.use("/*", serveStatic({ root: "./build" }));
 
-    const result = await processNexusRequest(userId || 'anon', transcript, context || {});
-    return c.json(result);
-  } catch (error: any) {
-    console.error("Nexus Endpoint Error:", error);
-    return c.json({ error: error.message }, 500);
+app.get("*", async (c) => {
+  if (c.req.path.startsWith("/make-server-f9553289/")) {
+    return c.json({ error: "Not found" }, 404);
+  }
+
+  try {
+    const html = await fs.readFile("build/index.html", "utf8");
+    return c.html(html);
+  } catch {
+    return c.text("Frontend build not found. Run `npm run build` before starting the server.", 404);
   }
 });
 

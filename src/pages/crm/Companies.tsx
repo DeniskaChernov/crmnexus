@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useChunkedList } from '../../hooks/useChunkedList';
 import { crm } from "@/lib/crmClient.ts";
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -22,14 +23,15 @@ import { toast } from 'sonner@2.0.3';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { downloadCSV, formatDateForExport } from '../../utils/exportUtils';
 import { useIsMobile } from '../../components/ui/use-mobile';
+import { useCrmAiClient } from '../../context/CrmAiClientContext.tsx';
 
 interface Lead {
   id: string;
   name: string;
-  type: string;
-  city: string;
+  type?: string;
+  city?: string;
   status: string;
-  phone: string;
+  phone?: string;
   created_at: string;
 }
 
@@ -38,6 +40,7 @@ export default function Companies() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
   const [activeTab, setActiveTab] = useState('all');
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -62,8 +65,8 @@ export default function Companies() {
       if (error) throw error;
       setLeads(data || []);
     } catch (err: any) {
-      console.error('Error fetching leads:', err);
-      setError(err.message || 'Не удалось загрузить лиды');
+      console.error('Error fetching companies:', err);
+      setError(err.message || 'Не удалось загрузить компании');
     } finally {
       setLoading(false);
     }
@@ -86,13 +89,13 @@ export default function Companies() {
 
       if (error) throw error;
 
-      toast.success('Лид удалён');
+      toast.success('Компания удалена');
       fetchLeads();
       setDeleteDialogOpen(false);
       setLeadToDelete(null);
     } catch (err: any) {
       console.error('Error deleting lead:', err);
-      toast.error('Ошибка при удалении лида');
+      toast.error('Ошибка при удалении компании');
     } finally {
       setDeletingLead(false);
     }
@@ -101,7 +104,27 @@ export default function Companies() {
   const handleEditLead = (lead: Lead) => {
     setEditingLead(lead);
     setEditDialogOpen(true);
+    setFocus({ kind: "company", id: lead.id, label: lead.name });
   };
+
+  const filteredLeads = useMemo(() => {
+    const q = deferredSearch.trim().toLowerCase();
+    return leads.filter((lead) => {
+      const matchesSearch =
+        !q ||
+        lead.name.toLowerCase().includes(q) ||
+        (lead.city && lead.city.toLowerCase().includes(q)) ||
+        (lead.phone && lead.phone.toLowerCase().includes(q)) ||
+        (lead.type && lead.type.toLowerCase().includes(q));
+
+      const matchesTab = activeTab === 'all' || lead.status === activeTab;
+
+      return matchesSearch && matchesTab;
+    });
+  }, [leads, deferredSearch, activeTab]);
+
+  const { visibleItems: visibleLeads, sentinelRef, hasMore, visibleCount, total: leadsTotal } =
+    useChunkedList(filteredLeads, `${activeTab}|${deferredSearch}`, 30);
 
   const exportLeads = () => {
     if (filteredLeads.length === 0) {
@@ -113,7 +136,8 @@ export default function Companies() {
       'hot': 'Горячий',
       'warm': 'Тёплый',
       'cold': 'Холодный',
-      'new': 'Новый'
+      'new': 'Новый',
+      'active': 'Активный',
     };
 
     const exportData = filteredLeads.map(lead => ({
@@ -125,20 +149,9 @@ export default function Companies() {
       'Дата создания': formatDateForExport(lead.created_at)
     }));
 
-    downloadCSV(exportData, `leads-${new Date().toISOString().split('T')[0]}`);
-    toast.success('Лиды экспортированы');
+    downloadCSV(exportData, `companies-${new Date().toISOString().split('T')[0]}`);
+    toast.success('Компании экспортированы');
   };
-
-  // Filter by Search and Tab
-  const filteredLeads = leads.filter(lead => {
-    const matchesSearch = lead.name.toLowerCase().includes(search.toLowerCase()) ||
-                          (lead.city && lead.city.toLowerCase().includes(search.toLowerCase())) ||
-                          (lead.phone && lead.phone.toLowerCase().includes(search.toLowerCase()));
-    
-    const matchesTab = activeTab === 'all' || lead.status === activeTab;
-
-    return matchesSearch && matchesTab;
-  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -185,7 +198,7 @@ export default function Companies() {
   };
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
+    <div className="space-y-6 h-full flex flex-col animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">B2B</h2>
@@ -228,19 +241,25 @@ export default function Companies() {
         </div>
 
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all">Все{!isMobile && ' лиды'}</TabsTrigger>
-            <TabsTrigger value="cold" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
-                <Snowflake className="mr-0 sm:mr-2 h-4 w-4" />
-                {!isMobile && 'Холодные'}
+          <TabsList className="flex w-full flex-wrap gap-1 h-auto justify-stretch p-1">
+            <TabsTrigger value="all" className="flex-1 min-w-[4.5rem]">Все</TabsTrigger>
+            <TabsTrigger
+              value="active"
+              className="flex-1 min-w-[4.5rem] data-[state=active]:bg-green-100 data-[state=active]:text-green-800"
+            >
+              Активные
             </TabsTrigger>
-            <TabsTrigger value="warm" className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-700">
-                <Sun className="mr-0 sm:mr-2 h-4 w-4" />
-                {!isMobile && 'Тёплые'}
+            <TabsTrigger value="cold" className="flex-1 min-w-[4.5rem] data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
+              <Snowflake className="mr-0 sm:mr-1 h-4 w-4 shrink-0" />
+              {!isMobile && 'Холодные'}
             </TabsTrigger>
-            <TabsTrigger value="hot" className="data-[state=active]:bg-red-100 data-[state=active]:text-red-700">
-                <Flame className="mr-0 sm:mr-2 h-4 w-4" />
-                {!isMobile && 'Горячие'}
+            <TabsTrigger value="warm" className="flex-1 min-w-[4.5rem] data-[state=active]:bg-orange-100 data-[state=active]:text-orange-700">
+              <Sun className="mr-0 sm:mr-1 h-4 w-4 shrink-0" />
+              {!isMobile && 'Тёплые'}
+            </TabsTrigger>
+            <TabsTrigger value="hot" className="flex-1 min-w-[4.5rem] data-[state=active]:bg-red-100 data-[state=active]:text-red-700">
+              <Flame className="mr-0 sm:mr-1 h-4 w-4 shrink-0" />
+              {!isMobile && 'Горячие'}
             </TabsTrigger>
           </TabsList>
 
@@ -258,12 +277,12 @@ export default function Companies() {
                   <CardContent className="py-8">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <User className="h-8 w-8 mb-2 opacity-20" />
-                      <p>Лиды не найдены</p>
+                      <p>Компании не найдены</p>
                     </div>
                   </CardContent>
                 </Card>
               ) : (
-                filteredLeads.map((lead) => (
+                visibleLeads.map((lead) => (
                   <Card key={lead.id} className="overflow-hidden">
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
@@ -339,12 +358,12 @@ export default function Companies() {
                       <TableCell colSpan={6} className="text-center h-32 text-muted-foreground">
                         <div className="flex flex-col items-center justify-center">
                           <User className="h-8 w-8 mb-2 opacity-20" />
-                          <p>Лиды не найдены</p>
+                          <p>Компании не найдены</p>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredLeads.map((lead) => (
+                    visibleLeads.map((lead) => (
                       <TableRow key={lead.id}>
                         <TableCell className="font-medium">{lead.name}</TableCell>
                         <TableCell>{lead.phone || '-'}</TableCell>
@@ -379,13 +398,27 @@ export default function Companies() {
             </div>
           )}
         </Tabs>
+
+        {!loading && leadsTotal > 0 && (
+          <div className="text-center">
+            <div ref={sentinelRef} className="h-3 w-full" aria-hidden />
+            {hasMore && (
+              <p className="text-xs text-muted-foreground pt-1">
+                Загружено {visibleCount} из {leadsTotal}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {editingLead && (
         <EditCompanyDialog
           company={editingLead}
           open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) clearFocus();
+          }}
           onSuccess={fetchLeads}
         />
       )}
@@ -393,9 +426,9 @@ export default function Companies() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Удаление лида</AlertDialogTitle>
+            <AlertDialogTitle>Удаление компании</AlertDialogTitle>
             <AlertDialogDescription>
-              Вы уверены, что хотите удалить лид {leadToDelete?.name}?
+              Вы уверены, что хотите удалить компанию «{leadToDelete?.name}»?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

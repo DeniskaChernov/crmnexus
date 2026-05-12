@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { crmUrl, authHeaders } from '../lib/crmApi.ts';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { crmUrl } from '../lib/crmApi.ts';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { crm } from "@/lib/crmClient.ts";
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner@2.0.3';
-import { Command, ArrowRight, CheckCircle2, User as UserIcon } from 'lucide-react';
+import { Command, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -15,6 +15,23 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromPath =
+    typeof (location.state as { from?: { pathname?: string } } | null)?.from?.pathname === 'string'
+      ? (location.state as { from: { pathname: string } }).from.pathname
+      : '/';
+
+  useEffect(() => {
+    let cancelled = false;
+    crm.auth.getSession().then(({ data: { session } }) => {
+      if (!cancelled && session) {
+        navigate(fromPath, { replace: true });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fromPath, navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +69,7 @@ export default function Login() {
         });
         
         if (signInError) throw signInError;
-        navigate('/');
+        navigate(fromPath, { replace: true });
         
       } else {
         const { error } = await crm.auth.signInWithPassword({
@@ -60,7 +77,7 @@ export default function Login() {
           password,
         });
         if (error) throw error;
-        navigate('/');
+        navigate(fromPath, { replace: true });
       }
     } catch (error: unknown) {
       console.error(error);
@@ -124,7 +141,17 @@ export default function Login() {
                     <div className="flex items-center justify-between">
                         <Label htmlFor="password" className="text-xs font-semibold uppercase text-slate-500 tracking-wider">Пароль</Label>
                         {!isSignUp && (
-                            <a href="#" className="text-xs font-medium text-slate-900 hover:text-slate-700">Забыли пароль?</a>
+                            <button
+                              type="button"
+                              className="text-xs font-medium text-slate-600 hover:text-slate-900 underline-offset-2 hover:underline"
+                              onClick={() =>
+                                toast.info(
+                                  'Сброс пароля выполняет администратор: раздел «Пользователи» в настройках.',
+                                )
+                              }
+                            >
+                              Забыли пароль?
+                            </button>
                         )}
                     </div>
                     <Input 
@@ -204,7 +231,7 @@ export default function Login() {
                 <h2 className="text-2xl font-bold text-slate-900">Управляйте бизнесом на новом уровне</h2>
                 <ul className="space-y-3">
                     {[
-                        'Автоматический расчет воронки продаж',
+                        'Автоматический расчёт воронки продаж',
                         'Интеграция с почтой и мессенджерами',
                         'Умная аналитика на базе AI'
                     ].map((item, i) => (

@@ -70,6 +70,20 @@ export const getByPrefix = async (prefix: string): Promise<any[]> => {
   return rows.map((r) => r.value);
 };
 
+/** Последние записи по updated_at (для тяжёлых префиксов без полного выборочного списка). */
+export const getByPrefixRecent = async (
+  prefix: string,
+  limit: number,
+): Promise<{ key: string; value: any }[]> => {
+  const pool = getPool();
+  const lim = Math.max(1, Math.min(200, Math.floor(limit)));
+  const { rows } = await pool.query<{ key: string; value: unknown }>(
+    `SELECT key, value FROM crm_kv WHERE key LIKE $1 ORDER BY updated_at DESC NULLS LAST LIMIT $2`,
+    [`${prefix}%`, lim],
+  );
+  return rows.map((r) => ({ key: r.key, value: r.value }));
+};
+
 export const scanByKeyLike = async (
   likePattern: string,
 ): Promise<{ key: string; value: any }[]> => {

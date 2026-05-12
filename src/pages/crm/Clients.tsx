@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useChunkedList } from '../../hooks/useChunkedList';
 import { crm } from "@/lib/crmClient.ts";
 import { 
   Table, 
@@ -62,6 +63,7 @@ export default function Clients() {
   const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
   
   // Sort States
   const [sortField, setSortField] = useState<SortField | null>(null);
@@ -143,10 +145,9 @@ export default function Clients() {
 
     try {
       const payload = {
-          name: formData.name,
-          phone: formData.phone,
-          // email: formData.email, // Check if table supports this
-          // notes: formData.notes
+          name: formData.name.trim(),
+          phone: formData.phone.trim() || null,
+          email: formData.email.trim() || null,
       };
       
       let error;
@@ -214,58 +215,68 @@ export default function Clients() {
     setIsAddOpen(true);
   };
 
-  const getClientDeals = (client: Client) => {
-    // Get contact IDs that belong to this company
+  const getClientDeals = useCallback((client: Client) => {
     const companyContactIds = contacts
       .filter(contact => contact.company_id === client.company_id)
       .map(contact => contact.id);
 
-    // Filter deals that match either:
-    // 1. company_id matches this client's company_id
-    // 2. contact_id matches any contact that belongs to this company
-    return deals.filter(deal => 
-      deal.company_id === client.company_id || 
+    return deals.filter(deal =>
+      deal.company_id === client.company_id ||
       (deal.contact_id && companyContactIds.includes(deal.contact_id))
     );
-  };
+  }, [contacts, deals]);
 
-  const getClientStats = (client: Client) => {
+  const getClientStats = useCallback((client: Client) => {
     const clientDeals = getClientDeals(client);
     const wonDeals = clientDeals.filter(d => d.status === 'won');
-    
+
     const totalSpent = wonDeals.reduce((sum, d) => sum + (d.amount || 0), 0);
-    const lastOrder = wonDeals.length > 0 
-      ? new Date(Math.max(...wonDeals.map(d => new Date(d.created_at).getTime()))) 
+    const lastOrder = wonDeals.length > 0
+      ? new Date(Math.max(...wonDeals.map(d => new Date(d.created_at).getTime())))
       : null;
 
     return { totalDeals: clientDeals.length, wonDeals: wonDeals.length, ltv: totalSpent, lastOrder };
-  };
+  }, [getClientDeals]);
 
-  const filteredClients = clients.filter(c => 
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    (c.phone && c.phone.includes(search)) ||
-    (c.email && c.email.toLowerCase().includes(search.toLowerCase()))
-  );
+  const sortedClients = useMemo(() => {
+    const q = deferredSearch.trim().toLowerCase();
+    const filtered = q
+      ? clients.filter(c =>
+          c.name.toLowerCase().includes(q) ||
+          (c.phone && c.phone.toLowerCase().includes(q)) ||
+          (c.email && c.email.toLowerCase().includes(q))
+        )
+      : clients;
 
-  const sortedClients = filteredClients.sort((a, b) => {
-    if (!sortField) return 0;
-    if (sortField === 'name') {
-      return sortDirection === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
-    } else if (sortField === 'orders') {
-      const aStats = getClientStats(a);
-      const bStats = getClientStats(b);
-      return sortDirection === 'asc' ? aStats.wonDeals - bStats.wonDeals : bStats.wonDeals - aStats.wonDeals;
-    } else if (sortField === 'ltv') {
-      const aStats = getClientStats(a);
-      const bStats = getClientStats(b);
-      return sortDirection === 'asc' ? aStats.ltv - bStats.ltv : bStats.ltv - aStats.ltv;
-    }
-    return 0;
-  });
+    const arr = [...filtered];
+    if (!sortField || !sortDirection) return arr;
+
+    arr.sort((a, b) => {
+      if (sortField === 'name') {
+        return sortDirection === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+      }
+      if (sortField === 'orders') {
+        const aStats = getClientStats(a);
+        const bStats = getClientStats(b);
+        return sortDirection === 'asc' ? aStats.wonDeals - bStats.wonDeals : bStats.wonDeals - aStats.wonDeals;
+      }
+      if (sortField === 'ltv') {
+        const aStats = getClientStats(a);
+        const bStats = getClientStats(b);
+        return sortDirection === 'asc' ? aStats.ltv - bStats.ltv : bStats.ltv - aStats.ltv;
+      }
+      return 0;
+    });
+    return arr;
+  }, [clients, deferredSearch, sortField, sortDirection, getClientStats]);
+
+  const chunkResetKey = `${deferredSearch}|${sortField}|${sortDirection}`;
+  const { visibleItems: visibleClients, sentinelRef, hasMore, visibleCount, total: clientsTotal } =
+    useChunkedList(sortedClients, chunkResetKey, 28);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortField(field);
       setSortDirection('asc');
@@ -308,7 +319,7 @@ export default function Clients() {
              ) : sortedClients.length === 0 ? (
                 <div className="text-center py-8 text-slate-500">Клиенты не найдены</div>
              ) : (
-                sortedClients.map(client => {
+                visibleClients.map(client => {
                    const stats = getClientStats(client);
                    return (
                       <Card key={client.id} onClick={() => setSelectedClient(client)} className="shadow-none border border-slate-200">
@@ -316,7 +327,7 @@ export default function Clients() {
                             <div className="flex justify-between items-start">
                                <div className="flex items-center gap-2">
                                   <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                                     {client.name.slice(0,2).toUpperCase()}
+                                     {(client.name || '?').slice(0, 2).toUpperCase()}
                                   </div>
                                   <div>
                                      <div className="font-medium text-slate-900">{client.name}</div>
@@ -417,14 +428,14 @@ export default function Clients() {
                 </TableCell>
               </TableRow>
             ) : (
-              sortedClients.map(client => {
+              visibleClients.map(client => {
                 const stats = getClientStats(client);
                 return (
                   <TableRow key={client.id} className="group cursor-pointer hover:bg-slate-50" onClick={() => setSelectedClient(client)}>
                     <TableCell className="font-medium text-slate-900">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                          {client.name.slice(0,2).toUpperCase()}
+                          {(client.name || '?').slice(0, 2).toUpperCase()}
                         </div>
                         {client.name}
                       </div>
@@ -470,6 +481,16 @@ export default function Clients() {
           </TableBody>
         </Table>
         )}
+        {!loading && clientsTotal > 0 && (
+          <div className="px-4 pb-3 text-center">
+            <div ref={sentinelRef} className="h-3 w-full" aria-hidden />
+            {hasMore && (
+              <p className="text-xs text-muted-foreground pt-1">
+                Загружено {visibleCount} из {clientsTotal}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Dialog */}
@@ -498,6 +519,15 @@ export default function Clients() {
                 onChange={e => setFormData({...formData, phone: e.target.value})} 
               />
             </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                placeholder="name@company.com"
+                value={formData.email}
+                onChange={e => setFormData({ ...formData, email: e.target.value })}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button onClick={handleSave}>Сохранить</Button>
@@ -510,7 +540,7 @@ export default function Clients() {
         <SheetContent className="w-full sm:max-w-[800px] overflow-y-auto">
           {selectedClient && (() => {
              const stats = getClientStats(selectedClient);
-             const clientDeals = getClientDeals(selectedClient).sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+             const clientDeals = [...getClientDeals(selectedClient)].sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
              return (
               <div className="space-y-6">
@@ -541,7 +571,10 @@ export default function Clients() {
                       <span className="text-slate-500">Телефон:</span>
                       <span className="font-medium">{selectedClient.phone || '-'}</span>
                     </div>
-                    {/* Add more fields if available in companies table */}
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Email:</span>
+                      <span className="font-medium">{selectedClient.email || '—'}</span>
+                    </div>
                   </div>
                 </div>
 

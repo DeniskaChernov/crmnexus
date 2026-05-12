@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { crmUrl, authHeaders } from '../../lib/crmApi.ts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -23,6 +23,7 @@ import { CreateDealDialog } from '../../components/crm/CreateDealDialog';
 import { EditDealDialog } from '../../components/crm/EditDealDialog';
 import { DealCard } from '../../components/crm/DealCard';
 import { DealDetailSheet } from '../../components/crm/DealDetailSheet';
+import { useCrmAiClient } from '../../context/CrmAiClientContext.tsx';
 import { 
     DropdownMenu, 
     DropdownMenuContent, 
@@ -34,6 +35,7 @@ import {
 import { Pencil } from 'lucide-react';
 
 export default function Deals() {
+  const { setFocus, clearFocus } = useCrmAiClient();
   const [deals, setDeals] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [excludedDealIds, setExcludedDealIds] = useState<Set<string>>(new Set());
@@ -62,6 +64,10 @@ export default function Deals() {
     date: format(new Date(), 'yyyy-MM-dd'),
     note: ''
   });
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+  const DEALS_BATCH_SIZE = 24;
+  const [visibleDealsCount, setVisibleDealsCount] = useState(DEALS_BATCH_SIZE);
+  const loadMoreDealsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -70,29 +76,25 @@ export default function Deals() {
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      // 1. Fetch deals (CRM API)
-      const { data: dealsData, error } = await crm
-        .from('deals')
-        .select('*, companies(name)')
-        .order('created_at', { ascending: false });
+      const [dealsRes, paymentsRes, metaRes] = await Promise.all([
+        crm
+          .from('deals')
+          .select('*, companies(name)')
+          .order('created_at', { ascending: false }),
+        fetch(`${crmUrl('/payments')}`, {
+          headers: { ...authHeaders(false) }
+        }),
+        fetch(`${crmUrl('/deals/excluded')}`, {
+          headers: { ...authHeaders(false) }
+        }),
+      ]);
 
-      if (error) throw error;
-
-      // 2. Fetch Payments from Server KV
-      const response = await fetch(`${crmUrl('/payments')}`, {
-        headers: { ...authHeaders(false) }
-      });
-      
-      const paymentsData = response.ok ? await response.json() : [];
-
-      // 3. Fetch Excluded Metadata
-      const metaResponse = await fetch(`${crmUrl('/deals/excluded')}`, {
-        headers: { ...authHeaders(false) }
-      });
-      const metaData = metaResponse.ok ? await metaResponse.json() : { excludedIds: [] };
+      if (dealsRes.error) throw dealsRes.error;
+      const paymentsData = paymentsRes.ok ? await paymentsRes.json() : [];
+      const metaData = metaRes.ok ? await metaRes.json() : { excludedIds: [] };
       setExcludedDealIds(new Set(metaData.excludedIds || []));
 
-      setDeals(dealsData || []);
+      setDeals(dealsRes.data || []);
       setPayments(paymentsData || []);
 
     } catch (e) {
@@ -102,6 +104,138 @@ export default function Deals() {
       if (!silent) setLoading(false);
     }
   };
+
+  const openDealForEdit = useCallback((deal: any) => {
+    setDealToEdit(deal);
+    setIsEditOpen(true);
+  }, []);
+
+  const openDealForView = useCallback(
+    (deal: any) => {
+      setDealToView(deal);
+      setIsDetailOpen(true);
+      setFocus({ kind: "deal", id: String(deal.id), label: deal.title ? String(deal.title) : undefined });
+    },
+    [setFocus],
+  );
+
+  const openAddPaymentDialog = useCallback(
+    (deal: any) => {
+      setSelectedDeal(deal);
+      setNewPayment({ amount: '', date: format(new Date(), 'yyyy-MM-dd'), note: '' });
+      setIsPaymentOpen(true);
+      setFocus({ kind: "deal", id: String(deal.id), label: deal.title ? String(deal.title) : undefined });
+    },
+    [setFocus],
+  );
+
+  const paymentStatsByDeal = useMemo(() => {
+    const byDeal = new Map<string, { paidTotal: number; dealPayments: any[] }>();
+    for (const p of payments) {
+      const dealId = p?.dealId;
+      if (!dealId) continue;
+      const existing = byDeal.get(dealId);
+      if (existing) {
+        existing.paidTotal += Number(p.amount || 0);
+        existing.dealPayments.push(p);
+      } else {
+        byDeal.set(dealId, { paidTotal: Number(p.amount || 0), dealPayments: [p] });
+      }
+    }
+    return byDeal;
+  }, [payments]);
+
+  // Helper to calculate stats per deal
+  const getDealStats = (deal: any) => {
+    const paymentStats = paymentStatsByDeal.get(deal.id);
+    const paidTotal = paymentStats?.paidTotal || 0;
+    const dealPayments = paymentStats?.dealPayments || [];
+    const dealTotal = deal.amount || 0;
+    const balance = dealTotal - paidTotal;
+    const percentage = dealTotal > 0 ? (paidTotal / dealTotal) * 100 : 0;
+    return { paidTotal, balance, percentage, dealPayments };
+  };
+
+  const normalizedSearch = deferredSearchTerm.trim().toLowerCase();
+  const filteredDeals = useMemo(() => {
+    return deals.filter((deal) => {
+      // 1. Search Term
+      const dealTitle = deal.title?.toLowerCase() || '';
+      const companyName = deal.companies?.name?.toLowerCase() || '';
+      const matchesSearch = !normalizedSearch ||
+        dealTitle.includes(normalizedSearch) ||
+        companyName.includes(normalizedSearch);
+      if (!matchesSearch) return false;
+
+      // 2. Date Range Filter
+      if (dateRange?.from) {
+        const dealDate = parseISO(deal.created_at);
+        const end = dateRange.to || dateRange.from;
+        const endOfDay = new Date(end);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (!isWithinInterval(dealDate, { start: dateRange.from, end: endOfDay })) {
+          return false;
+        }
+      }
+
+      // 3. Status Filter
+      if (filterStatus !== 'all') {
+        const stats = getDealStats(deal);
+        const hasDebt = stats.balance > 0;
+        if (filterStatus === 'debt' && !hasDebt) return false;
+        if (filterStatus === 'paid' && hasDebt) return false;
+      }
+
+      return true;
+    });
+  }, [deals, normalizedSearch, dateRange, filterStatus, paymentStatsByDeal]);
+
+  useEffect(() => {
+    setVisibleDealsCount(DEALS_BATCH_SIZE);
+  }, [normalizedSearch, filterStatus, dateRange?.from?.toISOString(), dateRange?.to?.toISOString()]);
+
+  useEffect(() => {
+    if (visibleDealsCount >= filteredDeals.length) return;
+    const target = loadMoreDealsRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleDealsCount((prev) => Math.min(prev + DEALS_BATCH_SIZE, filteredDeals.length));
+        }
+      },
+      { rootMargin: '300px 0px' },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [filteredDeals.length, visibleDealsCount]);
+
+  const visibleDeals = useMemo(
+    () => filteredDeals.slice(0, visibleDealsCount),
+    [filteredDeals, visibleDealsCount],
+  );
+  const hasMoreDeals = visibleDealsCount < filteredDeals.length;
+
+  const summary = useMemo(() => {
+    let expectedRevenue = 0;
+    let receivedRevenue = 0;
+    let debtTotal = 0;
+
+    for (const d of filteredDeals) {
+      if (excludedDealIds.has(d.id)) continue;
+      const stats = getDealStats(d);
+      receivedRevenue += stats.paidTotal;
+      if (d.status === 'open' || d.status === 'won') {
+        expectedRevenue += d.amount || 0;
+      }
+      if (d.status === 'won') {
+        debtTotal += stats.balance;
+      }
+    }
+
+    return { expectedRevenue, receivedRevenue, debtTotal };
+  }, [filteredDeals, excludedDealIds, paymentStatsByDeal]);
 
   const handleAddPayment = async () => {
     if (!selectedDeal || !newPayment.amount) {
@@ -193,7 +327,7 @@ export default function Deals() {
                     dealId: deal.id,
                     amount: stats.balance,
                     date: format(new Date(), 'yyyy-MM-dd'),
-                    note: 'Автомтическое погашение'
+                    note: 'Автоматическое погашение'
                     })
                 });
                 toast.loading(`Погашение долгов: ${i + 1}/${dealsToPay.length}...`, { id: loadingToast });
@@ -256,48 +390,6 @@ export default function Deals() {
     }
   };
 
-  // Helper to calculate stats per deal
-  const getDealStats = (deal: any) => {
-    const dealPayments = payments.filter(p => p.dealId === deal.id);
-    const paidTotal = dealPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-    const dealTotal = deal.amount || 0;
-    const balance = dealTotal - paidTotal;
-    const percentage = dealTotal > 0 ? (paidTotal / dealTotal) * 100 : 0;
-    
-    return { paidTotal, balance, percentage, dealPayments };
-  };
-
-  const filteredDeals = deals.filter(deal => {
-    // 1. Search Term
-    const matchesSearch = deal.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          deal.companies?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    if (!matchesSearch) return false;
-
-    // 2. Date Range Filter
-    if (dateRange?.from) {
-        const dealDate = parseISO(deal.created_at);
-        const end = dateRange.to || dateRange.from;
-        // Adjust end date to end of day to include deals created on that day
-        const endOfDay = new Date(end);
-        endOfDay.setHours(23, 59, 59, 999);
-        
-        if (!isWithinInterval(dealDate, { start: dateRange.from, end: endOfDay })) {
-            return false;
-        }
-    }
-
-    // 3. Status Filter
-    if (filterStatus !== 'all') {
-        const stats = getDealStats(deal);
-        const hasDebt = stats.balance > 0;
-        
-        if (filterStatus === 'debt' && !hasDebt) return false;
-        if (filterStatus === 'paid' && hasDebt) return false;
-    }
-
-    return true;
-  });
-
   const getFilterLabel = () => {
     if (!dateRange?.from) return "За все время";
     
@@ -320,9 +412,6 @@ export default function Deals() {
     }
     return format(dateRange.from, 'dd MMM yyyy', { locale: ru });
   };
-
-  // Filter payments to exclude those from deleted deals
-  const validPayments = payments.filter(p => deals.some(d => d.id === p.dealId));
 
   return (
     <div className="p-4 md:p-8 space-y-8 max-w-[1600px] mx-auto pb-24">
@@ -361,7 +450,7 @@ export default function Deals() {
           <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input 
-                  placeholder="Поик по названию..." 
+                  placeholder="Поиск по названию..." 
                   className="pl-9 w-full bg-white border-slate-200 rounded-xl h-11 shadow-sm"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -405,9 +494,7 @@ export default function Deals() {
             <CardContent>
                 <div className="text-3xl font-bold">
                     {new Intl.NumberFormat('uz-UZ').format(
-                        filteredDeals
-                            .filter(d => !excludedDealIds.has(d.id) && (d.status === 'open' || d.status === 'won'))
-                            .reduce((sum, d) => sum + (d.amount || 0), 0)
+                        summary.expectedRevenue
                     )}
                 </div>
                 <div className="text-xs text-slate-400 mt-1">Сумма контрактов (отображаемых)</div>
@@ -421,12 +508,7 @@ export default function Deals() {
             <CardContent>
                 <div className="text-3xl font-bold">
                     {new Intl.NumberFormat('uz-UZ').format(
-                        filteredDeals
-                            .filter(d => !excludedDealIds.has(d.id))
-                            .reduce((sum, deal) => {
-                                 const stats = getDealStats(deal);
-                                 return sum + stats.paidTotal;
-                            }, 0)
+                        summary.receivedRevenue
                     )}
                 </div>
                 <div className="text-xs text-emerald-100 mt-1">Оплаты по отображаемым сделкам</div>
@@ -440,9 +522,7 @@ export default function Deals() {
             <CardContent>
                 <div className="text-3xl font-bold text-red-500">
                     {new Intl.NumberFormat('uz-UZ').format(
-                        filteredDeals
-                            .filter(d => !excludedDealIds.has(d.id) && d.status === 'won')
-                            .reduce((sum, d) => sum + getDealStats(d).balance, 0)
+                        summary.debtTotal
                     )}
                 </div>
                 <div className="text-xs text-slate-400 mt-1">Долг по отображаемым сделкам</div>
@@ -651,14 +731,21 @@ export default function Deals() {
       {/* Deals List */}
       <div className="grid gap-6">
         {loading ? (
-            <div className="text-center py-12 text-slate-500">Загрузка данных...</div>
+            <div className="grid gap-4">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="h-36 rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 animate-pulse"
+                />
+              ))}
+            </div>
         ) : filteredDeals.length === 0 ? (
             <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
                 <p className="text-slate-500">Сделки не найдены</p>
             </div>
         ) : (
             <AnimatePresence>
-            {filteredDeals.map((deal, index) => {
+            {visibleDeals.map((deal) => {
                 const stats = getDealStats(deal);
                 
                 return (
@@ -667,28 +754,18 @@ export default function Deals() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.2, delay: index * 0.05 }}
+                        transition={{ duration: 0.18 }}
                         layout
                     >
                         <DealCard 
                             deal={deal}
                             stats={stats}
                             isExcluded={excludedDealIds.has(deal.id)}
-                            onEdit={(d) => {
-                                setDealToEdit(d);
-                                setIsEditOpen(true);
-                            }}
+                            onEdit={openDealForEdit}
                             onDelete={handleDeleteDeal}
-                            onAddPayment={(d) => {
-                                setSelectedDeal(d);
-                                setNewPayment({ amount: '', date: format(new Date(), 'yyyy-MM-dd'), note: '' });
-                                setIsPaymentOpen(true);
-                            }}
+                            onAddPayment={openAddPaymentDialog}
                             onDeletePayment={handleDeletePayment}
-                            onView={(d) => {
-                                setDealToView(d);
-                                setIsDetailOpen(true);
-                            }}
+                            onView={openDealForView}
                         />
                     </motion.div>
                 );
@@ -696,6 +773,13 @@ export default function Deals() {
             </AnimatePresence>
         )}
       </div>
+      {!loading && hasMoreDeals && (
+        <div ref={loadMoreDealsRef} className="h-10 flex items-center justify-center">
+          <span className="text-xs text-slate-400">
+            Загружено {visibleDeals.length} из {filteredDeals.length}
+          </span>
+        </div>
+      )}
 
       {/* Add Payment Dialog */}
       <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
@@ -703,7 +787,7 @@ export default function Deals() {
             <DialogHeader className="mb-4">
                 <DialogTitle className="text-xl font-bold text-slate-900">Внести оплату</DialogTitle>
                 <DialogDescription className="text-slate-500">
-                    {selectedDeal ? `По сдел��е: ${selectedDeal.title}` : 'Укажите сумму и дату оплаты'}
+                    {selectedDeal ? `По сделке: ${selectedDeal.title}` : 'Укажите сумму и дату оплаты'}
                 </DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-2">
@@ -783,7 +867,10 @@ export default function Deals() {
         deal={dealToView}
         stats={dealToView ? getDealStats(dealToView) : null}
         open={isDetailOpen} 
-        onOpenChange={setIsDetailOpen}
+        onOpenChange={(open) => {
+          setIsDetailOpen(open);
+          if (!open) clearFocus();
+        }}
         onEdit={(d) => {
           setIsDetailOpen(false);
           setDealToEdit(d);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { memo, useMemo } from 'react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -44,7 +44,7 @@ interface DealCardProps {
     onDeletePayment: (id: string) => void;
 }
 
-export const DealCard: React.FC<DealCardProps> = ({ 
+export const DealCard = memo(function DealCard({ 
     deal, 
     stats, 
     isExcluded,
@@ -53,9 +53,15 @@ export const DealCard: React.FC<DealCardProps> = ({
     onDelete, 
     onAddPayment, 
     onDeletePayment 
-}) => {
-    const [isPaymentsOpen, setIsPaymentsOpen] = useState(false);
+}: DealCardProps) {
     const isPaid = stats.balance <= 0;
+    const sortedPayments = useMemo(
+      () =>
+        [...stats.dealPayments].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        ),
+      [stats.dealPayments],
+    );
 
     return (
         <Card className={`overflow-hidden transition-all hover:shadow-md group cursor-pointer ${ 
@@ -186,7 +192,7 @@ export const DealCard: React.FC<DealCardProps> = ({
                                     Нет поступлений
                                 </div>
                             ) : (
-                                stats.dealPayments.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(payment => (
+                                sortedPayments.map(payment => (
                                     <div key={payment.id} className="bg-white p-2.5 rounded-lg border border-slate-100 shadow-sm flex justify-between items-center group/pay" onClick={e => e.stopPropagation()}>
                                         <div>
                                             <div className="font-bold text-emerald-600 text-sm">
@@ -220,4 +226,6 @@ export const DealCard: React.FC<DealCardProps> = ({
             </div>
         </Card>
     );
-};
+});
+
+DealCard.displayName = 'DealCard';

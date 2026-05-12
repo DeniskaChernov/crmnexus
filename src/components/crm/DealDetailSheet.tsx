@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { crmUrl, authHeaders } from '../../lib/crmApi.ts';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '../ui/sheet';
 import { Button } from '../ui/button';
@@ -60,6 +60,10 @@ const fmtCompact = (n: number) =>
 export function DealDetailSheet({
   deal, stats, open, onOpenChange, onEdit, onDelete, onPaymentAdded, onPaymentDeleted,
 }: DealDetailSheetProps) {
+  const ITEMS_BATCH_SIZE = 24;
+  const PAYMENTS_BATCH_SIZE = 20;
+  const TIMELINE_BATCH_SIZE = 20;
+
   const [isAddingPayment, setIsAddingPayment] = useState(false);
   const [paymentForm, setPaymentForm] = useState({ amount: '', date: format(new Date(), 'yyyy-MM-dd'), note: '' });
   const [submittingPayment, setSubmittingPayment] = useState(false);
@@ -71,6 +75,12 @@ export function DealDetailSheet({
   const [loadingTimeline, setLoadingTimeline] = useState(false);
 
   const [activeTab, setActiveTab] = useState('payments');
+  const [visibleItemsCount, setVisibleItemsCount] = useState(ITEMS_BATCH_SIZE);
+  const [visiblePaymentsCount, setVisiblePaymentsCount] = useState(PAYMENTS_BATCH_SIZE);
+  const [visibleTimelineCount, setVisibleTimelineCount] = useState(TIMELINE_BATCH_SIZE);
+
+  const itemsCacheRef = useRef(new Map<string, any[]>());
+  const timelineCacheRef = useRef(new Map<string, TimelineEvent[]>());
 
   useEffect(() => {
     if (open && deal) {
@@ -79,33 +89,61 @@ export function DealDetailSheet({
       setActiveTab('payments');
       setDealItems([]);
       setTimeline([]);
+      setVisibleItemsCount(ITEMS_BATCH_SIZE);
+      setVisiblePaymentsCount(PAYMENTS_BATCH_SIZE);
+      setVisibleTimelineCount(TIMELINE_BATCH_SIZE);
     }
   }, [open, deal?.id]);
 
-  useEffect(() => {
-    if (open && deal && activeTab === 'items') fetchItems();
-    if (open && deal && activeTab === 'timeline') fetchTimeline();
-  }, [activeTab, open, deal?.id]);
-
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     if (!deal?.id) return;
+    const cached = itemsCacheRef.current.get(deal.id);
+    if (cached) {
+      setDealItems(cached);
+      return;
+    }
     setLoadingItems(true);
     try {
       const res = await fetch(`${crmUrl(`/deal-items/${deal.id}`)}`, {
         headers: { ...authHeaders(false) },
       });
-      setDealItems(res.ok ? await res.json() : []);
+      const items = res.ok ? await res.json() : [];
+      setDealItems(items);
+      itemsCacheRef.current.set(deal.id, items);
     } catch { setDealItems([]); }
     finally { setLoadingItems(false); }
-  };
+  }, [deal?.id]);
 
-  const fetchTimeline = async () => {
+  const fetchTimeline = useCallback(async () => {
     if (!deal?.id) return;
+    const cached = timelineCacheRef.current.get(deal.id);
+    if (cached) {
+      setTimeline(cached);
+      return;
+    }
     setLoadingTimeline(true);
-    try { setTimeline(await getTimeline(deal.id)); }
+    try {
+      const data = await getTimeline(deal.id);
+      setTimeline(data);
+      timelineCacheRef.current.set(deal.id, data);
+    }
     catch { setTimeline([]); }
     finally { setLoadingTimeline(false); }
-  };
+  }, [deal?.id]);
+
+  useEffect(() => {
+    if (open && deal && activeTab === 'items') void fetchItems();
+    if (open && deal && activeTab === 'timeline') void fetchTimeline();
+  }, [activeTab, open, deal?.id, fetchItems, fetchTimeline]);
+
+  const handlePaymentDelete = useCallback(
+    (paymentId: string) => {
+      if (deal?.id) timelineCacheRef.current.delete(deal.id);
+      if (activeTab === 'timeline') void fetchTimeline();
+      onPaymentDeleted(paymentId);
+    },
+    [deal?.id, activeTab, fetchTimeline, onPaymentDeleted],
+  );
 
   const handleAddPayment = async () => {
     if (!deal || !paymentForm.amount) { toast.error('Введите сумму'); return; }
@@ -120,6 +158,8 @@ export function DealDetailSheet({
       toast.success('Оплата добавлена');
       setPaymentForm({ amount: '', date: format(new Date(), 'yyyy-MM-dd'), note: '' });
       setIsAddingPayment(false);
+      timelineCacheRef.current.delete(deal.id);
+      if (activeTab === 'timeline') void fetchTimeline();
       onPaymentAdded();
     } catch { toast.error('Ошибка сохранения'); }
     finally { setSubmittingPayment(false); }
@@ -130,9 +170,38 @@ export function DealDetailSheet({
   const statusCfg = STATUS_CONFIG[deal.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.open;
   const StatusIcon = statusCfg.icon;
   const isPaid = stats.balance <= 0;
-  const sortedPayments = [...stats.dealPayments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const itemsTotal = dealItems.reduce((s, i) =>
-    s + (parseFloat(String(i.quantity).replace(',', '.')) || 0) * (parseFloat(String(i.price).replace(',', '.')) || 0), 0);
+  const sortedPayments = useMemo(
+    () => [...stats.dealPayments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [stats.dealPayments],
+  );
+  const visiblePayments = useMemo(
+    () => sortedPayments.slice(0, visiblePaymentsCount),
+    [sortedPayments, visiblePaymentsCount],
+  );
+  const hasMorePayments = visiblePaymentsCount < sortedPayments.length;
+
+  const itemsTotal = useMemo(
+    () =>
+      dealItems.reduce(
+        (s, i) =>
+          s +
+          (parseFloat(String(i.quantity).replace(',', '.')) || 0) *
+            (parseFloat(String(i.price).replace(',', '.')) || 0),
+        0,
+      ),
+    [dealItems],
+  );
+  const visibleItems = useMemo(
+    () => dealItems.slice(0, visibleItemsCount),
+    [dealItems, visibleItemsCount],
+  );
+  const hasMoreItems = visibleItemsCount < dealItems.length;
+
+  const visibleTimeline = useMemo(
+    () => timeline.slice(0, visibleTimelineCount),
+    [timeline, visibleTimelineCount],
+  );
+  const hasMoreTimeline = visibleTimelineCount < timeline.length;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -253,13 +322,13 @@ export function DealDetailSheet({
                 ) : (
                   <div className="space-y-2">
                     <AnimatePresence initial={false}>
-                      {sortedPayments.map((payment, idx) => (
+                      {visiblePayments.map((payment) => (
                         <motion.div
                           key={payment.id}
                           initial={{ opacity: 0, y: -8 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, x: 20 }}
-                          transition={{ duration: 0.2, delay: idx * 0.03 }}
+                          transition={{ duration: 0.18 }}
                           className="flex items-center gap-3 bg-white border border-slate-100 rounded-xl px-4 py-3 shadow-sm hover:border-slate-200 hover:shadow transition-all group/pay"
                         >
                           <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
@@ -275,7 +344,7 @@ export function DealDetailSheet({
                             </p>
                           </div>
                           <button
-                            onClick={() => onPaymentDeleted(payment.id)}
+                            onClick={() => handlePaymentDelete(payment.id)}
                             className="opacity-0 group-hover/pay:opacity-100 transition-all w-7 h-7 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 flex items-center justify-center flex-shrink-0"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -283,6 +352,15 @@ export function DealDetailSheet({
                         </motion.div>
                       ))}
                     </AnimatePresence>
+                    {hasMorePayments && (
+                      <button
+                        type="button"
+                        className="w-full h-9 rounded-xl border border-dashed border-slate-200 text-xs text-slate-500 hover:text-slate-900 hover:border-slate-400 transition-colors"
+                        onClick={() => setVisiblePaymentsCount((prev) => prev + PAYMENTS_BATCH_SIZE)}
+                      >
+                        Показать ещё оплаты ({sortedPayments.length - visiblePayments.length})
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -414,7 +492,7 @@ export function DealDetailSheet({
                       <div className="col-span-2 text-right">Сумма</div>
                     </div>
 
-                    {dealItems.map((item, i) => {
+                    {visibleItems.map((item, i) => {
                       const qty = parseFloat(String(item.quantity).replace(',', '.')) || 0;
                       const price = parseFloat(String(item.price).replace(',', '.')) || 0;
                       const total = qty * price;
@@ -445,6 +523,15 @@ export function DealDetailSheet({
                         </div>
                       );
                     })}
+                    {hasMoreItems && (
+                      <button
+                        type="button"
+                        className="w-full h-9 rounded-xl border border-dashed border-slate-200 text-xs text-slate-500 hover:text-slate-900 hover:border-slate-400 transition-colors mt-2"
+                        onClick={() => setVisibleItemsCount((prev) => prev + ITEMS_BATCH_SIZE)}
+                      >
+                        Показать ещё товары ({dealItems.length - visibleItems.length})
+                      </button>
+                    )}
 
                     {/* Totals */}
                     <div className="bg-slate-900 rounded-xl px-4 py-3 flex items-center justify-between mt-3">
@@ -478,7 +565,7 @@ export function DealDetailSheet({
                     {/* Vertical line */}
                     <div className="absolute left-[18px] top-5 bottom-5 w-px bg-slate-100" />
 
-                    {timeline.map((evt, i) => {
+                    {visibleTimeline.map((evt, i) => {
                       const tCfg = TIMELINE_TYPE_CONFIG[evt.type] || TIMELINE_TYPE_CONFIG.update;
                       const TIcon = tCfg.icon;
                       return (
@@ -486,7 +573,7 @@ export function DealDetailSheet({
                           key={i}
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.04 }}
+                          transition={{ duration: 0.18 }}
                           className="flex gap-3 relative"
                         >
                           {/* Dot */}
@@ -511,6 +598,15 @@ export function DealDetailSheet({
                         </motion.div>
                       );
                     })}
+                    {hasMoreTimeline && (
+                      <button
+                        type="button"
+                        className="w-full h-9 rounded-xl border border-dashed border-slate-200 text-xs text-slate-500 hover:text-slate-900 hover:border-slate-400 transition-colors mt-2"
+                        onClick={() => setVisibleTimelineCount((prev) => prev + TIMELINE_BATCH_SIZE)}
+                      >
+                        Показать ещё события ({timeline.length - visibleTimeline.length})
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

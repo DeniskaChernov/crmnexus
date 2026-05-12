@@ -61,12 +61,12 @@ export function EditCompanyDialog({ company, open, onOpenChange, onSuccess }: Ed
 
       if (error) throw error;
 
-      toast.success('Лид обновлен');
+      toast.success('Компания обновлена');
       onOpenChange(false);
       onSuccess();
     } catch (error: any) {
-      console.error('Error updating lead:', error);
-      toast.error('Ошибка при обновлении лида');
+      console.error('Error updating company:', error);
+      toast.error(error?.message || 'Ошибка при обновлении компании');
     } finally {
       setLoading(false);
     }
@@ -76,9 +76,9 @@ export function EditCompanyDialog({ company, open, onOpenChange, onSuccess }: Ed
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Редактировать лид</DialogTitle>
+          <DialogTitle>Редактировать компанию</DialogTitle>
           <DialogDescription>
-            Измените информацию о лиде или поменяйте его статус.
+            Измените данные компании или статус в воронке.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">

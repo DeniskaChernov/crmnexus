@@ -5,8 +5,10 @@ import { isSafeIdent } from "../sqlSafe.ts";
 import { verifyBearer } from "../jwt.ts";
 
 type Verb = "select" | "insert" | "update" | "delete" | "count";
-type FilterOp = "eq" | "in" | "gte" | "lte" | "neq";
+type FilterOp = "eq" | "in" | "gte" | "lte" | "neq" | "ilike";
 type FilterTuple = [FilterOp, string, unknown];
+
+const MAX_ILIKE_LEN = 300;
 
 const CRM_TABLES = new Set([
   "deals",
@@ -54,6 +56,10 @@ function validateFilterTuple(f: unknown, allowedOps: Set<FilterOp>): string | nu
   if (!allowedOps.has(op)) return `Unsupported filter op: ${String(op)}`;
   if (!isSafeIdent(col)) return `Invalid column: ${col}`;
   if (op === "in" && !Array.isArray(val)) return `IN expects array for column: ${col}`;
+  if (op === "ilike") {
+    if (typeof val !== "string") return `ILIKE expects string for column: ${col}`;
+    if (val.length > MAX_ILIKE_LEN) return `ILIKE pattern too long for column: ${col}`;
+  }
   return null;
 }
 
@@ -78,7 +84,7 @@ export function registerCrmRunRoute(app: Hono) {
       const db = createClient();
 
       if (verb === "select") {
-        const filterOps = new Set<FilterOp>(["eq", "in", "gte", "lte", "neq"]);
+        const filterOps = new Set<FilterOp>(["eq", "in", "gte", "lte", "neq", "ilike"]);
         for (const f of filters) {
           const err = validateFilterTuple(f, filterOps);
           if (err) return c.json({ data: null, error: { message: err } }, 400);
@@ -95,6 +101,7 @@ export function registerCrmRunRoute(app: Hono) {
           else if (op === "gte") q = q.gte(a, b);
           else if (op === "lte") q = q.lte(a, b);
           else if (op === "neq") q = q.neq(a, b);
+          else if (op === "ilike") q = q.ilike(a, b);
         }
         if (body.order) q = q.order(body.order.col, body.order.opts);
         if (body.limit != null) q = q.limit(body.limit);

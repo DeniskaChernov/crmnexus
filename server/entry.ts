@@ -1,8 +1,10 @@
 import "dotenv/config";
 import { validateServerEnv } from "../src/server/validateEnv.ts";
-validateServerEnv();
 import { serve } from "@hono/node-server";
-import app from "../src/server/index.tsx";
+
+validateServerEnv();
+
+const { default: app } = await import("../src/server/index.tsx");
 
 const port = Number(process.env["PORT"] || 4000);
 

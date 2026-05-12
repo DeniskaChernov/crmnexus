@@ -52,6 +52,10 @@ class SelectChain {
     this.filters.push(["lte", col, val]);
     return this;
   }
+  ilike(col: string, val: unknown) {
+    this.filters.push(["ilike", col, val]);
+    return this;
+  }
   order(col: string, opts?: { ascending?: boolean }) {
     this.orderSpec = { col, opts };
     return this;

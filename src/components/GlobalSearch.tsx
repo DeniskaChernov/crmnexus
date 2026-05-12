@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useDeferredValue, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CommandDialog,
@@ -22,19 +22,40 @@ interface SearchResult {
   url: string;
 }
 
+/** Экранируем спецсимволы шаблона LIKE на стороне клиента (сервер всё равно параметризует). */
+function searchPattern(query: string): string | null {
+  const raw = query.trim().slice(0, 120).replace(/[%_\\]/g, '');
+  if (raw.length < 2) return null;
+  return `%${raw}%`;
+}
+
+function dedupeById<T extends { id: string }>(rows: (T | null | undefined)[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const r of rows) {
+    if (r?.id && !seen.has(r.id)) {
+      seen.add(r.id);
+      out.push(r);
+    }
+  }
+  return out;
+}
+
 export default function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const deferredSearch = useDeferredValue(search);
+  const cacheRef = useRef<Map<string, SearchResult[]>>(new Map());
+  const requestIdRef = useRef(0);
 
-  // Keyboard shortcut: Cmd+K or Ctrl+K
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((open) => !open);
+        setOpen((o) => !o);
       }
     };
 
@@ -42,26 +63,74 @@ export default function GlobalSearch() {
     return () => document.removeEventListener('keydown', down);
   }, []);
 
-  // Search across all entities
   useEffect(() => {
+    const openFromChrome = () => setOpen(true);
+    window.addEventListener('crm-open-global-search', openFromChrome);
+    return () => window.removeEventListener('crm-open-global-search', openFromChrome);
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setLoading(false);
+      return;
+    }
+
     const searchData = async () => {
-      if (!search || search.length < 2) {
+      const query = deferredSearch.trim().toLowerCase();
+      const pattern = searchPattern(query);
+      if (!pattern) {
         setResults([]);
         return;
       }
 
+      if (cacheRef.current.has(query)) {
+        setResults(cacheRef.current.get(query) || []);
+        return;
+      }
+
+      const reqId = ++requestIdRef.current;
       setLoading(true);
       const searchResults: SearchResult[] = [];
 
       try {
-        // Search deals
-        const { data: deals } = await crm
-          .from('deals')
-          .select('id, title, amount, status, companies(name)')
-          .or(`title.ilike.%${search}%`)
-          .limit(5);
+        const [
+          dealsRes,
+          companiesNameRes,
+          companiesIndustryRes,
+          contactsFn,
+          contactsLn,
+          contactsEmail,
+          tasksTitleRes,
+          tasksDescRes,
+        ] = await Promise.all([
+          crm
+            .from('deals')
+            .select('id, title, amount, status, companies(name)')
+            .ilike('title', pattern)
+            .limit(5),
+          crm.from('companies').select('id, name, industry').ilike('name', pattern).limit(5),
+          crm.from('companies').select('id, name, industry').ilike('industry', pattern).limit(5),
+          crm
+            .from('contacts')
+            .select('id, first_name, last_name, email, position, companies(name)')
+            .ilike('first_name', pattern)
+            .limit(5),
+          crm
+            .from('contacts')
+            .select('id, first_name, last_name, email, position, companies(name)')
+            .ilike('last_name', pattern)
+            .limit(5),
+          crm
+            .from('contacts')
+            .select('id, first_name, last_name, email, position, companies(name)')
+            .ilike('email', pattern)
+            .limit(5),
+          crm.from('tasks').select('id, title, status, priority').ilike('title', pattern).limit(5),
+          crm.from('tasks').select('id, title, status, priority').ilike('description', pattern).limit(5),
+        ]);
 
-        deals?.forEach(deal => {
+        const deals = Array.isArray(dealsRes.data) ? dealsRes.data : [];
+        deals.forEach((deal: any) => {
           searchResults.push({
             id: deal.id,
             type: 'deal',
@@ -69,72 +138,85 @@ export default function GlobalSearch() {
             subtitle: deal.companies?.name,
             status: deal.status,
             amount: deal.amount,
-            url: '/deals'
+            url: '/deals',
           });
         });
 
-        // Search companies
-        const { data: companies } = await crm
-          .from('companies')
-          .select('id, name, industry')
-          .or(`name.ilike.%${search}%,industry.ilike.%${search}%`)
-          .limit(5);
-
-        companies?.forEach(company => {
+        const companies = dedupeById([
+          ...(Array.isArray(companiesNameRes.data) ? companiesNameRes.data : []),
+          ...(Array.isArray(companiesIndustryRes.data) ? companiesIndustryRes.data : []),
+        ]);
+        companies.forEach((company: any) => {
           searchResults.push({
             id: company.id,
             type: 'company',
             title: company.name,
             subtitle: company.industry,
-            url: '/companies'
+            url: '/database',
           });
         });
 
-        // Search contacts
-        const { data: contacts } = await crm
-          .from('contacts')
-          .select('id, first_name, last_name, email, position, companies(name)')
-          .or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,position.ilike.%${search}%`)
-          .limit(5);
-
-        contacts?.forEach(contact => {
+        const contactRows = dedupeById([
+          ...(Array.isArray(contactsFn.data) ? contactsFn.data : []),
+          ...(Array.isArray(contactsLn.data) ? contactsLn.data : []),
+          ...(Array.isArray(contactsEmail.data) ? contactsEmail.data : []),
+        ]);
+        contactRows.forEach((contact: any) => {
+          const displayName =
+            [contact.first_name, contact.last_name].filter(Boolean).join(' ').trim() ||
+            contact.name ||
+            contact.email ||
+            'Контакт';
           searchResults.push({
             id: contact.id,
             type: 'contact',
-            title: `${contact.first_name} ${contact.last_name}`,
+            title: displayName,
             subtitle: contact.companies?.name || contact.email,
-            url: '/contacts'
+            url: '/database',
           });
         });
 
-        // Search tasks
-        const { data: tasks } = await crm
-          .from('tasks')
-          .select('id, title, status, priority')
-          .or(`title.ilike.%${search}%,description.ilike.%${search}%`)
-          .limit(5);
-
-        tasks?.forEach(task => {
+        const tasks = dedupeById([
+          ...(Array.isArray(tasksTitleRes.data) ? tasksTitleRes.data : []),
+          ...(Array.isArray(tasksDescRes.data) ? tasksDescRes.data : []),
+        ]);
+        tasks.forEach((task: any) => {
           searchResults.push({
             id: task.id,
             type: 'task',
             title: task.title,
             status: task.status,
-            url: '/tasks'
+            url: '/tasks',
           });
         });
 
-        setResults(searchResults);
+        if (reqId !== requestIdRef.current) return;
+
+        const rankedResults = searchResults
+          .sort((a, b) => {
+            const typePriority = { deal: 1, company: 2, contact: 3, task: 4 } as const;
+            return typePriority[a.type] - typePriority[b.type];
+          })
+          .slice(0, 24);
+
+        if (cacheRef.current.size > 60) {
+          const oldest = cacheRef.current.keys().next().value;
+          if (oldest) cacheRef.current.delete(oldest);
+        }
+        cacheRef.current.set(query, rankedResults);
+        setResults(rankedResults);
       } catch (error) {
         console.error('Search error:', error);
       } finally {
-        setLoading(false);
+        if (reqId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
 
     const debounce = setTimeout(searchData, 300);
     return () => clearTimeout(debounce);
-  }, [search]);
+  }, [deferredSearch, open]);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -200,24 +282,30 @@ export default function GlobalSearch() {
   return (
     <CommandDialog 
       open={open} 
-      onOpenChange={setOpen}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setSearch('');
+      }}
       title="Глобальный поиск"
-      description="Поиск сделок, компаний, контактов и задач в системе CRM"
+      description="Поиск сделок, компаний, контактов и задач в CRM"
     >
       <CommandInput 
-        placeholder="Поиск сделок, компаний, контактов, задач..." 
+        placeholder="Сделки, компании, контакты, задачи…" 
         value={search}
         onValueChange={setSearch}
       />
       <CommandList>
         {!search && (
           <div className="py-6 text-center text-sm text-muted-foreground">
-            Начните вводить для поиска...
+            Начните вводить запрос (от 2 символов)…
             <div className="mt-2 flex items-center justify-center gap-1 text-xs">
               <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
                 <span className="text-xs">⌘</span>K
               </kbd>
-              для быстрого доступа
+              <span>или</span>
+              <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                Ctrl+K
+              </kbd>
             </div>
           </div>
         )}
@@ -228,7 +316,7 @@ export default function GlobalSearch() {
 
         {loading && (
           <div className="py-6 text-center text-sm text-muted-foreground">
-            Поиск...
+            Поиск…
           </div>
         )}
 
@@ -256,9 +344,9 @@ export default function GlobalSearch() {
                     {result.subtitle && (
                       <div className="text-xs text-muted-foreground">{result.subtitle}</div>
                     )}
-                    {result.amount && (
+                    {result.amount != null && (
                       <div className="text-xs text-green-600 font-medium">
-                        {result.amount.toLocaleString('uz-UZ')} UZS
+                        {Number(result.amount).toLocaleString('uz-UZ')} UZS
                       </div>
                     )}
                   </div>

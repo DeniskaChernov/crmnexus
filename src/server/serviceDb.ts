@@ -16,13 +16,14 @@ const TABLES = new Set([
   "tasks",
   "leads",
   "calendar_events",
+  "crm_users",
 ]);
 
 function err(message: string) {
   return { message };
 }
 
-type Filter = { col: string; op: "=" | ">=" | "<=" | "<>" | "IN"; val: unknown };
+type Filter = { col: string; op: "=" | ">=" | "<=" | "<>" | "IN" | "ILIKE"; val: unknown };
 
 class BaseBuilder {
   protected filters: Filter[] = [];
@@ -51,6 +52,10 @@ class BaseBuilder {
   }
   neq(col: string, val: unknown) {
     this.filters.push({ col, op: "<>", val });
+    return this;
+  }
+  ilike(col: string, val: unknown) {
+    this.filters.push({ col, op: "ILIKE", val });
     return this;
   }
   order(col: string, opts?: { ascending?: boolean }) {
@@ -93,6 +98,9 @@ class BaseBuilder {
         const ph = arr.map(() => `$${i++}`).join(", ");
         vals.push(...arr);
         parts.push(`${col} IN (${ph})`);
+      } else if (f.op === "ILIKE") {
+        parts.push(`${col} ILIKE $${i++}`);
+        vals.push(f.val);
       } else {
         parts.push(`${col} ${f.op} $${i++}`);
         vals.push(f.val);
@@ -279,7 +287,7 @@ class UpdateBuilder extends BaseBuilder {
 
   async execute(): Promise<{ data: any; error: any }> {
     const pool = getPool();
-    const keys = Object.keys(this.patch);
+    const keys = Object.keys(this.patch).filter((k) => this.patch[k] !== undefined);
     if (!keys.length) return { data: null, error: null };
     for (const k of keys) quoteIdent(k);
     const vals = keys.map((k) => this.patch[k]);

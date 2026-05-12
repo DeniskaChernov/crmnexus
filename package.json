@@ -74,6 +74,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "start": "tsx server/entry.ts",
     "server": "tsx server/entry.ts",
     "migrate": "node server/migrate.mjs",
     "smoke": "node scripts/smoke.mjs"

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useChunkedList } from '../../hooks/useChunkedList';
 import { crm } from "@/lib/crmClient.ts";
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -23,12 +24,15 @@ import { AlertCircle, RefreshCcw, Search, User, Mail, Download, Pencil, Trash2, 
 import { downloadCSV, formatDateForExport } from '../../utils/exportUtils';
 import { toast } from 'sonner@2.0.3';
 import { useIsMobile } from '../../components/ui/use-mobile';
+import { useCrmAiClient } from '../../context/CrmAiClientContext.tsx';
 
 export default function Contacts() {
+  const { setFocus, clearFocus } = useCrmAiClient();
   const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
   const [editingContact, setEditingContact] = useState<any | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -64,11 +68,15 @@ export default function Contacts() {
   const handleViewDetails = (contact: any) => {
     setSelectedContactId(contact.id);
     setDetailsSheetOpen(true);
+    const nm = [contact.first_name, contact.last_name].filter(Boolean).join(" ");
+    setFocus({ kind: "contact", id: String(contact.id), label: nm || undefined });
   };
 
   const handleEditContact = (contact: any) => {
     setEditingContact(contact);
     setEditDialogOpen(true);
+    const nm = [contact.first_name, contact.last_name].filter(Boolean).join(" ");
+    setFocus({ kind: "contact", id: String(contact.id), label: nm || undefined });
   };
 
   const handleDeleteClick = (contact: any) => {
@@ -100,10 +108,23 @@ export default function Contacts() {
     }
   };
 
-  const filteredContacts = contacts.filter(c => 
-    (c.first_name + ' ' + c.last_name).toLowerCase().includes(search.toLowerCase()) ||
-    c.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredContacts = useMemo(() => {
+    const q = deferredSearch.trim().toLowerCase();
+    if (!q) return contacts;
+    return contacts.filter((c) => {
+      const full = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
+      const company = (c.companies?.name || '').toLowerCase();
+      return (
+        full.includes(q) ||
+        (c.email && c.email.toLowerCase().includes(q)) ||
+        (c.phone && String(c.phone).toLowerCase().includes(q)) ||
+        company.includes(q)
+      );
+    });
+  }, [contacts, deferredSearch]);
+
+  const { visibleItems: visibleContacts, sentinelRef, hasMore, visibleCount, total: contactsTotal } =
+    useChunkedList(filteredContacts, deferredSearch, 32);
 
   const exportContacts = () => {
     if (filteredContacts.length === 0) {
@@ -126,7 +147,7 @@ export default function Contacts() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">B2C</h2>
@@ -159,7 +180,7 @@ export default function Contacts() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Поиск по имени или email..."
+            placeholder="Поиск по имени, email, телефону или компании..."
             className="pl-8"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -178,7 +199,7 @@ export default function Contacts() {
                   <p>Нет контактов</p>
                 </div>
              ) : (
-                filteredContacts.map(contact => (
+                visibleContacts.map(contact => (
                   <Card key={contact.id} onClick={() => handleViewDetails(contact)} className="shadow-none border border-slate-200">
                      <CardContent className="p-4 space-y-3">
                         <div className="flex justify-between items-start">
@@ -258,7 +279,7 @@ export default function Contacts() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredContacts.map((contact) => (
+              visibleContacts.map((contact) => (
                 <TableRow key={contact.id} className="cursor-pointer hover:bg-slate-50" onClick={() => handleViewDetails(contact)}>
                   <TableCell className="font-medium">
                     <span className="hover:underline text-slate-900">{contact.first_name} {contact.last_name}</span>
@@ -299,6 +320,16 @@ export default function Contacts() {
             )}
           </TableBody>
         </Table>
+        )}
+        {!loading && contactsTotal > 0 && (
+          <div className="text-center px-4 pb-2">
+            <div ref={sentinelRef} className="h-3 w-full" aria-hidden />
+            {hasMore && (
+              <p className="text-xs text-muted-foreground pt-1">
+                Загружено {visibleCount} из {contactsTotal}
+              </p>
+            )}
+          </div>
         )}
       </div>
 

@@ -38,26 +38,26 @@ export function CreateCompanyDialog({ onSuccess }: CreateCompanyDialogProps) {
   const onSubmit = async (data: any) => {
     setLoading(true);
     try {
-      const { error } = await crm.from('companies').insert([
-        {
-          name: data.name,
-          phone: data.phone,
-          city: data.city,
-          type: data.type, // Keep this as existing 'type'
-          status: data.status || 'cold', // Map our new lead status here
-          notes: data.notes,
-        },
-      ]);
+      const row: Record<string, unknown> = {
+        name: data.name?.trim(),
+        phone: data.phone?.trim() || null,
+        status: data.status || 'cold',
+      };
+      if (data.city?.trim()) row.city = data.city.trim();
+      if (data.type) row.type = String(data.type).trim();
+      if (data.notes?.trim()) row.notes = data.notes.trim();
+
+      const { error } = await crm.from('companies').insert([row]);
 
       if (error) throw error;
 
-      toast.success('Лид успешно создан');
+      toast.success('Компания создана');
       setOpen(false);
       reset();
       onSuccess();
     } catch (error: any) {
-      console.error('Error creating lead:', error);
-      toast.error('Ошибка при создании лида');
+      console.error('Error creating company:', error);
+      toast.error(error?.message || 'Ошибка при создании компании');
     } finally {
       setLoading(false);
     }
@@ -67,14 +67,14 @@ export function CreateCompanyDialog({ onSuccess }: CreateCompanyDialogProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
-          <Plus className="mr-2 h-4 w-4" /> Добавить лид
+          <Plus className="mr-2 h-4 w-4" /> Добавить компанию
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Новый лид</DialogTitle>
+          <DialogTitle>Новая компания</DialogTitle>
           <DialogDescription>
-            Добавьте нового потенциального клиента.
+            Карточка компании в базе B2B (лиды и статусы).
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
@@ -101,9 +101,11 @@ export function CreateCompanyDialog({ onSuccess }: CreateCompanyDialogProps) {
                   <SelectValue placeholder="Выберите статус" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="active">Активный</SelectItem>
+                  <SelectItem value="new">Новый</SelectItem>
                   <SelectItem value="cold">❄️ Холодный</SelectItem>
-                  <SelectItem value="warm">🔥 Тёплый</SelectItem>
-                  <SelectItem value="hot">🚀 Горячий</SelectItem>
+                  <SelectItem value="warm">☀️ Тёплый</SelectItem>
+                  <SelectItem value="hot">🔥 Горячий</SelectItem>
                 </SelectContent>
               </Select>
             </div>

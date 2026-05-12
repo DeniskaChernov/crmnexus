@@ -42,8 +42,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+      <div className="h-screen w-full flex flex-col items-center justify-center gap-4 bg-gradient-to-b from-slate-50 to-slate-100">
+        <div className="h-11 w-11 rounded-xl bg-slate-900 flex items-center justify-center shadow-lg shadow-slate-900/15">
+          <Loader2 className="h-6 w-6 animate-spin text-white" />
+        </div>
+        <p className="text-sm text-slate-500">Загрузка сессии…</p>
       </div>
     );
   }

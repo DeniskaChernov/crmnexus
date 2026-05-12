@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { crmUrl, authHeaders } from '../lib/crmApi.ts';
 import { crm } from "@/lib/crmClient.ts";
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { DollarSign, Users, TrendingUp, Sparkles, Target, Briefcase, Activity, Package, ArrowRight, MoreHorizontal } from 'lucide-react';
+import { DollarSign, Users, TrendingUp, Sparkles, Target, Briefcase, Activity, Package, MoreHorizontal, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -18,7 +19,7 @@ import { Badge } from '../components/ui/badge';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
 import { toast } from 'sonner@2.0.3';
 import { TodayTasksWidget } from '../components/crm/TodayTasksWidget';
-import { requestNotificationPermission, getNotificationPermission } from '../utils/pushNotifications';
+import { getNotificationPermission, getNotificationPreference } from '../utils/pushNotifications';
 import { startTaskNotifications, stopTaskNotifications } from '../utils/taskNotifications';
 
 export default function Dashboard() {
@@ -44,13 +45,14 @@ export default function Dashboard() {
   const [aiResult, setAiResult] = useState('');
   const [warehouseStats, setWarehouseStats] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
+  const [dashboardError, setDashboardError] = useState('');
 
   const [pipelines, setPipelines] = useState<any[]>([]);
   const [stages, setStages] = useState<any[]>([]);
   
   useEffect(() => {
     setMounted(true);
-    fetchStats(timeRange);
+    fetchStats(timeRange, true);
     loadPlan();
     fetchWarehouseStats();
     fetchPipelines();
@@ -126,12 +128,9 @@ export default function Dashboard() {
 
   // Initialize task notifications
   useEffect(() => {
-    const initNotifications = async () => {
-      if (getNotificationPermission() === 'default') {
-        await requestNotificationPermission();
-      }
-    };
-    initNotifications();
+    if (getNotificationPermission() !== 'granted' || !getNotificationPreference()) {
+      return;
+    }
     const interval = startTaskNotifications(10);
     return () => {
       if (interval) stopTaskNotifications(interval);
@@ -207,9 +206,10 @@ export default function Dashboard() {
     }
   };
 
-  const fetchStats = async (currentRange: string) => {
-    setLoading(true);
+  const fetchStats = async (currentRange: string, showLoader = false) => {
+    if (showLoader) setLoading(true);
     try {
+      setDashboardError('');
       // 1. Fetch raw deals
       const { data: rawDeals } = await crm.from('deals').select('*, companies(name)');
 
@@ -387,8 +387,9 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
+      setDashboardError('Не удалось обновить показатели. Проверьте подключение к API и попробуйте ещё раз.');
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
@@ -434,10 +435,10 @@ export default function Dashboard() {
     ];
 
     return (
-        <Card className="soft-card p-6">
+        <Card className="nexus-card p-6">
             <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 bg-slate-100 rounded-lg">
-                    <DollarSign className="h-4 w-4 text-slate-900" />
+                <div className="p-2 rounded-xl bg-indigo-50 ring-1 ring-indigo-100/80">
+                    <DollarSign className="h-4 w-4 text-indigo-700" />
                 </div>
                 <div>
                     <h3 className="font-bold text-slate-900">Финансы</h3>
@@ -478,7 +479,7 @@ export default function Dashboard() {
                         <span className="font-bold text-slate-900">{new Intl.NumberFormat('uz-UZ', { notation: "compact" }).format(stats.revenue)}</span>
                     </div>
                     <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-                        <div className="bg-slate-900 h-full" style={{ width: '100%' }}></div>
+                        <div className="h-full bg-gradient-to-r from-indigo-600 to-violet-600" style={{ width: '100%' }}></div>
                     </div>
                     
                     <div className="flex justify-between items-center text-xs">
@@ -516,22 +517,24 @@ export default function Dashboard() {
     const lowStock = allItems.sort((a, b) => a.qty - b.qty).slice(0, 3);
 
     return (
-      <Card className="soft-card">
+      <Card className="nexus-card">
         <CardHeader className="pb-2">
            <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-2">
-             <Package className="h-4 w-4 text-blue-500" />
+             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 ring-1 ring-slate-200/80">
+               <Package className="h-4 w-4 text-indigo-600" />
+             </span>
              Склад
            </CardTitle>
         </CardHeader>
         <CardContent className="pt-4 space-y-4">
            <div className="grid grid-cols-2 gap-4">
-               <div className="bg-slate-50 p-3 rounded-2xl">
+               <div className="bg-slate-50 p-3 rounded-2xl ring-1 ring-slate-100">
                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Всего</p>
                   <p className="text-lg font-bold text-slate-900">{totalStock.toLocaleString()} кг</p>
                </div>
-               <div className="bg-blue-50 p-3 rounded-2xl">
-                  <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wider mb-1">Производство</p>
-                  <p className="text-lg font-bold text-blue-700">{totalProduced.toLocaleString()} кг</p>
+               <div className="bg-indigo-50/80 p-3 rounded-2xl ring-1 ring-indigo-100/60">
+                  <p className="text-[10px] text-indigo-700 font-bold uppercase tracking-wider mb-1">Производство</p>
+                  <p className="text-lg font-bold text-indigo-800">{totalProduced.toLocaleString()} кг</p>
                </div>
            </div>
            
@@ -556,8 +559,13 @@ export default function Dashboard() {
   };
 
   const FunnelWidget = () => (
-    <Card className="soft-card p-6 flex flex-col min-w-0 min-h-[300px]">
-      <h3 className="font-bold text-lg text-slate-900 mb-4">Воронка</h3>
+    <Card className="nexus-card p-6 flex flex-col min-w-0 min-h-[300px]">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 ring-1 ring-indigo-100/70">
+          <Briefcase className="h-4 w-4 text-indigo-700" />
+        </span>
+        <h3 className="font-bold text-lg text-slate-900">Воронка</h3>
+      </div>
       {funnelData.length > 0 ? (
           <div className="w-full min-w-0" style={{ height: 220 }}>
              {mounted && (
@@ -588,9 +596,11 @@ export default function Dashboard() {
   );
 
   const ForecastWidget = () => (
-    <Card className="soft-card p-6">
-       <div className="flex items-center gap-2 mb-2 text-slate-500">
-          <TrendingUp className="h-4 w-4 text-green-600" />
+    <Card className="nexus-card p-6">
+       <div className="flex items-center gap-2 mb-3 text-slate-600">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 ring-1 ring-emerald-100/80">
+            <TrendingUp className="h-4 w-4 text-emerald-700" />
+          </span>
           <span className="text-xs font-bold uppercase tracking-wider">Прогноз</span>
        </div>
        <div className="mb-4">
@@ -613,9 +623,9 @@ export default function Dashboard() {
   );
 
   const StatCard = ({ title, value, icon: Icon, trend, colorClass = "bg-white" }: any) => (
-    <div className={`soft-card p-6 flex flex-col justify-between h-32 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 ${colorClass}`}>
+    <div className={`nexus-card p-6 flex flex-col justify-between min-h-[8.5rem] relative overflow-hidden group hover:-translate-y-0.5 transition-all duration-300 ${colorClass}`}>
       <div className="flex justify-between items-start z-10">
-         <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-900 shadow-sm">
+         <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-50 to-slate-50 ring-1 ring-indigo-100/70 flex items-center justify-center text-indigo-800 shadow-sm">
             <Icon className="w-5 h-5" />
          </div>
          {trend && (
@@ -632,23 +642,30 @@ export default function Dashboard() {
   );
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full text-slate-400">Загрузка...</div>;
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-slate-500">
+        <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
+        <p className="text-sm font-medium">Загружаем показатели…</p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-8 animate-in fade-in pb-10">
       
       {/* Header Area */}
-      <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+      <div className="nexus-page-hero pl-7 md:pl-9">
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-slate-900 tracking-tight mb-2">Обзор</h1>
-          <div className="flex items-center gap-2 text-sm text-slate-500">
+          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 mb-1">Дашборд</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight mb-2">Обзор</h1>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
              <span>Статистика за</span>
              <Select value={timeRange} onValueChange={setTimeRange}>
-               <SelectTrigger className="w-[140px] h-8 bg-transparent border-none font-bold text-slate-900 focus:ring-0 shadow-none px-0 gap-1 hover:text-slate-700">
+               <SelectTrigger className="w-[160px] h-9 rounded-full border border-slate-200 bg-slate-50/80 font-semibold text-slate-900 hover:bg-white focus:ring-indigo-200">
                  <SelectValue />
                </SelectTrigger>
-               <SelectContent align="end">
+               <SelectContent align="start">
                  <SelectItem value="this_month">Этот месяц</SelectItem>
                  <SelectItem value="last_month">Прошлый месяц</SelectItem>
                  <SelectItem value="this_year">Этот год</SelectItem>
@@ -657,15 +674,29 @@ export default function Dashboard() {
              </Select>
           </div>
         </div>
-        <div className="flex gap-3">
-           <Button onClick={() => setAiOpen(true)} className="rounded-full bg-white text-slate-900 border border-slate-200 shadow-sm hover:bg-slate-50">
-              <Sparkles className="w-4 h-4 mr-2" /> AI Assistant
+        <div className="flex flex-wrap gap-2 md:gap-3">
+           <Button
+             onClick={() => setAiOpen(true)}
+             variant="outline"
+             className="rounded-full border-indigo-200 bg-white text-indigo-900 shadow-sm hover:bg-indigo-50/80"
+           >
+              <Sparkles className="w-4 h-4 mr-2 text-indigo-600" /> AI-анализ
            </Button>
-           <Button onClick={() => setIsPlanDialogOpen(true)} className="rounded-full bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/20">
-              <Target className="w-4 h-4 mr-2" /> Цель
+           <Button
+             onClick={() => setIsPlanDialogOpen(true)}
+             className="rounded-full bg-gradient-to-r from-slate-900 to-indigo-950 text-white shadow-md shadow-indigo-900/25 hover:opacity-95"
+           >
+              <Target className="w-4 h-4 mr-2" /> Цель продаж
            </Button>
         </div>
+        </div>
       </div>
+
+      {dashboardError && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+          {dashboardError}
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -700,17 +731,22 @@ export default function Dashboard() {
          
          {/* Large Chart Card */}
          <div className="lg:col-span-2 space-y-6 min-w-0">
-            <Card className="soft-card p-6 min-h-[350px]">
+            <Card className="nexus-card p-6 min-h-[350px]">
                <div className="flex items-center justify-between mb-6">
-                  <div>
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 ring-1 ring-indigo-100/80">
+                      <Activity className="h-5 w-5 text-indigo-700" />
+                    </span>
+                    <div>
                       <h3 className="font-bold text-lg text-slate-900">Продажи</h3>
                       <p className="text-sm text-slate-500">Динамика выручки</p>
+                    </div>
                   </div>
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="rounded-full hover:bg-slate-100"
-                    onClick={() => toast.info('Фукционал экспорта данных в разработке')}
+                    className="rounded-full hover:bg-indigo-50"
+                    onClick={() => toast.info('Экспорт в разработке')}
                     title="Дополнительные опции"
                   >
                       <MoreHorizontal className="h-5 w-5 text-slate-400" />
@@ -722,8 +758,8 @@ export default function Dashboard() {
                         <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                           <defs>
                             <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#000000" stopOpacity={0.1}/>
-                              <stop offset="95%" stopColor="#000000" stopOpacity={0}/>
+                              <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.22}/>
+                              <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -734,7 +770,7 @@ export default function Dashboard() {
                             itemStyle={{ color: '#fff' }}
                             formatter={(value: number) => [new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', maximumFractionDigits: 0 }).format(value), '']}
                           />
-                          <Area type="monotone" dataKey="amount" stroke="#000000" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                          <Area type="monotone" dataKey="amount" stroke="#4f46e5" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
                         </AreaChart>
                       </ResponsiveContainer>
                   )}
@@ -745,27 +781,33 @@ export default function Dashboard() {
                <FunnelWidget />
 
                {/* Hot Deals List */}
-               <Card className="soft-card p-6 h-full overflow-hidden min-h-[300px]">
+               <Card className="nexus-card p-6 h-full overflow-hidden min-h-[300px]">
                   <div className="flex items-center justify-between mb-4">
                      <h3 className="font-bold text-lg text-slate-900">Активные сделки</h3>
-                     <Button variant="link" className="text-slate-500 hover:text-slate-900 p-0 h-auto text-xs">Все</Button>
+                     <Button variant="link" className="text-indigo-600 hover:text-indigo-800 p-0 h-auto text-xs font-semibold" asChild>
+                       <Link to="/deals">Все</Link>
+                     </Button>
                   </div>
                   <div className="space-y-1 overflow-y-auto max-h-[240px] pr-2 custom-scrollbar">
                      {hotDeals.map((deal) => (
-                         <div key={deal.id} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer group">
-                             <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs">
+                         <Link
+                           key={deal.id}
+                           to="/deals"
+                           className="flex items-center justify-between p-2 hover:bg-indigo-50/60 rounded-xl transition-colors cursor-pointer group border border-transparent hover:border-indigo-100"
+                         >
+                             <div className="flex items-center gap-3 min-w-0">
+                                <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-slate-100 to-indigo-50 flex items-center justify-center text-indigo-800 font-bold text-xs ring-1 ring-slate-200/80">
                                    {deal.companies?.name?.[0] || '?'}
                                 </div>
                                 <div className="min-w-0">
-                                   <p className="font-bold text-sm text-slate-900 truncate max-w-[100px]">{deal.title}</p>
+                                   <p className="font-bold text-sm text-slate-900 truncate max-w-[140px] md:max-w-[180px]">{deal.title}</p>
                                    <p className="text-[10px] text-slate-500 truncate">{deal.companies?.name}</p>
                                 </div>
                              </div>
-                             <div className="text-right">
-                                <span className="font-bold text-sm text-slate-900 block">{new Intl.NumberFormat('uz-UZ').format(deal.amount)}</span>
+                             <div className="text-right shrink-0">
+                                <span className="font-bold text-sm text-slate-900 block tabular-nums">{new Intl.NumberFormat('uz-UZ').format(deal.amount)}</span>
                              </div>
-                         </div>
+                         </Link>
                      ))}
                   </div>
                </Card>
@@ -779,22 +821,25 @@ export default function Dashboard() {
 
             {/* Plan Card (Black Card from design) */}
             {monthlyPlan > 0 && (
-                <Card className="soft-card p-6 relative overflow-hidden">
-                   <div className="absolute top-0 right-0 w-40 h-40 bg-slate-100 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                <Card className="nexus-card p-6 relative overflow-hidden">
+                   <div className="absolute top-0 right-0 w-44 h-44 bg-indigo-200/40 rounded-full blur-3xl -mr-12 -mt-12 pointer-events-none" />
                    <div className="relative z-10">
                       <div className="flex justify-between items-start mb-6">
-                         <div className="p-2 bg-slate-100 rounded-xl">
-                            <Target className="h-5 w-5 text-slate-900" />
+                         <div className="p-2 rounded-xl bg-indigo-50 ring-1 ring-indigo-100/80">
+                            <Target className="h-5 w-5 text-indigo-800" />
                          </div>
-                         <span className="text-xs font-bold bg-slate-100 px-2 py-1 rounded-full text-slate-900">
+                         <span className="text-xs font-bold bg-indigo-100/90 px-2.5 py-1 rounded-full text-indigo-900 ring-1 ring-indigo-200/60">
                             {planProgress.toFixed(0)}%
                          </span>
                       </div>
-                      <h3 className="text-3xl font-bold mb-1 text-slate-900">{planProgress.toFixed(0)}%</h3>
+                      <h3 className="text-3xl font-bold mb-1 text-slate-900 tabular-nums">{planProgress.toFixed(0)}%</h3>
                       <p className="text-slate-500 text-sm mb-6">Выполнение плана</p>
                       
-                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2">
-                         <div className="h-full bg-slate-900 rounded-full transition-all duration-1000" style={{ width: `${Math.min(planProgress, 100)}%` }}></div>
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2 ring-1 ring-slate-200/80">
+                         <div
+                           className="h-full rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 transition-all duration-1000"
+                           style={{ width: `${Math.min(planProgress, 100)}%` }}
+                         />
                       </div>
                       <div className="flex justify-between text-xs text-slate-400">
                          <span>0</span>
@@ -812,10 +857,10 @@ export default function Dashboard() {
 
       {/* Plan Dialog */}
       <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
-        <DialogContent className="soft-card max-w-sm p-6">
+        <DialogContent className="nexus-card max-w-sm p-6 border-slate-200">
           <DialogHeader>
             <DialogTitle>Цель продаж</DialogTitle>
-            <DialogDescription>Установите финансовую цель.</DialogDescription>
+            <DialogDescription>Месячная сумма в UZS для отслеживания прогресса.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -823,41 +868,44 @@ export default function Dashboard() {
                <Input 
                   value={planInput} 
                   onChange={(e) => setPlanInput(e.target.value)}
-                  className="bg-slate-50 border-none h-12 text-lg font-bold" 
+                  className="border-slate-200 bg-slate-50/80 h-12 text-lg font-bold focus-visible:ring-indigo-200" 
                />
             </div>
-            <Button onClick={savePlan} className="w-full bg-black text-white h-12 rounded-xl hover:bg-slate-800">Сохранить</Button>
+            <Button onClick={savePlan} className="w-full h-12 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-900/15">Сохранить</Button>
           </div>
         </DialogContent>
       </Dialog>
       
       {/* AI Dialog */}
       <Dialog open={aiOpen} onOpenChange={setAiOpen}>
-        <DialogContent className="soft-card max-w-2xl p-0 overflow-hidden">
-          <div className="p-6 border-b border-slate-100">
-             <DialogTitle className="flex items-center gap-2">
-               <Sparkles className="w-5 h-5 text-purple-600" />
-               AI Insights
+        <DialogContent className="nexus-card max-w-2xl p-0 overflow-hidden border-slate-200">
+          <div className="crm-ai-header-glow p-6 border-b border-slate-100">
+             <DialogTitle className="flex items-center gap-2 text-slate-900">
+               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+                 <Sparkles className="w-5 h-5" />
+               </span>
+               AI-инсайты
              </DialogTitle>
-             <DialogDescription className="text-sm text-slate-500 mt-1">
-               Анализ текущих показателей и рекомендации
+             <DialogDescription className="text-sm text-slate-600 mt-2 pl-[3.25rem]">
+               Краткий разбор текущих показателей и идей по продажам
              </DialogDescription>
           </div>
-          <div className="p-8 bg-slate-50/50 min-h-[300px]">
+          <div className="p-6 md:p-8 bg-slate-50/60 min-h-[280px]">
              {aiLoading ? (
-                 <div className="flex flex-col items-center justify-center h-full gap-4 opacity-50">
-                    <div className="animate-spin h-8 w-8 border-4 border-slate-900 border-t-transparent rounded-full"></div>
-                    <p className="text-sm font-medium">Analyzing data...</p>
+                 <div className="flex flex-col items-center justify-center min-h-[240px] gap-4 text-slate-500">
+                    <Loader2 className="h-9 w-9 animate-spin text-indigo-600" />
+                    <p className="text-sm font-medium">Анализируем данные…</p>
                  </div>
              ) : (
-                 <div className="prose prose-slate max-w-none">
-                    {aiResult || <div className="text-center text-slate-400 py-10">Нажмите "AI Анализ" для получения отчета</div>}
+                 <div className="prose prose-slate max-w-none prose-headings:text-slate-900">
+                    {aiResult || <div className="text-center text-slate-400 py-10">Нажмите «Анализировать», чтобы получить отчёт</div>}
                  </div>
              )}
           </div>
-          <div className="p-4 bg-white border-t border-slate-100 flex justify-end">
-             <Button onClick={runAIAnalysis} disabled={aiLoading} className="bg-black text-white rounded-xl px-6">
-                {aiLoading ? 'Thinking...' : 'Анализировать'}
+          <div className="p-4 bg-white border-t border-slate-100 flex justify-end gap-2">
+             <Button variant="outline" onClick={() => setAiOpen(false)} className="rounded-xl border-slate-200">Закрыть</Button>
+             <Button onClick={runAIAnalysis} disabled={aiLoading} className="rounded-xl bg-indigo-600 px-6 text-white hover:bg-indigo-700 shadow-md">
+                {aiLoading ? 'Подождите…' : 'Анализировать'}
              </Button>
           </div>
         </DialogContent>

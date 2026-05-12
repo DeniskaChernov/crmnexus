@@ -1,33 +1,34 @@
 import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  BarChart3, 
-  Briefcase, 
-  Users, 
-  CheckSquare, 
-  Package, 
-  Settings, 
-  Menu, 
-  Search, 
+import type { LucideIcon } from 'lucide-react';
+import {
+  LayoutDashboard,
+  BarChart3,
+  Briefcase,
+  Users,
+  CheckSquare,
+  Package,
+  Settings,
+  Menu,
+  Search,
   ChevronLeft,
   Plus,
-  Share,
   Trash2,
-  FileText,
   Bot,
   ChefHat,
   Calendar,
   UserPlus,
   Phone,
-  TrendingUp
+  TrendingUp,
+  UserCog,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
 import { ImageWithFallback } from "./ImageWithFallback";
 import { crm } from "@/lib/crmClient.ts";
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from './ui/sheet';
 import Notifications from './Notifications';
+import { CrmAiAssistant, openCrmAiAssistant } from './crm/CrmAiAssistant.tsx';
+import { CrmAiClientProvider, CrmAiFocusResetOnRoute } from '../context/CrmAiClientContext.tsx';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { 
   DropdownMenu, 
@@ -75,9 +76,12 @@ export default function Layout() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const userRole = user?.user_metadata?.role || 'director'; // Default to director for creator/first user
+  const userRole =
+    typeof user?.user_metadata?.role === 'string' && user.user_metadata.role
+      ? user.user_metadata.role
+      : 'manager';
   const isAdmin = userRole === 'admin' || userRole === 'director' || userRole === 'owner';
-  const isManager = userRole === 'manager' || isAdmin;
+  const userInitial = (user?.email?.trim()?.[0] || user?.user_metadata?.name?.trim?.()?.[0] || 'U').toUpperCase();
 
   const handleSignOut = async () => {
     await crm.auth.signOut();
@@ -94,26 +98,43 @@ export default function Layout() {
     { name: 'Клиенты', href: '/database', icon: Users, roles: ['admin', 'director', 'manager', 'sales', 'owner'] },
     { name: 'Аналитика', href: '/sales-analytics', icon: TrendingUp, roles: ['admin', 'director', 'manager', 'owner'] },
     { name: 'Склад', href: '/warehouse', icon: Package, roles: ['admin', 'director', 'manager', 'owner'] }, // Warehouse usually requires strict control
-    { name: 'Сотрудники', href: '/employees', icon: Users, roles: ['admin', 'director', 'manager', 'owner'] },
+    { name: 'Сотрудники', href: '/employees', icon: UserCog, roles: ['admin', 'director', 'manager', 'owner'] },
     { name: 'Маркетинг', href: '/marketing', icon: BarChart3, roles: ['admin', 'director', 'manager', 'owner'] },
   ];
 
   const topNavigation = allNavigation.filter(item => item.roles.includes(userRole));
+  const navPills =
+    topNavigation.length > 0
+      ? topNavigation
+      : allNavigation.filter((i) => i.href === '/');
+  const isNavActive = (href: string) =>
+    href === '/'
+      ? location.pathname === '/'
+      : location.pathname === href || location.pathname.startsWith(`${href}/`);
 
-  // Combine everything for mobile menu
-  const mobileNavigation = [
-    { name: 'Лиды', href: '/leads', icon: UserPlus }, // Add leads back for mobile menu
-    ...topNavigation,
-    { name: 'Библиотека Рецептов', href: '/recipes', icon: ChefHat },
-    { name: 'AI Чат', href: '/ai-chat', icon: Bot },
-    ...(isAdmin ? [{ name: 'Настройки', href: '/settings', icon: Settings }] : [])
+  type MobileNavItem =
+    | { name: string; href: string; icon: LucideIcon }
+    | { name: string; icon: LucideIcon; openAiSheet: true };
+
+  const mobileNavigation: MobileNavItem[] = [
+    { name: 'Лиды', href: '/leads', icon: UserPlus },
+    ...navPills.map((item) => ({
+      name: item.name,
+      href: item.href,
+      icon: item.icon,
+    })),
+    { name: 'Библиотека рецептов', href: '/recipes', icon: ChefHat },
+    { name: 'CRM ИИ', icon: Bot, openAiSheet: true },
+    ...(isAdmin ? [{ name: 'Настройки', href: '/settings', icon: Settings }] : []),
   ];
 
   return (
-    <div className="min-h-screen flex font-sans text-slate-600 bg-background overflow-hidden">
+    <CrmAiClientProvider>
+    <CrmAiFocusResetOnRoute>
+    <div className="min-h-screen flex font-sans text-slate-600 nexus-app overflow-hidden">
       
-      {/* 1. Left Icon Sidebar (Fixed strip) */}
-      <aside className="hidden md:flex flex-col items-center py-6 w-20 bg-background/60 backdrop-blur-md z-50 border-r border-slate-100/50">
+      {/* 1. Left Icon Sidebar (Fixed strip) — единая «стеклянная» колонка под Nexus Ops */}
+      <aside className="hidden md:flex flex-col items-center py-6 w-20 z-50 border-r border-slate-200/80 bg-white/75 backdrop-blur-xl shadow-[inset_-1px_0_0_rgba(148,163,184,0.12)]">
         <div className="mb-8">
            {/* Back button */}
            <Button 
@@ -136,8 +157,8 @@ export default function Layout() {
              onClick={() => navigate('/leads')}
              className={`h-10 w-10 rounded-xl transition-colors ${
                location.pathname.startsWith('/leads')
-                 ? 'bg-blue-100 text-blue-700 shadow-sm'
-                 : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'
+                 ? 'bg-indigo-100 text-indigo-800 shadow-sm ring-1 ring-indigo-200/60'
+                 : 'text-slate-500 hover:text-indigo-700 hover:bg-indigo-50/80'
              }`}
              title="Лиды (Холодные)"
            >
@@ -147,7 +168,7 @@ export default function Layout() {
            {/* Quick Create Menu */}
            <DropdownMenu>
              <DropdownMenuTrigger asChild>
-               <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Создать">
+               <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-slate-500 hover:text-indigo-700 hover:bg-indigo-50/80 transition-colors" title="Создать">
                   <Plus className="h-5 w-5" />
                </Button>
              </DropdownMenuTrigger>
@@ -176,8 +197,8 @@ export default function Layout() {
              onClick={() => navigate('/deals')}
              className={`h-10 w-10 rounded-xl transition-colors ${
                location.pathname.startsWith('/deals')
-                 ? 'bg-blue-100 text-blue-700 shadow-sm'
-                 : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'
+                 ? 'bg-indigo-100 text-indigo-800 shadow-sm ring-1 ring-indigo-200/60'
+                 : 'text-slate-500 hover:text-indigo-700 hover:bg-indigo-50/80'
              }`}
              title="Сделки (Воронки)"
            >
@@ -189,27 +210,23 @@ export default function Layout() {
              variant="ghost" 
              size="icon" 
              onClick={() => navigate('/sales-analytics')}
-             className={`h-10 w-10 rounded-xl transition-colors ${
+             className={`h-10 w-10 rounded-xl transition-all duration-300 ${
                location.pathname === '/sales-analytics' 
                  ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-md' 
                  : 'text-slate-400 hover:text-green-600 hover:bg-green-50'
              }`}
-             title="Аналитика и Отчеты"
+             title="Аналитика и отчёты"
            >
               <TrendingUp className="h-5 w-5" />
            </Button>
 
-           {/* AI Chat */}
+           {/* Встроенный CRM ИИ */}
            <Button 
              variant="ghost" 
              size="icon" 
-             onClick={() => navigate('/ai-chat')}
-             className={`h-10 w-10 rounded-xl transition-all ${
-               location.pathname === '/ai-chat'
-                 ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-md hover:shadow-lg scale-105'
-                 : 'text-slate-400 hover:text-purple-600 hover:bg-purple-50'
-             }`}
-             title="AI Чат"
+             onClick={() => openCrmAiAssistant()}
+             className="h-10 w-10 rounded-xl transition-all duration-300 text-slate-400 hover:text-violet-700 hover:bg-violet-50 hover:scale-105 active:scale-95 hover:shadow-md hover:shadow-violet-200/50"
+             title="CRM ИИ (панель)"
            >
               <Bot className="h-5 w-5" />
            </Button>
@@ -219,7 +236,7 @@ export default function Layout() {
              variant="ghost" 
              size="icon" 
              onClick={() => navigate('/recipes')}
-             className={`h-10 w-10 rounded-xl transition-colors ${
+             className={`h-10 w-10 rounded-xl transition-all duration-300 ${
                location.pathname === '/recipes'
                  ? 'bg-emerald-100 text-emerald-700 shadow-sm'
                  : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'
@@ -255,39 +272,30 @@ export default function Layout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
         
-        {/* 2. Top Navigation Bar (Pill menu + Search + Profile) */}
-        <header className="h-16 md:h-24 px-4 md:px-8 flex items-center justify-between shrink-0 bg-transparent z-40">
+        {/* 2. Top bar — карточка вместо «висит в воздухе» */}
+        <header className="shrink-0 z-40 px-3 pt-3 pb-2 md:px-5 md:pt-4 md:pb-3">
+          <div className="nexus-header-surface flex min-h-[3.5rem] md:min-h-[4.25rem] items-center justify-between gap-2 px-3 py-2 md:px-5 md:py-2.5">
            
            {/* Logo / Brand Name */}
-           <div className="flex items-center gap-3 mr-4 md:mr-8">
-              <Link to="/" className="block">
+           <div className="flex items-center gap-3 mr-2 md:mr-6 shrink-0">
+              <Link to="/" className="block rounded-full ring-1 ring-slate-200/80 shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]">
                  <ImageWithFallback 
                     src={bttLogo} 
                     alt="BTT Nexus" 
-                    className="h-10 md:h-12 w-auto object-contain bg-slate-900 rounded-full px-3 py-1.5 md:px-4 md:py-2 shadow-md"
+                    className="h-10 md:h-11 w-auto object-contain bg-gradient-to-br from-slate-800 to-slate-950 rounded-full px-3 py-1.5 md:px-4 md:py-2"
                  />
               </Link>
            </div>
 
            {/* Center Menu - Pills */}
-           <nav className="hidden md:flex items-center gap-1 flex-1 overflow-x-auto custom-scrollbar px-4">
-              {(topNavigation && topNavigation.length > 0 ? topNavigation : [
-                { name: 'Дашборд', href: '/' },
-                // Leads removed from here
-                { name: 'Сделки', href: '/deals' },
-                { name: 'Задачи', href: '/tasks' },
-                { name: 'Контакты', href: '/database' },
-                { name: 'Аналитика', href: '/sales-analytics' },
-                { name: 'Склад', href: '/warehouse' },
-                { name: 'Сотрудники', href: '/employees' },
-                { name: 'Маркетинг', href: '/marketing' },
-              ]).map((item) => {
-                const isActive = location.pathname === item.href;
+           <nav className="hidden md:flex items-center gap-1 flex-1 min-w-0 overflow-x-auto custom-scrollbar px-2">
+              {navPills.map((item) => {
+                const isActive = isNavActive(item.href);
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`whitespace-nowrap text-sm transition-all duration-300 rounded-full ${
+                    className={`whitespace-nowrap text-sm transition-all duration-300 rounded-full will-change-transform ${
                       isActive 
                         ? 'nav-pill-active' 
                         : 'nav-pill-inactive'
@@ -300,15 +308,21 @@ export default function Layout() {
            </nav>
 
            {/* Right Actions */}
-           <div className="flex items-center gap-4 ml-4">
+           <div className="flex items-center gap-2 md:gap-3 ml-2 shrink-0">
               {/* Search Pill */}
-              <div className="hidden lg:flex items-center bg-white rounded-full px-4 py-2 shadow-sm border border-slate-100 w-64">
+             <div className="hidden lg:flex items-center bg-slate-50/90 rounded-full px-4 py-2 border border-slate-200/90 w-64 xl:w-72 transition-all duration-300 hover:bg-white hover:shadow-md hover:border-indigo-200/60 focus-within:ring-2 focus-within:ring-indigo-200/70 focus-within:border-indigo-200/80 focus-within:bg-white">
                  <Search className="h-4 w-4 text-slate-400 mr-2" />
                  <input 
                     type="text" 
-                    placeholder="Search..." 
-                    className="bg-transparent border-none outline-none text-sm w-full placeholder:text-slate-400"
+                    readOnly
+                    placeholder="Поиск…" 
+                    className="bg-transparent border-none outline-none text-sm w-full placeholder:text-slate-400 cursor-pointer"
+                    onFocus={() => window.dispatchEvent(new Event('crm-open-global-search'))}
+                    onClick={() => window.dispatchEvent(new Event('crm-open-global-search'))}
                  />
+                 <span className="ml-2 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-500">
+                   Ctrl+K
+                 </span>
               </div>
 
               <Notifications />
@@ -318,7 +332,7 @@ export default function Layout() {
                    <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 overflow-hidden border-2 border-white shadow-sm hover:scale-105 transition-transform">
                      <Avatar className="h-full w-full">
                        <AvatarFallback className="bg-orange-100 text-orange-600">
-                         {user?.email?.[0].toUpperCase()}
+                         {userInitial}
                        </AvatarFallback>
                      </Avatar>
                    </Button>
@@ -333,7 +347,7 @@ export default function Layout() {
            </div>
            
            {/* Mobile Menu Toggle */}
-           <div className="md:hidden ml-4">
+           <div className="md:hidden ml-1">
              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
                <SheetTrigger asChild>
                  <Button variant="ghost" size="icon">
@@ -344,35 +358,58 @@ export default function Layout() {
                  <SheetTitle className="sr-only">Меню навигации</SheetTitle>
                  <SheetDescription className="sr-only">Основное меню мобильной навигации</SheetDescription>
                  <div className="flex flex-col gap-4 mt-8 overflow-y-auto max-h-[80vh]">
-                   {mobileNavigation.map((item) => (
-                     <Link
-                       key={item.name}
-                       to={item.href}
-                       onClick={() => setSidebarOpen(false)}
-                       className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                         location.pathname === item.href
-                           ? 'bg-slate-900 text-white'
-                           : 'hover:bg-slate-100'
-                       }`}
-                     >
-                       <item.icon className="h-5 w-5" />
-                       {item.name}
-                     </Link>
-                   ))}
+                   {mobileNavigation.map((item) =>
+                     "openAiSheet" in item && item.openAiSheet ? (
+                       <button
+                         key={item.name}
+                         type="button"
+                         onClick={() => {
+                           openCrmAiAssistant();
+                           setSidebarOpen(false);
+                         }}
+                         className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left hover:bg-violet-50 text-violet-900"
+                       >
+                         <item.icon className="h-5 w-5" />
+                         {item.name}
+                       </button>
+                     ) : (
+                       <Link
+                         key={item.name}
+                         to={item.href}
+                         onClick={() => setSidebarOpen(false)}
+                         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                           isNavActive(item.href)
+                             ? 'bg-slate-900 text-white'
+                             : 'hover:bg-slate-100'
+                         }`}
+                       >
+                         <item.icon className="h-5 w-5" />
+                         {item.name}
+                       </Link>
+                     ),
+                   )}
                  </div>
                </SheetContent>
              </Sheet>
            </div>
+          </div>
         </header>
 
         {/* 3. Dashboard Content Area */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden md:px-8 md:pb-8 custom-scrollbar">
-           <div className="max-w-[1600px] mx-auto w-full">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-6 pt-1 md:px-6 md:pb-8 md:pt-2 custom-scrollbar">
+           <div
+             key={location.pathname}
+             className="max-w-[1600px] mx-auto w-full animate-in fade-in slide-in-from-bottom-1 duration-300"
+           >
              <Outlet />
            </div>
         </main>
 
       </div>
+
+      <CrmAiAssistant />
     </div>
+    </CrmAiFocusResetOnRoute>
+    </CrmAiClientProvider>
   );
 }

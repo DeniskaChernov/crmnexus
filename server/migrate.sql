@@ -23,9 +23,17 @@ CREATE TABLE IF NOT EXISTS companies (
   phone TEXT,
   email TEXT,
   industry TEXT,
+  city TEXT,
+  type TEXT,
+  notes TEXT,
   status TEXT NOT NULL DEFAULT 'active',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Существующие БД без этих полей (старый migrate)
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS type TEXT;
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS notes TEXT;
 
 CREATE TABLE IF NOT EXISTS pipelines (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

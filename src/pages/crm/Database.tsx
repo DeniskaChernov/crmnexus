@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import React, { useMemo, useState } from 'react';
+import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import Clients from './Clients';
 import Companies from './Companies';
 import Contacts from './Contacts';
 import { Users, Building2, UserCircle, Database as DatabaseIcon, Upload } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '../../components/ui/use-mobile';
@@ -20,6 +19,12 @@ export default function Database() {
     setActiveTab(value);
     localStorage.setItem('crm_database_tab', value);
   };
+
+  const activeTabContent = useMemo(() => {
+    if (activeTab === 'clients') return <Clients />;
+    if (activeTab === 'companies') return <Companies />;
+    return <Contacts />;
+  }, [activeTab]);
 
   return (
     <div className="space-y-6 animate-in-fade">
@@ -66,15 +71,12 @@ export default function Database() {
           </TabsList>
         </div>
         
-        <TabsContent value="clients" className="mt-0 focus-visible:ring-0">
-           <Clients /> 
-        </TabsContent>
-        <TabsContent value="companies" className="mt-0 focus-visible:ring-0">
-           <Companies />
-        </TabsContent>
-        <TabsContent value="contacts" className="mt-0 focus-visible:ring-0">
-           <Contacts />
-        </TabsContent>
+        <div
+          key={activeTab}
+          className="mt-0 focus-visible:ring-0 animate-in fade-in slide-in-from-bottom-1 duration-300"
+        >
+          {activeTabContent}
+        </div>
       </Tabs>
     </div>
   );

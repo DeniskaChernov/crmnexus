@@ -36,6 +36,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { CreateDealDialog } from '../../components/crm/CreateDealDialog';
 import { Checkbox } from '../../components/ui/checkbox';
 import { motion, AnimatePresence } from 'motion/react';
+import { useCrmAiClient } from '../../context/CrmAiClientContext.tsx';
 
 interface Lead {
   id: string;
@@ -57,6 +58,7 @@ const COUNTRIES = [
 ];
 
 export default function Leads() {
+  const { setFocus, clearFocus } = useCrmAiClient();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -242,10 +244,12 @@ export default function Leads() {
       country: lead.country,
       status: lead.status
     });
+    setFocus({ kind: "lead", id: lead.id, label: lead.name });
     setIsAddOpen(true);
   };
 
   const openAdd = () => {
+    clearFocus();
     setEditingLead(null);
     setFormData({ 
       name: '', 
@@ -611,7 +615,13 @@ export default function Leads() {
         )}
       </AnimatePresence>
 
-      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+      <Dialog
+        open={isAddOpen}
+        onOpenChange={(open) => {
+          setIsAddOpen(open);
+          if (!open) clearFocus();
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingLead ? 'Редактировать лида' : 'Новый лид'}</DialogTitle>

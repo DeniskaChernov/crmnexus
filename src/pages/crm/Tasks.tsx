@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { crm } from "@/lib/crmClient.ts";
 import { Button } from '../../components/ui/button';
 import { CreateTaskDialog } from '../../components/crm/CreateTaskDialog';
@@ -20,6 +20,7 @@ import { Checkbox } from '../../components/ui/checkbox';
 import { AlertCircle, RefreshCcw, Calendar as CalendarIcon, Phone, Mail, Users, CheckCircle2, Pencil, Trash2, Clock, Download, Loader2, Briefcase, User, ClipboardList, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { downloadCSV, formatDateForExport } from '../../utils/exportUtils';
+import { useCrmAiClient } from '../../context/CrmAiClientContext.tsx';
 
 interface Task {
   id: string;
@@ -37,6 +38,7 @@ interface Task {
 }
 
 export default function Tasks() {
+  const { setFocus, clearFocus } = useCrmAiClient();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,12 +52,14 @@ export default function Tasks() {
     client: false,
     employee: false
   });
+  const INITIAL_TASK_BATCH = 8;
+  const TASK_BATCH_STEP = 12;
+  const [visibleByColumn, setVisibleByColumn] = useState<{ client: number; employee: number }>({
+    client: INITIAL_TASK_BATCH,
+    employee: INITIAL_TASK_BATCH,
+  });
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -76,9 +80,13 @@ export default function Tasks() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const toggleTaskStatus = async (task: Task) => {
+  useEffect(() => {
+    void fetchTasks();
+  }, [fetchTasks]);
+
+  const toggleTaskStatus = useCallback(async (task: Task) => {
     const newStatus = task.status === 'done' ? 'planned' : 'done';
     try {
       const { error } = await crm
@@ -88,18 +96,18 @@ export default function Tasks() {
       
       if (error) throw error;
       
-      setTasks(tasks.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)));
       toast.success(newStatus === 'done' ? 'Задача выполнена' : 'Задача возвращена в работу');
     } catch (err) {
       console.error('Error updating task status:', err);
       toast.error('Ошибка при обновлении статуса');
     }
-  };
+  }, []);
 
-  const handleDeleteClick = (task: Task) => {
+  const handleDeleteClick = useCallback((task: Task) => {
     setTaskToDelete(task);
     setDeleteDialogOpen(true);
-  };
+  }, []);
 
   const deleteTask = async () => {
     if (!taskToDelete) return;
@@ -114,7 +122,7 @@ export default function Tasks() {
       if (error) throw error;
 
       toast.success('Задача удалена');
-      fetchTasks();
+      setTasks((prev) => prev.filter((t) => t.id !== taskToDelete.id));
       setDeleteDialogOpen(false);
       setTaskToDelete(null);
     } catch (err: any) {
@@ -125,15 +133,67 @@ export default function Tasks() {
     }
   };
 
-  const handleEditTask = (task: Task) => {
-    setEditingTask(task);
-    setEditDialogOpen(true);
+  const handleEditTask = useCallback(
+    (task: Task) => {
+      setEditingTask(task);
+      setEditDialogOpen(true);
+      setFocus({ kind: "task", id: task.id, label: task.title });
+    },
+    [setFocus],
+  );
+
+  const getTaskCategory = (task: Task) => {
+    // Client actions: call, meeting, email OR linked to deal/contact
+    if (['call', 'meeting', 'email'].includes(task.type)) return 'client';
+    if (task.contact_id || task.deal_id) return 'client';
+    return 'employee';
   };
 
-  const exportTasks = () => {
-    const filteredTasks = activeTab === 'all' ? tasks : tasks.filter(t => t.status === activeTab);
+  const plannedTasks = useMemo(
+    () => tasks.filter((t) => t.status === 'planned'),
+    [tasks],
+  );
+  const doneTasks = useMemo(
+    () => tasks.filter((t) => t.status === 'done'),
+    [tasks],
+  );
+  const todayTasks = useMemo(() => {
+    const now = new Date();
+    return tasks.filter((t) => {
+      if (!t.due_date || t.status === 'done') return false;
+      const date = new Date(t.due_date);
+      return (
+        date.getDate() === now.getDate() &&
+        date.getMonth() === now.getMonth() &&
+        date.getFullYear() === now.getFullYear()
+      );
+    });
+  }, [tasks]);
+  const overdueTasks = useMemo(() => {
+    const now = new Date();
+    return tasks.filter((t) => {
+      if (!t.due_date || t.status === 'done') return false;
+      return new Date(t.due_date) < now;
+    });
+  }, [tasks]);
 
-    if (filteredTasks.length === 0) {
+  const tasksForExport = useMemo(() => {
+    switch (activeTab) {
+      case 'planned':
+        return plannedTasks;
+      case 'today':
+        return todayTasks;
+      case 'overdue':
+        return overdueTasks;
+      case 'done':
+        return doneTasks;
+      default:
+        return tasks;
+    }
+  }, [activeTab, plannedTasks, todayTasks, overdueTasks, doneTasks, tasks]);
+
+  const exportTasks = () => {
+    if (tasksForExport.length === 0) {
       toast.error('Нет данных для экспорта');
       return;
     }
@@ -148,6 +208,7 @@ export default function Tasks() {
       'call': 'Звонок',
       'meeting': 'Встреча',
       'email': 'Email',
+      'task': 'Задача',
       'other': 'Другое'
     };
 
@@ -156,7 +217,7 @@ export default function Tasks() {
       'done': 'Выполнено'
     };
 
-    const exportData = filteredTasks.map(task => ({
+    const exportData = tasksForExport.map(task => ({
       'Название': task.title,
       'Описание': task.description || '',
       'Тип': typeMap[task.type] || task.type,
@@ -170,25 +231,33 @@ export default function Tasks() {
     toast.success('Задачи экспортированы');
   };
 
-  const getTaskCategory = (task: Task) => {
-    // Client actions: call, meeting, email OR linked to deal/contact
-    if (['call', 'meeting', 'email'].includes(task.type)) return 'client';
-    if (task.contact_id || task.deal_id) return 'client';
-    return 'employee';
-  };
+  useEffect(() => {
+    setVisibleByColumn({
+      client: INITIAL_TASK_BATCH,
+      employee: INITIAL_TASK_BATCH,
+    });
+  }, [activeTab, tasks.length]);
 
-  const toggleColumn = (column: 'client' | 'employee') => {
-    setExpandedColumns(prev => ({
-      ...prev,
-      [column]: !prev[column]
-    }));
-  };
+  const toggleColumn = useCallback((column: 'client' | 'employee') => {
+    setExpandedColumns((prev) => {
+      const nextOpen = !prev[column];
+      if (nextOpen) {
+        setVisibleByColumn((vis) => ({ ...vis, [column]: INITIAL_TASK_BATCH }));
+      }
+      return {
+        ...prev,
+        [column]: nextOpen
+      };
+    });
+  }, []);
 
   const renderTaskColumn = (title: string, columnTasks: Task[], icon: React.ReactNode, columnType: 'client' | 'employee') => {
     const isExpanded = expandedColumns[columnType];
     const PREVIEW_COUNT = 2;
-    const displayTasks = isExpanded ? columnTasks : columnTasks.slice(0, PREVIEW_COUNT);
+    const displayLimit = isExpanded ? visibleByColumn[columnType] : PREVIEW_COUNT;
+    const displayTasks = columnTasks.slice(0, displayLimit);
     const hasMore = columnTasks.length > PREVIEW_COUNT;
+    const hasMoreExpanded = isExpanded && columnTasks.length > displayLimit;
 
     return (
       <div className="flex-1 min-w-0 flex flex-col">
@@ -257,6 +326,21 @@ export default function Tasks() {
                       Показать ещё {columnTasks.length - PREVIEW_COUNT} {columnTasks.length - PREVIEW_COUNT === 1 ? 'задачу' : 'задач'}
                     </Button>
                   )}
+                  {hasMoreExpanded && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setVisibleByColumn((prev) => ({
+                          ...prev,
+                          [columnType]: prev[columnType] + TASK_BATCH_STEP,
+                        }))
+                      }
+                      className="w-full text-xs h-8 text-slate-500 hover:text-slate-900"
+                    >
+                      Загрузить ещё {Math.min(TASK_BATCH_STEP, columnTasks.length - displayLimit)}
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -266,10 +350,9 @@ export default function Tasks() {
     );
   };
 
-  const renderTabContent = (statusFilter: (t: Task) => boolean) => {
-    const filtered = tasks.filter(statusFilter);
-    const clientTasks = filtered.filter(t => getTaskCategory(t) === 'client');
-    const employeeTasks = filtered.filter(t => getTaskCategory(t) === 'employee');
+  const renderTabContent = (filtered: Task[]) => {
+    const clientTasks = filtered.filter((t) => getTaskCategory(t) === 'client');
+    const employeeTasks = filtered.filter((t) => getTaskCategory(t) === 'employee');
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6 mt-4 md:mt-6">
@@ -318,30 +401,19 @@ export default function Tasks() {
         </TabsList>
         
         <TabsContent value="planned">
-          {renderTabContent(t => t.status === 'planned')}
+          {renderTabContent(plannedTasks)}
         </TabsContent>
 
         <TabsContent value="today">
-           {renderTabContent(t => {
-             if (!t.due_date) return false;
-             const date = new Date(t.due_date);
-             const today = new Date();
-             return date.getDate() === today.getDate() &&
-                    date.getMonth() === today.getMonth() &&
-                    date.getFullYear() === today.getFullYear() &&
-                    t.status !== 'done';
-           })}
+           {renderTabContent(todayTasks)}
         </TabsContent>
 
         <TabsContent value="overdue">
-            {renderTabContent(t => {
-                if (!t.due_date) return false;
-                return new Date(t.due_date) < new Date() && t.status !== 'done';
-            })}
+            {renderTabContent(overdueTasks)}
         </TabsContent>
 
         <TabsContent value="done">
-            {renderTabContent(t => t.status === 'done')}
+            {renderTabContent(doneTasks)}
         </TabsContent>
       </Tabs>
 
@@ -349,7 +421,10 @@ export default function Tasks() {
         <EditTaskDialog
           task={editingTask}
           open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) clearFocus();
+          }}
           onSuccess={fetchTasks}
         />
       )}
@@ -390,7 +465,7 @@ interface TaskCardProps {
   onDelete: (task: Task) => void;
 }
 
-function TaskCard({ task, onToggleStatus, onEdit, onDelete }: TaskCardProps) {
+const TaskCard = React.memo(function TaskCard({ task, onToggleStatus, onEdit, onDelete }: TaskCardProps) {
   const getTypeIcon = () => {
     switch (task.type) {
       case 'call':
@@ -427,7 +502,7 @@ function TaskCard({ task, onToggleStatus, onEdit, onDelete }: TaskCardProps) {
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done';
 
   return (
-    <Card className={`group transition-all hover:shadow-md ${task.status === 'done' ? 'opacity-60' : ''}`}>
+    <Card className={`group transition-all duration-300 hover:shadow-md hover:-translate-y-[1px] ${task.status === 'done' ? 'opacity-60' : ''}`}>
       <CardHeader className="p-2.5 md:p-4">
         <div className="flex items-start gap-2 md:gap-3">
           <div className="pt-0.5">
@@ -513,4 +588,6 @@ function TaskCard({ task, onToggleStatus, onEdit, onDelete }: TaskCardProps) {
       </CardHeader>
     </Card>
   );
-}
+});
+
+TaskCard.displayName = 'TaskCard';
