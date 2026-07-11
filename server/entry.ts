@@ -7,8 +7,10 @@ if (!isRailway && process.env["NODE_ENV"] !== "production") {
 
 import { validateServerEnv } from "../src/server/validateEnv.ts";
 import { serve } from "@hono/node-server";
+import { bootstrapDatabase } from "./bootstrapDb.ts";
 
 validateServerEnv();
+await bootstrapDatabase();
 
 const { default: app } = await import("../src/server/index.tsx");
 

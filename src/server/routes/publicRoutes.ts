@@ -2,6 +2,7 @@ import type { Hono } from "hono";
 import fs from "node:fs";
 import path from "node:path";
 import { handleSiteWebhook } from "../siteWebhook.ts";
+import { getPool } from "../dbPool.ts";
 
 export function registerPublicRoutes(app: Hono, env: (k: string) => string | undefined) {
   app.get("/api/static-uploads/:name", async (c) => {
@@ -49,5 +50,35 @@ export function registerPublicRoutes(app: Hono, env: (k: string) => string | und
   app.get("/api/health", (c) => {
     console.log("Health check requested");
     return c.json({ status: "ok", timestamp: new Date().toISOString(), version: "v8" });
+  });
+
+  app.get("/api/health/db", async (c) => {
+    try {
+      const pool = getPool();
+      const { rows } = await pool.query<{
+        crm_users: string | null;
+        users: number;
+        deals: number;
+      }>(
+        `SELECT
+           to_regclass('public.crm_users')::text AS crm_users,
+           (SELECT COUNT(*)::int FROM crm_users) AS users,
+           (SELECT COUNT(*)::int FROM deals) AS deals`,
+      );
+      const row = rows[0];
+      const ok = Boolean(row?.crm_users);
+      return c.json(
+        {
+          ok,
+          crm_users_table: row?.crm_users ?? null,
+          users: row?.users ?? 0,
+          deals: row?.deals ?? 0,
+          timestamp: new Date().toISOString(),
+        },
+        ok ? 200 : 503,
+      );
+    } catch (e: any) {
+      return c.json({ ok: false, error: e.message }, 503);
+    }
   });
 }
