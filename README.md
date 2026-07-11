@@ -1,31 +1,35 @@
 # BTT Nexus
 
-CRM и внутренний портал: React (Vite) + API на Hono + Postgres (Railway). Код HTTP API: каталог **`src/server/`** (точка входа `server/entry.ts`).
+CRM и внутренний портал: React (Vite) + API на Hono + Postgres (Railway).
+
+- **Фронт:** Vite + React, сборка в `build/`
+- **API:** `src/server/`, точка входа `server/entry.ts`
+- **Префикс API:** `/api/*` (ранее legacy Supabase Edge Function)
 
 ## Локальная разработка
 
-1. Скопируйте `.env.example` в `.env` в корне и задайте `DATABASE_URL`, `JWT_SECRET`, `CRM_WEBHOOK_SECRET`, при необходимости `OPENAI_API_KEY`.
+1. Скопируйте `.env.example` в `.env` и задайте `DATABASE_URL`, `JWT_SECRET`, `CRM_WEBHOOK_SECRET`.
 2. `npm install`
-3. Примените схему: `npm run migrate`
-4. В одном терминале: `npm run server` (API, по умолчанию порт **4000**).
-5. В другом: `npm run dev` (Vite, порт **3000**). Запросы на `/make-server-f9553289/*` проксируются на `http://localhost:4000`.
+3. `npm run migrate`
+4. Терминал 1: `npm run server` (API, порт **4000**)
+5. Терминал 2: `npm run dev` (Vite, порт **3000**). Запросы `/api/*` проксируются на `http://localhost:4000`.
 
-Вход в CRM: после регистрации/логина токен хранится в `localStorage` как `crm_token`.
+Вход: токен в `localStorage` как `crm_token`.
 
 ## Railway
 
-- Сервис **Postgres**: переменная `DATABASE_URL` (Railway подставляет автоматически при линке БД).
-- Сервис **Node** для API: корневая команда старта, например `npm run server`; переменные `JWT_SECRET`, `CRM_WEBHOOK_SECRET`, `PUBLIC_BASE_URL` (публичный URL этого сервиса), при необходимости `OPENAI_*`.
-- `ALLOW_SELF_SIGNUP=false` в проде. Для первоначального онбординга можно временно поставить `true`, зарегистрировать первый аккаунт и вернуть `false`.
-- Для Telegram webhook рекомендуется задать `TELEGRAM_WEBHOOK_SECRET` (проверка источника через `X-Telegram-Bot-Api-Secret-Token`).
-- Для прода обязательно задайте `CORS_ORIGINS` (comma-separated allowlist доменов фронта).
-- При `NODE_ENV=production` или `REQUIRE_STRICT_ENV=true` API при старте проверяет наличие `DATABASE_URL`, `JWT_SECRET`, `CRM_WEBHOOK_SECRET`, `PUBLIC_BASE_URL`, непустого `CORS_ORIGINS` и достаточной длины `JWT_SECRET`. Обход только для отладки: `SKIP_ENV_VALIDATION=1`.
-- После деплоя выполните миграцию один раз (локально с тем же `DATABASE_URL` или через одноразовую команду в Railway): `npm run migrate`.
+- **Postgres** — `DATABASE_URL` (линкуется автоматически)
+- **Node-сервис** — `npm start`; переменные `JWT_SECRET`, `CRM_WEBHOOK_SECRET`, `PUBLIC_BASE_URL`, `CORS_ORIGINS`
+- После деплоя: `npm run migrate` один раз
 
 ## Webhook с сайта (btt-site)
 
-Сайт шлёт подписанное тело на `POST {PUBLIC_BASE_URL}/make-server-f9553289/webhooks/site` с заголовками `X-BTT-*` и тем же секретом, что в `CRM_WEBHOOK_SECRET`. Репозиторий сайта не меняется — только URL и секрет в его конфиге.
+`POST {PUBLIC_BASE_URL}/api/webhooks/site` с заголовками `X-BTT-*` и секретом `CRM_WEBHOOK_SECRET`.
 
-## Прочее
+## Склад
 
-Исходный макет: [Figma — BTT Nexus](https://www.figma.com/design/MwPghSYSgBj5P0XEjeCWZv/BTT-Nexus).
+Единый склад **BTT Nexus**. Данные AIKO/Bizly при чтении автоматически объединяются в BTT.
+
+## ИИ-память
+
+CRM-чат сохраняет историю диалога в Postgres (`ai_chat_history_*`) и подгружает контекст страницы при каждом запросе.

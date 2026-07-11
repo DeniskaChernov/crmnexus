@@ -507,7 +507,7 @@ export default function Warehouse() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [integrations, setIntegrations] = useState({ google: false });
-  const [activeTab, setActiveTab] = useState("AIKO");
+  const [activeTab, setActiveTab] = useState("STOCK");
   const [recipeImages, setRecipeImages] = useState<Record<string, string>>({});
   const [isFetching, setIsFetching] = useState(false);
 
@@ -517,7 +517,7 @@ export default function Warehouse() {
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [currentShipment, setCurrentShipment] = useState<Shipment | null>(null);
   const [transferForm, setTransferForm] = useState({
-    fromWarehouse: 'AIKO',
+    fromWarehouse: 'BTT',
     toWarehouse: 'BTT',
     article: '',
     quantity: '',
@@ -545,7 +545,7 @@ export default function Warehouse() {
       amount: '', 
       article: '', 
       note: '', 
-      warehouse: 'AIKO',
+      warehouse: 'BTT',
       materialType: 'Искусственный ротанг',
       worker: '',
       twistedWorker: '',
@@ -677,7 +677,7 @@ export default function Warehouse() {
         } catch (e) { 
             console.warn("Failed logs", e);
             setLogs([
-                 { id: 'm1', date: new Date().toISOString(), user: 'Demo', amount: 50, unit: 'кг', status: 'synced', originalMessage: 'Демо запись', article: 'Ротанг С8', warehouse: 'AIKO', materialType: 'Искусственный ротанг' }
+                 { id: 'm1', date: new Date().toISOString(), user: 'Demo', amount: 50, unit: 'кг', status: 'synced', originalMessage: 'Демо запись', article: 'Ротанг С8', warehouse: 'BTT', materialType: 'Искусственный ротанг' }
             ]);
         }
       };
@@ -692,17 +692,13 @@ export default function Warehouse() {
           } else {
             console.warn(`Stats fetch failed with status: ${responseStats.status}`);
             setStats({
-                 'AIKO': { produced: { total: 1000, byArticle: {'Ротанг С8': 1000} }, sold: { total: 500, byArticle: {'Ротанг С8': 500} }, current: { total: 500, byArticle: {'Ротанг С8': 500} } },
-                 'BTT': { produced: { total: 0, byArticle: {} }, sold: { total: 0, byArticle: {} }, current: { total: 0, byArticle: {} } },
-                 'Bizly': { produced: { total: 0, byArticle: {} }, sold: { total: 0, byArticle: {} }, current: { total: 0, byArticle: {} } }
+                 'BTT': { produced: { total: 1000, byArticle: {'Ротанг С8': 1000} }, sold: { total: 500, byArticle: {'Ротанг С8': 500} }, current: { total: 500, byArticle: {'Ротанг С8': 500} } }
             });
           }
         } catch (e: any) { 
             console.warn("Failed to fetch stats:", e.message || e); 
             setStats({
-                 'AIKO': { produced: { total: 1000, byArticle: {'Ротанг С8': 1000} }, sold: { total: 500, byArticle: {'Ротанг С8': 500} }, current: { total: 500, byArticle: {'Ротанг С8': 500} } },
-                 'BTT': { produced: { total: 0, byArticle: {} }, sold: { total: 0, byArticle: {} }, current: { total: 0, byArticle: {} } },
-                 'Bizly': { produced: { total: 0, byArticle: {} }, sold: { total: 0, byArticle: {} }, current: { total: 0, byArticle: {} } }
+                 'BTT': { produced: { total: 1000, byArticle: {'Ротанг С8': 1000} }, sold: { total: 500, byArticle: {'Ротанг С8': 500} }, current: { total: 500, byArticle: {'Ротанг С8': 500} } }
             });
         }
       };
@@ -769,7 +765,7 @@ export default function Warehouse() {
     } catch (error) {
       console.warn('Error fetching movements:', error);
       setMovements([
-          { id: 'm1', date: new Date().toISOString(), type: 'production', article: 'Ротанг С8', amount: 50, warehouse: 'AIKO', user: 'Demo' }
+          { id: 'm1', date: new Date().toISOString(), type: 'production', article: 'Ротанг С8', amount: 50, warehouse: 'BTT', user: 'Demo' }
       ]);
     } finally {
       setLoadingMovements(false);
@@ -867,21 +863,14 @@ export default function Warehouse() {
       }, 1000);
     };
 
-    // Realtime subscription
-    const channel = crm
-      .channel('warehouse_updates')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'kv_store_f9553289' },
-        handleRealtimeUpdate
-      )
-      .subscribe();
+    // Автообновление каждые 30 секунд
+    const pollInterval = setInterval(() => {
+      if (isMounted.current) fetchData();
+    }, 30000);
 
     return () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-      crm.removeChannel(channel);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      clearInterval(pollInterval);
     };
   }, []);
 
@@ -891,7 +880,7 @@ export default function Warehouse() {
         amount: '', 
         article: '', 
         note: '', 
-        warehouse: activeTab, 
+        warehouse: 'BTT',
         materialType: 'Искусственный ротанг',
         worker: '',
         twistedWorker: '',
@@ -931,7 +920,7 @@ export default function Warehouse() {
           amount: log.amount.toString(),
           article: art,
           note: log.originalMessage || '',
-          warehouse: log.warehouse || 'AIKO',
+          warehouse: log.warehouse || 'BTT',
           materialType: log.materialType || 'Искусственный ротанг',
           worker: log.worker || '',
           twistedWorker: log.twistedWorker || '',
@@ -1294,14 +1283,14 @@ export default function Warehouse() {
           destination: 'Ташкент-Ош',
           status: 'draft',
           items: [],
-          warehouse: activeTab === 'SHIPMENTS' ? 'AIKO' : activeTab as any // Default to AIKO if on Shipments tab
+          warehouse: 'BTT'
       });
       setIsShipmentOpen(true);
       setNewItem({ article: '', weight: '', coils: '', bags: '', date: new Date().toISOString().slice(0, 10), stickerArticle: '' });
   };
 
   const handleEditShipment = (shipment: Shipment) => {
-      setCurrentShipment({ ...shipment, warehouse: shipment.warehouse || 'AIKO' });
+      setCurrentShipment({ ...shipment, warehouse: shipment.warehouse || 'BTT' });
       setIsShipmentOpen(true);
       setNewItem({ article: '', weight: '', coils: '', bags: '', date: new Date().toISOString().slice(0, 10), stickerArticle: '' });
   };
@@ -1410,7 +1399,7 @@ export default function Warehouse() {
       }
 
       // Validation Logic
-      const warehouse = currentShipment.warehouse || 'AIKO';
+      const warehouse = currentShipment.warehouse || 'BTT';
       const availableStats = stats?.[warehouse]?.current.byArticle[newItem.article] || 0;
       
       // Calculate how much of this article is already in the CURRENT draft (uncommitted)
@@ -1549,7 +1538,7 @@ export default function Warehouse() {
           toast.success(`Перемещено ${qty} кг из ${transferForm.fromWarehouse} в ${transferForm.toWarehouse}`);
           setIsTransferOpen(false);
           setTransferForm({
-              fromWarehouse: 'AIKO',
+              fromWarehouse: 'BTT',
               toWarehouse: 'BTT',
               article: '',
               quantity: '',
@@ -1665,7 +1654,7 @@ export default function Warehouse() {
                           <div class="info-row"><span class="info-label">Дата:</span> ${new Date(currentShipment.date).toLocaleDateString()}</div>
                           <div class="info-row"><span class="info-label">Клиент:</span> ${currentShipment.note || '—'}</div>
                           <div class="info-row"><span class="info-label">Направление:</span> ${currentShipment.destination || '—'}</div>
-                          <div class="info-row"><span class="info-label">Склад:</span> ${currentShipment.warehouse || 'AIKO'}</div>
+                          <div class="info-row"><span class="info-label">Склад:</span> ${currentShipment.warehouse || 'BTT'}</div>
                       </div>
                       
                       <table>
@@ -1884,7 +1873,7 @@ export default function Warehouse() {
 
   const renderDashboard = (warehouseName: string) => {
       const whStats = stats ? stats[warehouseName] : null;
-      const whLogs = logs.filter(l => (l.warehouse || 'AIKO') === warehouseName);
+      const whLogs = logs.filter(l => (l.warehouse || 'BTT') === warehouseName);
 
       const stockByMaterial = {
         'Искусственный ротанг': [] as {art: string, qty: number}[],
@@ -2370,115 +2359,6 @@ export default function Warehouse() {
     <div className="space-y-6">
       <EmployeesDialog open={isEmployeesOpen} onOpenChange={setIsEmployeesOpen} />
       
-      {/* Transfer Dialog */}
-      <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
-          <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                  <DialogTitle>Перемещение товара между складами</DialogTitle>
-                  <DialogDescription>
-                      Переместите товар с одного склада на другой. Остатки будут автоматически пересчитаны.
-                  </DialogDescription>
-              </DialogHeader>
-              
-              <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                          <Label>Откуда (склад-источник)</Label>
-                          <Select 
-                              value={transferForm.fromWarehouse} 
-                              onValueChange={(v) => setTransferForm({...transferForm, fromWarehouse: v, toWarehouse: transferForm.toWarehouse === v ? '' : transferForm.toWarehouse})}
-                          >
-                              <SelectTrigger>
-                                  <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="AIKO">AIKO</SelectItem>
-                                  <SelectItem value="BTT">BTT</SelectItem>
-                                  <SelectItem value="Bizly">Bizly</SelectItem>
-                              </SelectContent>
-                          </Select>
-                      </div>
-                      
-                      <div className="space-y-2">
-                          <Label>Куда (склад-назначение)</Label>
-                          <Select 
-                              value={transferForm.toWarehouse} 
-                              onValueChange={(v) => setTransferForm({...transferForm, toWarehouse: v})}
-                          >
-                              <SelectTrigger>
-                                  <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  {transferForm.fromWarehouse !== 'AIKO' && <SelectItem value="AIKO">AIKO</SelectItem>}
-                                  {transferForm.fromWarehouse !== 'BTT' && <SelectItem value="BTT">BTT</SelectItem>}
-                                  {transferForm.fromWarehouse !== 'Bizly' && <SelectItem value="Bizly">Bizly</SelectItem>}
-                              </SelectContent>
-                          </Select>
-                      </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                      <Label>Артикул товара</Label>
-                      <Select 
-                          value={transferForm.article} 
-                          onValueChange={(v) => setTransferForm({...transferForm, article: v})}
-                      >
-                          <SelectTrigger>
-                              <SelectValue placeholder="Выберите артикул" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              {getAvailableArticles(transferForm.fromWarehouse).map(({article, qty}) => (
-                                  <SelectItem key={article} value={article}>
-                                      <div className="flex justify-between w-full gap-4">
-                                          <span>{article}</span>
-                                          <span className="text-slate-400 font-mono text-xs">{qty} кг</span>
-                                      </div>
-                                  </SelectItem>
-                              ))}
-                          </SelectContent>
-                      </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                      <Label>Количество (кг)</Label>
-                      <Input 
-                          type="number" 
-                          step="0.01"
-                          value={transferForm.quantity}
-                          onChange={(e) => setTransferForm({...transferForm, quantity: e.target.value})}
-                          placeholder="Введите вес"
-                      />
-                      {transferForm.article && (
-                          <p className="text-xs text-slate-500">
-                              Доступно на складе {transferForm.fromWarehouse}: {
-                                  getAvailableQuantity(transferForm.fromWarehouse, transferForm.article).toFixed(2)
-                              } кг
-                          </p>
-                      )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                      <Label>Примечание (необязательно)</Label>
-                      <Input 
-                          value={transferForm.note}
-                          onChange={(e) => setTransferForm({...transferForm, note: e.target.value})}
-                          placeholder="Причина перемещения"
-                      />
-                  </div>
-              </div>
-              
-              <DialogFooter>
-                  <DialogClose asChild>
-                      <Button variant="outline">Отмена</Button>
-                  </DialogClose>
-                  <Button onClick={handleCreateTransfer} className="bg-green-600 hover:bg-green-700">
-                      <ArrowUpCircle className="mr-2 h-4 w-4" />
-                      Переместить
-                  </Button>
-              </DialogFooter>
-          </DialogContent>
-      </Dialog>
-      
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogContent>
               <DialogHeader>
@@ -2491,19 +2371,7 @@ export default function Warehouse() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-2">
                           <Label>Склад</Label>
-                          <Select 
-                              value={newLog.warehouse} 
-                              onValueChange={(v) => setNewLog({...newLog, warehouse: v})}
-                          >
-                              <SelectTrigger>
-                                  <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="AIKO">AIKO</SelectItem>
-                                  <SelectItem value="BTT">BTT</SelectItem>
-                                  <SelectItem value="Bizly">Bizly</SelectItem>
-                              </SelectContent>
-                          </Select>
+                          <div className="h-10 flex items-center px-3 rounded-md border bg-slate-50 text-sm font-medium text-slate-700">BTT Nexus</div>
                       </div>
                       <div className="space-y-2">
                           <Label>Количество ({newLog.materialType === 'Кашпо' ? 'шт' : 'кг'})</Label>
@@ -2725,8 +2593,8 @@ export default function Warehouse() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Склад и производство</h1>
-          <p className="text-slate-500">Учет остатков и поступлений продукции</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Склад BTT Nexus</h1>
+          <p className="text-slate-500">Остатки, поступления и отгрузки в одном месте</p>
         </div>
         <div className="flex gap-2 md:gap-3">
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -2739,10 +2607,6 @@ export default function Warehouse() {
           
           <Button variant="outline" onClick={handleOpenShipment} className="border-slate-300 text-slate-700">
              <Truck className="h-4 w-4 mr-2" /> {isMobile ? '' : 'Отгрузка'}
-          </Button>
-
-          <Button variant="outline" onClick={() => setIsTransferOpen(true)} className="border-slate-300 text-slate-700">
-             <ArrowUpCircle className="h-4 w-4 mr-2" /> {isMobile ? '' : 'Переместить'}
           </Button>
 
           <Button variant="outline" size="icon" onClick={() => setIsEmployeesOpen(true)} title="Сотрудники">
@@ -2798,18 +2662,10 @@ export default function Warehouse() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-6 h-auto">
-          <TabsTrigger value="AIKO" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+        <TabsList className="grid w-full grid-cols-3 mb-6 h-auto">
+          <TabsTrigger value="STOCK" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
             <Database className="h-4 w-4 mr-1 hidden sm:block" />
-            AIKO
-          </TabsTrigger>
-          <TabsTrigger value="BTT" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
-            <Database className="h-4 w-4 mr-1 hidden sm:block" />
-            BTT
-          </TabsTrigger>
-          <TabsTrigger value="Bizly" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
-            <Database className="h-4 w-4 mr-1 hidden sm:block" />
-            Bizly
+            Остатки
           </TabsTrigger>
           <TabsTrigger value="SHIPMENTS" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
             <Truck className="h-4 w-4 mr-1 hidden sm:block" />
@@ -2821,44 +2677,9 @@ export default function Warehouse() {
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="AIKO" className="space-y-4">
+        <TabsContent value="STOCK" className="space-y-4">
            {loading && !stats ? (
                <div className="space-y-6">
-                 {/* Skeleton Loading */}
-                 <div className="flex flex-col md:flex-row gap-6">
-                   {[1, 2, 3].map(i => (
-                     <div key={i} className="flex-1 bg-white rounded-xl border border-slate-200 p-6">
-                       <div className="animate-pulse space-y-4">
-                         <div className="h-4 w-24 bg-slate-200 rounded" />
-                         <div className="h-8 w-32 bg-slate-200 rounded" />
-                         <div className="h-3 w-20 bg-slate-200 rounded" />
-                       </div>
-                     </div>
-                   ))}
-                 </div>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                   {[1, 2, 3, 4, 5, 6].map(i => (
-                     <div key={i} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                       <div className="animate-pulse">
-                         <div className="h-48 bg-slate-200" />
-                         <div className="p-4 space-y-3">
-                           <div className="h-4 bg-slate-200 rounded w-3/4" />
-                           <div className="h-6 bg-slate-200 rounded w-1/2" />
-                         </div>
-                       </div>
-                     </div>
-                   ))}
-                 </div>
-               </div>
-           ) : (
-               renderDashboard('AIKO')
-           )}
-        </TabsContent>
-        
-        <TabsContent value="BTT" className="space-y-4">
-           {loading && !stats ? (
-               <div className="space-y-6">
-                 {/* Skeleton Loading */}
                  <div className="flex flex-col md:flex-row gap-6">
                    {[1, 2, 3].map(i => (
                      <div key={i} className="flex-1 bg-white rounded-xl border border-slate-200 p-6">
@@ -2889,41 +2710,7 @@ export default function Warehouse() {
            )}
         </TabsContent>
 
-        <div className="space-y-4">
-            <TabsContent value="Bizly" className="space-y-4">
-            {loading && !stats ? (
-                <div className="space-y-6">
-                  {/* Skeleton Loading */}
-                  <div className="flex flex-col md:flex-row gap-6">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="flex-1 bg-white rounded-xl border border-slate-200 p-6">
-                        <div className="animate-pulse space-y-4">
-                          <div className="h-4 w-24 bg-slate-200 rounded" />
-                          <div className="h-8 w-32 bg-slate-200 rounded" />
-                          <div className="h-3 w-20 bg-slate-200 rounded" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {[1, 2, 3, 4, 5, 6].map(i => (
-                      <div key={i} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                        <div className="animate-pulse">
-                          <div className="h-48 bg-slate-200" />
-                          <div className="p-4 space-y-3">
-                            <div className="h-4 bg-slate-200 rounded w-3/4" />
-                            <div className="h-6 bg-slate-200 rounded w-1/2" />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-            ) : (
-                renderDashboard('Bizly')
-            )}
-         </TabsContent>
-             <TabsContent value="SHIPMENTS">
+        <TabsContent value="SHIPMENTS">
               <Card className={`transition-all duration-300 ${expandedShipmentsLog ? 'fixed inset-4 z-50 h-[calc(100vh-2rem)] shadow-2xl overflow-hidden flex flex-col' : ''}`}>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -3034,20 +2821,7 @@ export default function Warehouse() {
                          <div className="flex flex-col md:flex-row items-start md:items-end gap-4">
                             <div className="grid gap-2 w-full md:w-1/4">
                                 <Label>Склад отгрузки</Label>
-                                <Select 
-                                    value={currentShipment?.warehouse || 'AIKO'} 
-                                    onValueChange={(v) => setCurrentShipment(prev => prev ? {...prev, warehouse: v} : null)}
-                                    disabled={currentShipment?.items.length > 0} 
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="AIKO">AIKO</SelectItem>
-                                        <SelectItem value="BTT">BTT</SelectItem>
-                                        <SelectItem value="Bizly">Bizly</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <div className="h-10 flex items-center px-3 rounded-md border bg-slate-50 text-sm font-medium text-slate-700">BTT Nexus</div>
                             </div>
                             <div className="grid gap-2 w-full md:w-1/4">
                                 <Label>Направление</Label>
@@ -3098,7 +2872,7 @@ export default function Warehouse() {
                                         <SelectValue placeholder="Выберите артикул" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {getAvailableArticles(currentShipment?.warehouse || 'AIKO').map(({article, qty}) => (
+                                        {getAvailableArticles(currentShipment?.warehouse || 'BTT').map(({article, qty}) => (
                                             <SelectItem key={article} value={article}>
                                                 <div className="flex justify-between w-full gap-4">
                                                     <span>{article}</span>
@@ -3106,7 +2880,7 @@ export default function Warehouse() {
                                                 </div>
                                             </SelectItem>
                                         ))}
-                                        {getAvailableArticles(currentShipment?.warehouse || 'AIKO').length === 0 && (
+                                        {getAvailableArticles(currentShipment?.warehouse || 'BTT').length === 0 && (
                                             <SelectItem value="none" disabled>Нет товаров на остатке</SelectItem>
                                         )}
                                     </SelectContent>
@@ -3349,7 +3123,7 @@ export default function Warehouse() {
                   filters={filters}
                   onFiltersChange={handleFiltersChange}
                   onReset={handleResetFilters}
-                  availableWarehouses={['AIKO', 'BTT', 'Bizly']}
+                  availableWarehouses={['BTT']}
                   availableArticles={availableArticles}
                 />
 
@@ -3383,7 +3157,6 @@ export default function Warehouse() {
                 </div>
               </div>
             </TabsContent>
-        </div>
       </Tabs>
 
     </div>

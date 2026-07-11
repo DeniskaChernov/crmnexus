@@ -12,7 +12,7 @@ const PUBLIC_PATH_PARTS = [
 ];
 
 export function registerAuthMiddleware(app: Hono) {
-  app.use("/make-server-f9553289/*", async (c, next) => {
+  app.use("/api/*", async (c, next) => {
     if (c.req.method === "OPTIONS") return next();
     const p = c.req.path;
     if (PUBLIC_PATH_PARTS.some((part) => p.includes(part))) {

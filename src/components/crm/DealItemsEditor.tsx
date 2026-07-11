@@ -10,7 +10,7 @@ export interface DealItem {
   article: string;
   quantity: number | string;
   price: number | string;
-  warehouse: 'AIKO' | 'BTT';
+  warehouse: 'BTT';
   type?: 'stock' | 'production';
 }
 
@@ -30,7 +30,7 @@ export function DealItemsEditor({ items, onChange, readOnly, productType }: Deal
   };
 
   const addItem = () => {
-    onChange([...items, { article: '', quantity: 1, price: 0, warehouse: 'AIKO', type: 'stock' }]);
+    onChange([...items, { article: '', quantity: 1, price: 0, warehouse: 'BTT', type: 'stock' }]);
   };
 
   const updateItem = (index: number, field: keyof DealItem, value: any) => {
@@ -116,19 +116,7 @@ export function DealItemsEditor({ items, onChange, readOnly, productType }: Deal
                      </div>
                      <div className="col-span-2">
                         <Label className="text-xs mb-1 block text-slate-500">Склад</Label>
-                        <Select 
-                            value={item.warehouse} 
-                            onValueChange={(v: any) => updateItem(index, 'warehouse', v)}
-                            disabled={readOnly}
-                        >
-                            <SelectTrigger className="h-8">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="AIKO">AIKO</SelectItem>
-                                <SelectItem value="BTT">BTT</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <div className="h-8 flex items-center px-3 rounded-md border bg-slate-50 text-sm text-slate-600">BTT</div>
                      </div>
                      <div className="col-span-2">
                         <Label className="text-xs mb-1 block text-slate-500">Цена (шт/кг)</Label>

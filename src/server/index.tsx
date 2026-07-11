@@ -9,6 +9,7 @@ import * as kv from "./kv_store.ts";
 import { generateSystemPrompt } from "./system_prompt.tsx";
 import { buildAiChatContext } from "./aiChatSnapshot.ts";
 import { sanitizeAiChatClientPayload } from "../lib/aiChatClientPayload.ts";
+import { DEFAULT_WAREHOUSE, normalizeWarehouse } from "../lib/constants.ts";
 import { SignJWT, importPKCS8 } from "jose";
 import { registerAuthRoutes } from "./routes/authRoutes.ts";
 import { registerAuthMiddleware } from "./middleware/authMiddleware.ts";
@@ -83,7 +84,7 @@ registerAuthMiddleware(app);
 registerCrmRunRoute(app);
 
 // Company settings endpoints
-app.get("/make-server-f9553289/company", async (c) => {
+app.get("/api/company", async (c) => {
   try {
     const company = await kv.get("company:settings");
     return c.json(company || null);
@@ -93,7 +94,7 @@ app.get("/make-server-f9553289/company", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/company", async (c) => {
+app.post("/api/company", async (c) => {
   try {
     const body = await c.req.json();
     const { name, email, phone, website } = body;
@@ -115,7 +116,7 @@ app.post("/make-server-f9553289/company", async (c) => {
 });
 
 // User management endpoints
-app.get("/make-server-f9553289/users", async (c) => {
+app.get("/api/users", async (c) => {
   const guard = await requireAdmin(c);
   if (!guard.ok) return guard.response;
   try {
@@ -127,7 +128,7 @@ app.get("/make-server-f9553289/users", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/users", async (c) => {
+app.post("/api/users", async (c) => {
   const guard = await requireAdmin(c);
   if (!guard.ok) return guard.response;
   try {
@@ -176,7 +177,7 @@ app.post("/make-server-f9553289/users", async (c) => {
   }
 });
 
-app.put("/make-server-f9553289/users/:id", async (c) => {
+app.put("/api/users/:id", async (c) => {
   const guard = await requireAdmin(c);
   if (!guard.ok) return guard.response;
   try {
@@ -225,7 +226,7 @@ app.put("/make-server-f9553289/users/:id", async (c) => {
   }
 });
 
-app.delete("/make-server-f9553289/users/:id", async (c) => {
+app.delete("/api/users/:id", async (c) => {
   const guard = await requireAdmin(c);
   if (!guard.ok) return guard.response;
   try {
@@ -257,7 +258,7 @@ app.delete("/make-server-f9553289/users/:id", async (c) => {
 });
 
 // Reset password endpoint
-app.post("/make-server-f9553289/reset-password", async (c) => {
+app.post("/api/reset-password", async (c) => {
   const guard = await requireAdmin(c);
   if (!guard.ok) return guard.response;
   try {
@@ -293,7 +294,7 @@ app.post("/make-server-f9553289/reset-password", async (c) => {
 });
 
 // Sales Plan endpoints
-app.get("/make-server-f9553289/sales-plan", async (c) => {
+app.get("/api/sales-plan", async (c) => {
   try {
     const now = new Date();
     const monthKey = `sales-plan-${now.getFullYear()}-${now.getMonth() + 1}`;
@@ -305,7 +306,7 @@ app.get("/make-server-f9553289/sales-plan", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/sales-plan", async (c) => {
+app.post("/api/sales-plan", async (c) => {
   try {
     const body = await c.req.json();
     const { plan } = body;
@@ -326,7 +327,7 @@ app.post("/make-server-f9553289/sales-plan", async (c) => {
 });
 
 // Pipeline management endpoints
-app.get("/make-server-f9553289/pipelines", async (c) => {
+app.get("/api/pipelines", async (c) => {
   try {
     const pool = getPool();
     const { rows } = await pool.query(
@@ -360,7 +361,7 @@ app.get("/make-server-f9553289/pipelines", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/pipelines", async (c) => {
+app.post("/api/pipelines", async (c) => {
   try {
     const body = await c.req.json();
     const { name, description, isDefault } = body;
@@ -421,7 +422,7 @@ app.post("/make-server-f9553289/pipelines", async (c) => {
 });
 
 // Product/Recipe Management
-app.get("/make-server-f9553289/products", async (c) => {
+app.get("/api/products", async (c) => {
   try {
     const products = await kv.getByPrefix("product:");
     return c.json(products || []);
@@ -430,7 +431,7 @@ app.get("/make-server-f9553289/products", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/products", async (c) => {
+app.post("/api/products", async (c) => {
   try {
     const body = await c.req.json();
     const { name, description, category } = body;
@@ -453,7 +454,7 @@ app.post("/make-server-f9553289/products", async (c) => {
   }
 });
 
-app.put("/make-server-f9553289/pipelines/:id", async (c) => {
+app.put("/api/pipelines/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
@@ -515,7 +516,7 @@ app.put("/make-server-f9553289/pipelines/:id", async (c) => {
   }
 });
 
-app.delete("/make-server-f9553289/pipelines/:id", async (c) => {
+app.delete("/api/pipelines/:id", async (c) => {
   try {
     const id = c.req.param("id");
 
@@ -540,7 +541,7 @@ app.delete("/make-server-f9553289/pipelines/:id", async (c) => {
 });
 
 // AI Insights endpoint (called by Dashboard)
-app.post("/make-server-f9553289/ai-insights", async (c) => {
+app.post("/api/ai-insights", async (c) => {
   try {
     const apiKey = env("OPENAI_API_KEY");
     if (!apiKey) {
@@ -608,7 +609,7 @@ app.post("/make-server-f9553289/ai-insights", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/ai-analyze", async (c) => {
+app.post("/api/ai-analyze", async (c) => {
   try {
     const apiKey = env("OPENAI_API_KEY");
     if (!apiKey) {
@@ -690,7 +691,7 @@ app.post("/make-server-f9553289/ai-analyze", async (c) => {
 });
 
 // AI Chat endpoint
-app.post("/make-server-f9553289/ai-chat", async (c) => {
+app.post("/api/ai-chat", async (c) => {
   try {
     const apiKey = env("OPENAI_API_KEY");
     if (!apiKey) {
@@ -775,7 +776,7 @@ app.post("/make-server-f9553289/ai-chat", async (c) => {
 });
 
 // Signup Endpoint
-app.post("/make-server-f9553289/signup", async (c) => {
+app.post("/api/signup", async (c) => {
   try {
     const body = await c.req.json();
     const { email, password, name } = body;
@@ -810,7 +811,7 @@ app.post("/make-server-f9553289/signup", async (c) => {
 });
 
 // Upload Image Endpoint
-app.post("/make-server-f9553289/upload", async (c) => {
+app.post("/api/upload", async (c) => {
   try {
     const body = await c.req.parseBody();
     const file = body['file'];
@@ -858,7 +859,7 @@ app.post("/make-server-f9553289/upload", async (c) => {
 });
 
 // Get AI Chat History
-app.get("/make-server-f9553289/ai-chat-history", async (c) => {
+app.get("/api/ai-chat-history", async (c) => {
   try {
     const userId = c.req.query('userId');
     
@@ -880,7 +881,7 @@ app.get("/make-server-f9553289/ai-chat-history", async (c) => {
 });
 
 // Clear AI Chat History
-app.delete("/make-server-f9553289/ai-chat-history", async (c) => {
+app.delete("/api/ai-chat-history", async (c) => {
   try {
     const userId = c.req.query('userId');
     
@@ -899,7 +900,7 @@ app.delete("/make-server-f9553289/ai-chat-history", async (c) => {
 });
 
 // Email Templates endpoints
-app.get("/make-server-f9553289/email-templates", async (c) => {
+app.get("/api/email-templates", async (c) => {
   try {
     const userId = c.req.query('userId');
     
@@ -919,7 +920,7 @@ app.get("/make-server-f9553289/email-templates", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/email-templates", async (c) => {
+app.post("/api/email-templates", async (c) => {
   try {
     const body = await c.req.json();
     const { userId, templates } = body;
@@ -942,7 +943,7 @@ app.post("/make-server-f9553289/email-templates", async (c) => {
 });
 
 // Production Events Endpoints
-app.get("/make-server-f9553289/production-events", async (c) => {
+app.get("/api/production-events", async (c) => {
   try {
     const events = await kv.getByPrefix("production_event:");
     return c.json(events || []);
@@ -952,7 +953,7 @@ app.get("/make-server-f9553289/production-events", async (c) => {
   }
 });
 
-  app.post("/make-server-f9553289/production-events", async (c) => {
+  app.post("/api/production-events", async (c) => {
     try {
       const body = await c.req.json();
       const { lineId, recipeId, amount, startDate, endDate, notes, status } = body;
@@ -982,7 +983,7 @@ app.get("/make-server-f9553289/production-events", async (c) => {
     }
   });
 
-app.delete("/make-server-f9553289/production-events/:id", async (c) => {
+app.delete("/api/production-events/:id", async (c) => {
   try {
     const id = c.req.param("id");
     await kv.del(`production_event:${id}`);
@@ -994,7 +995,7 @@ app.delete("/make-server-f9553289/production-events/:id", async (c) => {
 });
 
 // Production Event Payments
-app.get("/make-server-f9553289/production-events/:id/payments", async (c) => {
+app.get("/api/production-events/:id/payments", async (c) => {
   try {
     const eventId = c.req.param("id");
     const payments = await kv.getByPrefix(`production_payment:${eventId}:`);
@@ -1005,7 +1006,7 @@ app.get("/make-server-f9553289/production-events/:id/payments", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/production-events/:id/payments", async (c) => {
+app.post("/api/production-events/:id/payments", async (c) => {
   try {
     const eventId = c.req.param("id");
     const body = await c.req.json();
@@ -1034,7 +1035,7 @@ app.post("/make-server-f9553289/production-events/:id/payments", async (c) => {
   }
 });
 
-app.delete("/make-server-f9553289/production-events/:id/payments/:paymentId", async (c) => {
+app.delete("/api/production-events/:id/payments/:paymentId", async (c) => {
   try {
     const eventId = c.req.param("id");
     const paymentId = c.req.param("paymentId");
@@ -1047,7 +1048,7 @@ app.delete("/make-server-f9553289/production-events/:id/payments/:paymentId", as
 });
 
 // Recipe Endpoints
-app.get("/make-server-f9553289/recipes", async (c) => {
+app.get("/api/recipes", async (c) => {
   try {
     const recipes = await kv.getByPrefix("recipe:");
     return c.json(recipes || []);
@@ -1057,7 +1058,7 @@ app.get("/make-server-f9553289/recipes", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/recipes", async (c) => {
+app.post("/api/recipes", async (c) => {
   try {
     const body = await c.req.json();
     const id = body.id || `recipe-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1070,7 +1071,7 @@ app.post("/make-server-f9553289/recipes", async (c) => {
   }
 });
 
-app.delete("/make-server-f9553289/recipes/:id", async (c) => {
+app.delete("/api/recipes/:id", async (c) => {
   try {
     const id = c.req.param("id");
     // Handle both cases: ID with prefix (Telegram) and without (Legacy Manual)
@@ -1084,7 +1085,7 @@ app.delete("/make-server-f9553289/recipes/:id", async (c) => {
 });
 
 // Email sending endpoint
-app.post("/make-server-f9553289/send-email", async (c) => {
+app.post("/api/send-email", async (c) => {
   const guard = await requireAdmin(c);
   if (!guard.ok) return guard.response;
   try {
@@ -1148,7 +1149,7 @@ app.post("/make-server-f9553289/send-email", async (c) => {
 });
 
 // Telegram Webhook Endpoint (PUBLIC - no auth required, Telegram can't send headers)
-app.post("/make-server-f9553289/telegram-webhook", async (c) => {
+app.post("/api/telegram-webhook", async (c) => {
   try {
     const expectedSecret = env("TELEGRAM_WEBHOOK_SECRET");
     if (expectedSecret) {
@@ -1406,7 +1407,7 @@ Return JSON:
 });
 
 // Get Production Logs
-app.get("/make-server-f9553289/production-logs", async (c) => {
+app.get("/api/production-logs", async (c) => {
   try {
     let logs: any[] = [];
     try {
@@ -1428,7 +1429,7 @@ app.get("/make-server-f9553289/production-logs", async (c) => {
 });
 
 // Create Manual Production Log
-app.post("/make-server-f9553289/production-logs", async (c) => {
+app.post("/api/production-logs", async (c) => {
   try {
     const body = await c.req.json();
     const { amount, article, date, note, warehouse, materialType, worker, twistedWorker } = body;
@@ -1466,7 +1467,7 @@ app.post("/make-server-f9553289/production-logs", async (c) => {
       originalMessage: note || "Ручной ввод",
       status: 'pending_sync',
       unit: 'кг',
-      warehouse: warehouse || 'AIKO',
+      warehouse: normalizeWarehouse(warehouse),
       materialType: materialType || 'Искусстве��ный ротанг',
       worker: worker || '',
       twistedWorker: twistedWorker || '',
@@ -1484,7 +1485,7 @@ app.post("/make-server-f9553289/production-logs", async (c) => {
 });
 
 // Update Production Log
-app.put("/make-server-f9553289/production-logs/:id", async (c) => {
+app.put("/api/production-logs/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
@@ -1549,7 +1550,7 @@ app.put("/make-server-f9553289/production-logs/:id", async (c) => {
 });
 
 // Delete Production Log
-app.delete("/make-server-f9553289/production-logs/:id", async (c) => {
+app.delete("/api/production-logs/:id", async (c) => {
   try {
     const id = c.req.param("id");
     await kv.del(id);
@@ -1561,7 +1562,7 @@ app.delete("/make-server-f9553289/production-logs/:id", async (c) => {
 });
 
 // Get Stock Transaction History by Article
-app.get("/make-server-f9553289/stock-history/:article", async (c) => {
+app.get("/api/stock-history/:article", async (c) => {
   try {
     const article = decodeURIComponent(c.req.param("article"));
     const warehouse = c.req.query("warehouse") || null;
@@ -1644,7 +1645,7 @@ app.get("/make-server-f9553289/stock-history/:article", async (c) => {
 });
 
 // Get Webhook Debug Logs
-app.get("/make-server-f9553289/debug/logs", async (c) => {
+app.get("/api/debug/logs", async (c) => {
   const guard = await requireAdmin(c);
   if (!guard.ok) return guard.response;
   try {
@@ -1668,7 +1669,7 @@ app.get("/make-server-f9553289/debug/logs", async (c) => {
     }
 
     const apiBase = (env("PUBLIC_BASE_URL") || "http://localhost:4000").replace(/\/$/, "");
-    const expectedUrl = `${apiBase}/make-server-f9553289/telegram-webhook`;
+    const expectedUrl = `${apiBase}/api/telegram-webhook`;
 
     return c.json({ 
         logs, 
@@ -1685,7 +1686,7 @@ app.get("/make-server-f9553289/debug/logs", async (c) => {
 });
 
 // Fix Webhook Endpoint
-app.post("/make-server-f9553289/debug/fix-webhook", async (c) => {
+app.post("/api/debug/fix-webhook", async (c) => {
   const guard = await requireAdmin(c);
   if (!guard.ok) return guard.response;
   try {
@@ -1697,7 +1698,7 @@ app.post("/make-server-f9553289/debug/fix-webhook", async (c) => {
     }
 
     const apiBase = (env("PUBLIC_BASE_URL") || "http://localhost:4000").replace(/\/$/, "");
-    const webhookUrl = `${apiBase}/make-server-f9553289/telegram-webhook`;
+    const webhookUrl = `${apiBase}/api/telegram-webhook`;
     console.log(`Force fixing Telegram Webhook to: ${webhookUrl}`);
 
     const webhookRes = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
@@ -1719,7 +1720,7 @@ app.post("/make-server-f9553289/debug/fix-webhook", async (c) => {
 });
 
 // Get Integration Status
-app.get("/make-server-f9553289/integrations/status", async (c) => {
+app.get("/api/integrations/status", async (c) => {
   const guard = await requireAdmin(c);
   if (!guard.ok) return guard.response;
   const googleKv = await kv.get("integration:google");
@@ -1744,7 +1745,7 @@ app.get("/make-server-f9553289/integrations/status", async (c) => {
 });
 
 // Save Integration Credentials
-app.post("/make-server-f9553289/integrations", async (c) => {
+app.post("/api/integrations", async (c) => {
   const guard = await requireAdmin(c);
   if (!guard.ok) return guard.response;
   try {
@@ -1760,7 +1761,7 @@ app.post("/make-server-f9553289/integrations", async (c) => {
         const botToken = credentials.botToken || credentials.token;
         if (botToken) {
              const apiBase = (env("PUBLIC_BASE_URL") || "http://localhost:4000").replace(/\/$/, "");
-             const webhookUrl = `${apiBase}/make-server-f9553289/telegram-webhook`;
+             const webhookUrl = `${apiBase}/api/telegram-webhook`;
              
              console.log(`Setting Telegram Webhook to: ${webhookUrl}`);
              
@@ -1794,7 +1795,7 @@ app.post("/make-server-f9553289/integrations", async (c) => {
 });
 
 // Delete Integration
-app.delete("/make-server-f9553289/integrations/:type", async (c) => {
+app.delete("/api/integrations/:type", async (c) => {
   const guard = await requireAdmin(c);
   if (!guard.ok) return guard.response;
   try {
@@ -1809,7 +1810,7 @@ app.delete("/make-server-f9553289/integrations/:type", async (c) => {
 });
 
 // Notification Settings
-app.get("/make-server-f9553289/notifications/settings", async (c) => {
+app.get("/api/notifications/settings", async (c) => {
   try {
     const settings = await kv.get("settings:notifications");
     return c.json(settings || {
@@ -1823,7 +1824,7 @@ app.get("/make-server-f9553289/notifications/settings", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/notifications/settings", async (c) => {
+app.post("/api/notifications/settings", async (c) => {
   try {
     const body = await c.req.json();
     await kv.set("settings:notifications", body);
@@ -1834,7 +1835,7 @@ app.post("/make-server-f9553289/notifications/settings", async (c) => {
 });
 
 // Regional Settings
-app.get("/make-server-f9553289/regional-settings", async (c) => {
+app.get("/api/regional-settings", async (c) => {
   try {
     const settings = await kv.get("settings:regional");
     return c.json(settings || {
@@ -1847,7 +1848,7 @@ app.get("/make-server-f9553289/regional-settings", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/regional-settings", async (c) => {
+app.post("/api/regional-settings", async (c) => {
   try {
     const body = await c.req.json();
     await kv.set("settings:regional", body);
@@ -1858,7 +1859,7 @@ app.post("/make-server-f9553289/regional-settings", async (c) => {
 });
 
 // Get Clients
-app.get("/make-server-f9553289/clients", async (c) => {
+app.get("/api/clients", async (c) => {
   try {
     const clients = await kv.getByPrefix("client:");
     return c.json(clients || []);
@@ -1868,7 +1869,7 @@ app.get("/make-server-f9553289/clients", async (c) => {
 });
 
 // Add Client
-app.post("/make-server-f9553289/clients", async (c) => {
+app.post("/api/clients", async (c) => {
   try {
     const body = await c.req.json();
     const { name, phone, email, notes } = body;
@@ -1917,7 +1918,7 @@ app.post("/make-server-f9553289/clients", async (c) => {
 });
 
 // Update Client
-app.put("/make-server-f9553289/clients/:id", async (c) => {
+app.put("/api/clients/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
@@ -1951,7 +1952,7 @@ app.put("/make-server-f9553289/clients/:id", async (c) => {
 });
 
 // Delete Client
-app.delete("/make-server-f9553289/clients/:id", async (c) => {
+app.delete("/api/clients/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const existing = await kv.get(id);
@@ -1969,7 +1970,7 @@ app.delete("/make-server-f9553289/clients/:id", async (c) => {
 // ============= NOTIFICATIONS SYSTEM =============
 
 // Get all notifications
-app.get("/make-server-f9553289/notifications", async (c) => {
+app.get("/api/notifications", async (c) => {
   try {
     const notifications = await kv.getByPrefix("notification:");
     // Sort by created date (newest first)
@@ -1984,7 +1985,7 @@ app.get("/make-server-f9553289/notifications", async (c) => {
 });
 
 // Create notification
-app.post("/make-server-f9553289/notifications", async (c) => {
+app.post("/api/notifications", async (c) => {
   try {
     const body = await c.req.json();
     const { type, title, message, priority, entityType, entityId, actionUrl } = body;
@@ -2012,7 +2013,7 @@ app.post("/make-server-f9553289/notifications", async (c) => {
 });
 
 // Mark notification as read
-app.put("/make-server-f9553289/notifications/:id/read", async (c) => {
+app.put("/api/notifications/:id/read", async (c) => {
   try {
     const id = c.req.param("id");
     const notification = await kv.get(id);
@@ -2032,7 +2033,7 @@ app.put("/make-server-f9553289/notifications/:id/read", async (c) => {
 });
 
 // Mark all notifications as read
-app.put("/make-server-f9553289/notifications/read-all", async (c) => {
+app.put("/api/notifications/read-all", async (c) => {
   try {
     const notifications = await kv.getByPrefix("notification:");
     
@@ -2050,7 +2051,7 @@ app.put("/make-server-f9553289/notifications/read-all", async (c) => {
 });
 
 // Delete notification
-app.delete("/make-server-f9553289/notifications/:id", async (c) => {
+app.delete("/api/notifications/:id", async (c) => {
   try {
     const id = c.req.param("id");
     await kv.del(id);
@@ -2062,7 +2063,7 @@ app.delete("/make-server-f9553289/notifications/:id", async (c) => {
 });
 
 // Generate automatic notifications (called by cron or manually)
-app.post("/make-server-f9553289/notifications/generate", async (c) => {
+app.post("/api/notifications/generate", async (c) => {
   try {
     if (!env("DATABASE_URL")) {
       return c.json({ error: "DATABASE_URL is not configured" }, 500);
@@ -2256,7 +2257,7 @@ app.post("/make-server-f9553289/notifications/generate", async (c) => {
 });
 
 // Get Employees
-app.get("/make-server-f9553289/employees", async (c) => {
+app.get("/api/employees", async (c) => {
   try {
     const employees = await kv.getByPrefix("employee:");
     return c.json(employees || []);
@@ -2266,7 +2267,7 @@ app.get("/make-server-f9553289/employees", async (c) => {
 });
 
 // Add Employee
-app.post("/make-server-f9553289/employees", async (c) => {
+app.post("/api/employees", async (c) => {
   try {
     const { name, hourlyRate, windingRate, twistingRate, role, fixedSalary } = await c.req.json();
     if (!name) return c.json({ error: "Name required" }, 400);
@@ -2291,7 +2292,7 @@ app.post("/make-server-f9553289/employees", async (c) => {
 });
 
 // Update Employee
-app.put("/make-server-f9553289/employees/:id", async (c) => {
+app.put("/api/employees/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const { name, hourlyRate, windingRate, twistingRate, role, fixedSalary } = await c.req.json();
@@ -2317,7 +2318,7 @@ app.put("/make-server-f9553289/employees/:id", async (c) => {
 });
 
 // Delete Employee
-app.delete("/make-server-f9553289/employees/:id", async (c) => {
+app.delete("/api/employees/:id", async (c) => {
   try {
     const id = c.req.param("id");
     await kv.del(id);
@@ -2329,7 +2330,7 @@ app.delete("/make-server-f9553289/employees/:id", async (c) => {
 
 // ============= TIMESHEET SYSTEM =============
 
-app.get("/make-server-f9553289/timesheets", async (c) => {
+app.get("/api/timesheets", async (c) => {
   try {
     const sheets = await kv.getByPrefix("timesheet:");
     return c.json(sheets || []);
@@ -2338,7 +2339,7 @@ app.get("/make-server-f9553289/timesheets", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/timesheets", async (c) => {
+app.post("/api/timesheets", async (c) => {
   try {
     const body = await c.req.json();
     const { employeeId, date, hours, rate } = body;
@@ -2364,7 +2365,7 @@ app.post("/make-server-f9553289/timesheets", async (c) => {
   }
 });
 
-app.delete("/make-server-f9553289/timesheets/:id", async (c) => {
+app.delete("/api/timesheets/:id", async (c) => {
   try {
     const id = c.req.param("id");
     // Ensure key has prefix
@@ -2378,7 +2379,7 @@ app.delete("/make-server-f9553289/timesheets/:id", async (c) => {
 
 
 // Sync to Google Sheets
-app.post("/make-server-f9553289/sync-google-sheets", async (c) => {
+app.post("/api/sync-google-sheets", async (c) => {
   try {
     const sheetId = env("GOOGLE_SHEET_ID");
     const email = env("GOOGLE_SERVICE_ACCOUNT_EMAIL");
@@ -2435,7 +2436,7 @@ app.post("/make-server-f9553289/sync-google-sheets", async (c) => {
     // Prepare rows
     const values = pendingLogs.map((log: any) => [
         new Date(log.date).toLocaleDateString("ru-RU") + " " + new Date(log.date).toLocaleTimeString("ru-RU"),
-        log.warehouse || "AIKO",
+        normalizeWarehouse(log.warehouse),
         log.article || "",
         log.amount,
         log.unit || "кг",
@@ -2498,14 +2499,14 @@ app.post("/make-server-f9553289/sync-google-sheets", async (c) => {
 });
 
 // Get Webhook Logs (Debug)
-app.get("/make-server-f9553289/system/webhook-logs", async (c) => {
+app.get("/api/system/webhook-logs", async (c) => {
   return c.json(await kv.get("system:webhook_logs") || []);
 });
 
 // --- INVENTORY & DEAL ITEMS ---
 
 // Save items for a deal
-app.post("/make-server-f9553289/deal-items", async (c) => {
+app.post("/api/deal-items", async (c) => {
   try {
     const body = await c.req.json();
     const { dealId, items } = body; // items: [{ article: string, quantity: number, price: number }]
@@ -2523,7 +2524,7 @@ app.post("/make-server-f9553289/deal-items", async (c) => {
 });
 
 // Get items for a deal
-app.get("/make-server-f9553289/deal-items/:dealId", async (c) => {
+app.get("/api/deal-items/:dealId", async (c) => {
   try {
     const dealId = c.req.param("dealId");
     const items = await kv.get(`deal_items:${dealId}`);
@@ -2537,7 +2538,7 @@ app.get("/make-server-f9553289/deal-items/:dealId", async (c) => {
 // --- PRODUCTION ORDERS (linked to Deals) ---
 
 // Get all production orders — synthesised from ALL deal_items in KV + Postgres deals
-app.get("/make-server-f9553289/production-orders", async (c) => {
+app.get("/api/production-orders", async (c) => {
   try {
     // 1. Grab any manually saved prod-order entries (legacy metadata)
     let manualOrders: any[] = [];
@@ -2621,7 +2622,7 @@ app.get("/make-server-f9553289/production-orders", async (c) => {
 });
 
 // Create / update a production order for a deal
-app.post("/make-server-f9553289/production-orders", async (c) => {
+app.post("/api/production-orders", async (c) => {
   try {
     const body = await c.req.json();
     const { dealId, dealTitle, companyName, items } = body;
@@ -2648,7 +2649,7 @@ app.post("/make-server-f9553289/production-orders", async (c) => {
 });
 
 // Delete a production order
-app.delete("/make-server-f9553289/production-orders/:dealId", async (c) => {
+app.delete("/api/production-orders/:dealId", async (c) => {
   try {
     const dealId = c.req.param("dealId");
     await kv.del(`prod-order:${dealId}`);
@@ -2660,7 +2661,7 @@ app.delete("/make-server-f9553289/production-orders/:dealId", async (c) => {
 });
 
 // Get Full Warehouse Inventory (Calculated) - v8 with enhanced logging
-app.get("/make-server-f9553289/warehouse/inventory", async (c) => {
+app.get("/api/warehouse/inventory", async (c) => {
   try {
      console.log("Fetching warehouse inventory...");
      // 1. Get all production logs (Additions)
@@ -2669,17 +2670,9 @@ app.get("/make-server-f9553289/warehouse/inventory", async (c) => {
        console.error("Error fetching production logs:", e);
      }
      
-     // Initialize structure for all warehouses
+     // Единый склад BTT (AIKO/Bizly объединены)
      const finalInventory: Record<string, any> = {
-         'AIKO': { 
-             produced: { total: 0, byArticle: {} as Record<string, number> },
-             sold: { total: 0, byArticle: {} as Record<string, number> }
-         },
-         'BTT': { 
-             produced: { total: 0, byArticle: {} as Record<string, number> },
-             sold: { total: 0, byArticle: {} as Record<string, number> }
-         },
-         'Bizly': { 
+         [DEFAULT_WAREHOUSE]: {
              produced: { total: 0, byArticle: {} as Record<string, number> },
              sold: { total: 0, byArticle: {} as Record<string, number> }
          }
@@ -2687,7 +2680,7 @@ app.get("/make-server-f9553289/warehouse/inventory", async (c) => {
 
      // Process Production Logs (Additions)
      logs.forEach((log: any) => {
-        const wh = log.warehouse || 'AIKO';
+        const wh = normalizeWarehouse(log.warehouse);
         if (!finalInventory[wh]) finalInventory[wh] = { produced: { total: 0, byArticle: {} }, sold: { total: 0, byArticle: {} } };
         
         finalInventory[wh].produced.total += (log.amount || 0);
@@ -2695,12 +2688,12 @@ app.get("/make-server-f9553289/warehouse/inventory", async (c) => {
         finalInventory[wh].produced.byArticle[art] = (finalInventory[wh].produced.byArticle[art] || 0) + (log.amount || 0);
      });
 
-     // Inject Defined Products (Recipes) into AIKO inventory (as 0 stock if not present)
+     // Inject Defined Products (Recipes) into BTT inventory (as 0 stock if not present)
      // This ensures they appear in ProductSelect
      try {
          const products = await kv.getByPrefix("product:");
          if (products) {
-             const wh = 'AIKO'; // Default warehouse for definitions
+             const wh = DEFAULT_WAREHOUSE;
              if (!finalInventory[wh]) finalInventory[wh] = { produced: { total: 0, byArticle: {} }, sold: { total: 0, byArticle: {} } };
              
              products.forEach((p: any) => {
@@ -2723,7 +2716,7 @@ app.get("/make-server-f9553289/warehouse/inventory", async (c) => {
          if (shipments) {
              shipments.forEach((s: any) => {
                  if (s.status === 'completed') {
-                     const wh = s.warehouse || 'AIKO';
+                     const wh = normalizeWarehouse(s.warehouse);
                      
                      // Add to Stats
                      if (!finalInventory[wh]) finalInventory[wh] = { produced: { total: 0, byArticle: {} }, sold: { total: 0, byArticle: {} } };
@@ -2776,7 +2769,7 @@ app.get("/make-server-f9553289/warehouse/inventory", async (c) => {
                          if (items && Array.isArray(items)) {
                              items.forEach((item: any) => {
                                  const qty = parseFloat(item.quantity) || 0;
-                                 const wh = item.warehouse || 'AIKO';
+                                 const wh = normalizeWarehouse(item.warehouse);
                                  const art = item.article ? item.article.trim() : "Без артикула";
 
                                  // Check how much is already shipped for this specific deal/warehouse/article
@@ -2852,7 +2845,7 @@ app.get("/make-server-f9553289/warehouse/inventory", async (c) => {
 
 // ============= SHIPMENTS SYSTEM =============
 
-app.get("/make-server-f9553289/shipments", async (c) => {
+app.get("/api/shipments", async (c) => {
   try {
     const shipments = await kv.getByPrefix("shipment:");
     // Sort by date descending
@@ -2865,7 +2858,7 @@ app.get("/make-server-f9553289/shipments", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/shipments", async (c) => {
+app.post("/api/shipments", async (c) => {
   try {
     const body = await c.req.json();
     const { date, note, items, status, warehouse, dealId, stickerClient } = body;
@@ -2876,7 +2869,7 @@ app.post("/make-server-f9553289/shipments", async (c) => {
       date: date || new Date().toISOString(),
       note: note || '',
       status: status || 'draft', // draft, completed
-      warehouse: warehouse || 'AIKO',
+      warehouse: normalizeWarehouse(warehouse),
       items: items || [], // Array of { id, article, weight, date }
       dealId: dealId || null,
       stickerClient: stickerClient || '',
@@ -2890,7 +2883,7 @@ app.post("/make-server-f9553289/shipments", async (c) => {
   }
 });
 
-app.put("/make-server-f9553289/shipments/:id", async (c) => {
+app.put("/api/shipments/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
@@ -2906,7 +2899,7 @@ app.put("/make-server-f9553289/shipments/:id", async (c) => {
   }
 });
 
-app.delete("/make-server-f9553289/shipments/:id", async (c) => {
+app.delete("/api/shipments/:id", async (c) => {
   try {
     const id = c.req.param("id");
     await kv.del(id);
@@ -2918,7 +2911,7 @@ app.delete("/make-server-f9553289/shipments/:id", async (c) => {
 
 // ============= WAREHOUSE TRANSFERS SYSTEM =============
 
-app.get("/make-server-f9553289/transfers", async (c) => {
+app.get("/api/transfers", async (c) => {
   try {
     const transfers = await kv.getByPrefix("transfer:");
     // Sort by date descending
@@ -2931,7 +2924,7 @@ app.get("/make-server-f9553289/transfers", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/transfers", async (c) => {
+app.post("/api/transfers", async (c) => {
   try {
     const body = await c.req.json();
     const fromWarehouse = (body.fromWarehouse || '').trim();
@@ -2964,7 +2957,7 @@ app.post("/make-server-f9553289/transfers", async (c) => {
     
     // Check available stock in source warehouse
     const logs = await kv.getByPrefix("warehouse:log:");
-    const whLogs = (logs || []).filter((l: any) => (l.warehouse || 'AIKO') === fromWarehouse);
+    const whLogs = (logs || []).filter((l: any) => (l.normalizeWarehouse(warehouse)) === fromWarehouse);
     
     console.log('📦 Production logs for', fromWarehouse, ':', {
       totalLogs: logs?.length || 0,
@@ -2985,7 +2978,7 @@ app.post("/make-server-f9553289/transfers", async (c) => {
     // Subtract shipments
     const shipments = await kv.getByPrefix("shipment:");
     const completedShipments = (shipments || []).filter((s: any) => 
-      s.status === 'completed' && (s.warehouse || 'AIKO') === fromWarehouse
+      s.status === 'completed' && (normalizeWarehouse(s.warehouse)) === fromWarehouse
     );
     
     completedShipments.forEach((shipment: any) => {
@@ -3091,7 +3084,7 @@ app.post("/make-server-f9553289/transfers", async (c) => {
   }
 });
 
-app.delete("/make-server-f9553289/transfers/:id", async (c) => {
+app.delete("/api/transfers/:id", async (c) => {
   try {
     const id = c.req.param("id");
     await kv.del(id);
@@ -3103,7 +3096,7 @@ app.delete("/make-server-f9553289/transfers/:id", async (c) => {
 
 // ============= MARKETING SYSTEM =============
 
-app.get("/make-server-f9553289/marketing/reports", async (c) => {
+app.get("/api/marketing/reports", async (c) => {
   try {
     const reports = await kv.getByPrefix("marketing:report:");
     return c.json(reports || []);
@@ -3112,7 +3105,7 @@ app.get("/make-server-f9553289/marketing/reports", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/marketing/reports", async (c) => {
+app.post("/api/marketing/reports", async (c) => {
   try {
     const body = await c.req.json();
     const { reports } = body;
@@ -3138,7 +3131,7 @@ app.post("/make-server-f9553289/marketing/reports", async (c) => {
   }
 });
 
-app.delete("/make-server-f9553289/marketing/reports/:id", async (c) => {
+app.delete("/api/marketing/reports/:id", async (c) => {
   try {
     const id = c.req.param("id");
     // Ensure we delete the correct key.
@@ -3151,7 +3144,7 @@ app.delete("/make-server-f9553289/marketing/reports/:id", async (c) => {
 });
 
 // Marketing Target
-app.get("/make-server-f9553289/marketing/target", async (c) => {
+app.get("/api/marketing/target", async (c) => {
   try {
     const target = await kv.get("marketing:target");
     return c.json({ target: target || 50000000 });
@@ -3160,7 +3153,7 @@ app.get("/make-server-f9553289/marketing/target", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/marketing/target", async (c) => {
+app.post("/api/marketing/target", async (c) => {
   try {
     const body = await c.req.json();
     const { target } = body;
@@ -3172,7 +3165,7 @@ app.post("/make-server-f9553289/marketing/target", async (c) => {
 });
 
 // Marketing Calendar Events
-app.get("/make-server-f9553289/marketing/events", async (c) => {
+app.get("/api/marketing/events", async (c) => {
   try {
     const events = await kv.getByPrefix("marketing:event:");
     return c.json(events || []);
@@ -3181,7 +3174,7 @@ app.get("/make-server-f9553289/marketing/events", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/marketing/events", async (c) => {
+app.post("/api/marketing/events", async (c) => {
   try {
     const body = await c.req.json();
     const { title, date, type, channel, description } = body;
@@ -3205,7 +3198,7 @@ app.post("/make-server-f9553289/marketing/events", async (c) => {
   }
 });
 
-app.delete("/make-server-f9553289/marketing/events/:id", async (c) => {
+app.delete("/api/marketing/events/:id", async (c) => {
   try {
     const id = c.req.param("id");
     // Ensure we delete the correct key. The ID from frontend might or might not have prefix.
@@ -3220,7 +3213,7 @@ app.delete("/make-server-f9553289/marketing/events/:id", async (c) => {
 
 // ============= TIMELINE SYSTEM =============
 
-app.get("/make-server-f9553289/timeline/:dealId", async (c) => {
+app.get("/api/timeline/:dealId", async (c) => {
   try {
     const dealId = c.req.param("dealId");
     const events = await kv.get(`timeline:deal:${dealId}`);
@@ -3231,7 +3224,7 @@ app.get("/make-server-f9553289/timeline/:dealId", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/timeline", async (c) => {
+app.post("/api/timeline", async (c) => {
   try {
     const body = await c.req.json();
     const { dealId, event } = body;
@@ -3254,7 +3247,7 @@ app.post("/make-server-f9553289/timeline", async (c) => {
 
 // ============= GLOBAL SETTINGS =============
 
-app.get("/make-server-f9553289/settings/rates", async (c) => {
+app.get("/api/settings/rates", async (c) => {
   try {
     const rates = await kv.get("settings:rates");
     // Default values if not set
@@ -3268,7 +3261,7 @@ app.get("/make-server-f9553289/settings/rates", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/settings/rates", async (c) => {
+app.post("/api/settings/rates", async (c) => {
   try {
     const body = await c.req.json();
     const { winding, twisting } = body;
@@ -3286,7 +3279,7 @@ app.post("/make-server-f9553289/settings/rates", async (c) => {
 
 // ============= PAYMENT SYSTEM =============
 
-app.get("/make-server-f9553289/payments", async (c) => {
+app.get("/api/payments", async (c) => {
   try {
     const payments = await kv.getByPrefix("payment:");
     return c.json(payments || []);
@@ -3297,7 +3290,7 @@ app.get("/make-server-f9553289/payments", async (c) => {
   }
 });
 
-app.get("/make-server-f9553289/payments/deal/:dealId", async (c) => {
+app.get("/api/payments/deal/:dealId", async (c) => {
   try {
     const dealId = c.req.param("dealId");
     // Get all payments and filter (kv currently supports prefix, but let's be safe)
@@ -3309,7 +3302,7 @@ app.get("/make-server-f9553289/payments/deal/:dealId", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/payments", async (c) => {
+app.post("/api/payments", async (c) => {
   try {
     const body = await c.req.json();
     const { dealId, amount, date, note, type } = body; // type: 'income' | 'expense' (future proof)
@@ -3336,7 +3329,7 @@ app.post("/make-server-f9553289/payments", async (c) => {
   }
 });
 
-app.delete("/make-server-f9553289/payments/:id", async (c) => {
+app.delete("/api/payments/:id", async (c) => {
   try {
     const id = c.req.param("id");
     // The ID passed from frontend should be the full key
@@ -3349,7 +3342,7 @@ app.delete("/make-server-f9553289/payments/:id", async (c) => {
 
 // ============= RECIPE LIBRARY =============
 
-app.get("/make-server-f9553289/recipes", async (c) => {
+app.get("/api/recipes", async (c) => {
   try {
     const recipes = await kv.getByPrefix("recipe:");
     return c.json(recipes || []);
@@ -3359,7 +3352,7 @@ app.get("/make-server-f9553289/recipes", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/recipes", async (c) => {
+app.post("/api/recipes", async (c) => {
   try {
     const body = await c.req.json();
     const { id, name, description, base, dye, temperature, screwSpeed, dyeSpeed, winding, image } = body;
@@ -3401,7 +3394,7 @@ app.post("/make-server-f9553289/recipes", async (c) => {
   }
 });
 
-app.delete("/make-server-f9553289/recipes/:id", async (c) => {
+app.delete("/api/recipes/:id", async (c) => {
   try {
     const id = c.req.param("id");
     // Frontend should send the full ID (key)
@@ -3419,7 +3412,7 @@ app.delete("/make-server-f9553289/recipes/:id", async (c) => {
 // ============= AUTOMATION SYSTEM =============
 
 // Get Automation Settings
-app.get("/make-server-f9553289/automation/settings", async (c) => {
+app.get("/api/automation/settings", async (c) => {
   try {
     const settings = await kv.get("settings:automation");
     return c.json(settings || {
@@ -3433,7 +3426,7 @@ app.get("/make-server-f9553289/automation/settings", async (c) => {
 });
 
 // Save Automation Settings
-app.post("/make-server-f9553289/automation/settings", async (c) => {
+app.post("/api/automation/settings", async (c) => {
   try {
     const body = await c.req.json();
     await kv.set("settings:automation", body);
@@ -3444,7 +3437,7 @@ app.post("/make-server-f9553289/automation/settings", async (c) => {
 });
 
 // Update Deal with Automation
-app.post("/make-server-f9553289/deals/update-with-automation", async (c) => {
+app.post("/api/deals/update-with-automation", async (c) => {
   try {
     const body = await c.req.json();
     const { id, updates, previousStatus, previousStageId } = body;
@@ -3537,7 +3530,7 @@ app.post("/make-server-f9553289/deals/update-with-automation", async (c) => {
 });
 
 // Check Stalled Deals (Called by Frontend periodically or on load)
-app.post("/make-server-f9553289/deals/check-stalled", async (c) => {
+app.post("/api/deals/check-stalled", async (c) => {
   try {
      const settings = (await kv.get("settings:automation")) || {};
      if (!settings.stalledNotifications) {
@@ -3610,7 +3603,7 @@ app.post("/make-server-f9553289/deals/check-stalled", async (c) => {
 });
 
 // Reset Inventory Endpoint
-app.post("/make-server-f9553289/warehouse/inventory/reset", async (c) => {
+app.post("/api/warehouse/inventory/reset", async (c) => {
   try {
      // 1. Calculate Inventory (Copy logic from GET /warehouse/inventory)
      let logs: any[] = [];
@@ -3621,7 +3614,7 @@ app.post("/make-server-f9553289/warehouse/inventory/reset", async (c) => {
      // Add Production
      if (logs) {
          logs.forEach((log: any) => {
-            const wh = log.warehouse || 'AIKO';
+            const wh = normalizeWarehouse(log.warehouse);
             if (!inventory[wh]) inventory[wh] = {};
             const art = log.article ? log.article.trim() : "Без артикула";
             inventory[wh][art] = (inventory[wh][art] || 0) + (log.amount || 0);
@@ -3633,7 +3626,7 @@ app.post("/make-server-f9553289/warehouse/inventory/reset", async (c) => {
      if (shipments) {
          shipments.forEach((s: any) => {
              if (s.status === 'completed') {
-                 const wh = s.warehouse || 'AIKO';
+                 const wh = normalizeWarehouse(s.warehouse);
                  if (!inventory[wh]) inventory[wh] = {};
                  s.items.forEach((item: any) => {
                      const art = item.article ? item.article.trim() : "Без артикула";
@@ -3700,7 +3693,7 @@ app.post("/make-server-f9553289/warehouse/inventory/reset", async (c) => {
 
 // ============= LEADS SYSTEM =============
 
-app.get("/make-server-f9553289/leads", async (c) => {
+app.get("/api/leads", async (c) => {
   try {
     const leads = await kv.getByPrefix("lead:");
     // Sort by date descending
@@ -3713,7 +3706,7 @@ app.get("/make-server-f9553289/leads", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/leads", async (c) => {
+app.post("/api/leads", async (c) => {
   try {
     const body = await c.req.json();
     const { name, phone, info, status, country } = body;
@@ -3740,7 +3733,7 @@ app.post("/make-server-f9553289/leads", async (c) => {
   }
 });
 
-app.put("/make-server-f9553289/leads/:id", async (c) => {
+app.put("/api/leads/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
@@ -3756,7 +3749,7 @@ app.put("/make-server-f9553289/leads/:id", async (c) => {
   }
 });
 
-app.delete("/make-server-f9553289/leads/:id", async (c) => {
+app.delete("/api/leads/:id", async (c) => {
   try {
     const id = c.req.param("id");
     await kv.del(id);
@@ -3767,10 +3760,10 @@ app.delete("/make-server-f9553289/leads/:id", async (c) => {
 });
 
 // Import from Google - DEPRECATED/REMOVED
-// app.post("/make-server-f9553289/leads/import-google", ... )
+// app.post("/api/leads/import-google", ... )
 
 // Deal Metadata (Exclusions) Endpoints
-app.get("/make-server-f9553289/deals/excluded", async (c) => {
+app.get("/api/deals/excluded", async (c) => {
   try {
     const meta = await kv.getByPrefix("deal-meta:");
     // Filter only those marked as excluded
@@ -3784,7 +3777,7 @@ app.get("/make-server-f9553289/deals/excluded", async (c) => {
   }
 });
 
-app.post("/make-server-f9553289/deals/exclude", async (c) => {
+app.post("/api/deals/exclude", async (c) => {
   try {
     const body = await c.req.json();
     const { dealId, excluded } = body;
@@ -3809,7 +3802,7 @@ app.post("/make-server-f9553289/deals/exclude", async (c) => {
 
 // Payroll endpoints
 // Save monthly payroll calculation
-app.post("/make-server-f9553289/payroll", async (c) => {
+app.post("/api/payroll", async (c) => {
   try {
     const { month, payrollData } = await c.req.json();
     if (!month || !payrollData) {
@@ -3837,7 +3830,7 @@ app.post("/make-server-f9553289/payroll", async (c) => {
 });
 
 // Get payroll history
-app.get("/make-server-f9553289/payroll", async (c) => {
+app.get("/api/payroll", async (c) => {
   try {
     const payrolls = await kv.getByPrefix("payroll:");
     return c.json(payrolls || []);
@@ -3848,7 +3841,7 @@ app.get("/make-server-f9553289/payroll", async (c) => {
 });
 
 // Get specific month payroll
-app.get("/make-server-f9553289/payroll/:month", async (c) => {
+app.get("/api/payroll/:month", async (c) => {
   try {
     const month = c.req.param("month");
     const payroll = await kv.get(`payroll:${month}`);
@@ -3862,7 +3855,7 @@ app.get("/make-server-f9553289/payroll/:month", async (c) => {
 // ==================== SALES ANALYTICS ENDPOINTS ====================
 
 // ABC Analysis - Shows which clients bring 80% of revenue
-app.get("/make-server-f9553289/analytics/abc-analysis", async (c) => {
+app.get("/api/analytics/abc-analysis", async (c) => {
   try {
     if (!env("DATABASE_URL")) {
       return c.json({ error: "DATABASE_URL is not configured" }, 500);
@@ -3952,7 +3945,7 @@ app.get("/make-server-f9553289/analytics/abc-analysis", async (c) => {
 });
 
 // RFM Segmentation - Recency, Frequency, Monetary analysis
-app.get("/make-server-f9553289/analytics/rfm-segmentation", async (c) => {
+app.get("/api/analytics/rfm-segmentation", async (c) => {
   try {
     if (!env("DATABASE_URL")) {
       return c.json({ error: "DATABASE_URL is not configured" }, 500);
@@ -4074,7 +4067,7 @@ app.get("/make-server-f9553289/analytics/rfm-segmentation", async (c) => {
 });
 
 // Sales Funnel Conversion Analysis
-app.get("/make-server-f9553289/analytics/funnel-conversion", async (c) => {
+app.get("/api/analytics/funnel-conversion", async (c) => {
   try {
     if (!env("DATABASE_URL")) {
       return c.json({ error: "DATABASE_URL is not configured" }, 500);
@@ -4161,7 +4154,7 @@ app.get("/make-server-f9553289/analytics/funnel-conversion", async (c) => {
 });
 
 // Sales Forecast using AI (OpenAI)
-app.get("/make-server-f9553289/analytics/sales-forecast", async (c) => {
+app.get("/api/analytics/sales-forecast", async (c) => {
   try {
     const openaiKey = env("OPENAI_API_KEY");
     
@@ -4279,7 +4272,7 @@ ${historicalData.map(d => `${d.month}: ${d.revenue.toLocaleString('uz-UZ')} су
 
 // Manager Performance Analysis
 // Note: owner_id field doesn't exist yet, returning overall statistics
-app.get("/make-server-f9553289/analytics/manager-performance", async (c) => {
+app.get("/api/analytics/manager-performance", async (c) => {
   try {
     if (!env("DATABASE_URL")) {
       return c.json({ error: "DATABASE_URL is not configured" }, 500);
@@ -4336,7 +4329,7 @@ app.get("/make-server-f9553289/analytics/manager-performance", async (c) => {
 });
 
 // Lost Deals Analysis (Why deals are lost)
-app.get("/make-server-f9553289/analytics/lost-deals", async (c) => {
+app.get("/api/analytics/lost-deals", async (c) => {
   try {
     if (!env("DATABASE_URL")) {
       return c.json({ error: "DATABASE_URL is not configured" }, 500);
@@ -4413,7 +4406,7 @@ app.get("/make-server-f9553289/analytics/lost-deals", async (c) => {
 // ==================== ADVANCED ANALYTICS ENDPOINTS ====================
 
 // Cohort Analysis - Customer retention and LTV by cohort
-app.get("/make-server-f9553289/analytics/cohort-analysis", async (c) => {
+app.get("/api/analytics/cohort-analysis", async (c) => {
   try {
     if (!env("DATABASE_URL")) {
       return c.json({ error: "DATABASE_URL is not configured" }, 500);
@@ -4509,7 +4502,7 @@ app.get("/make-server-f9553289/analytics/cohort-analysis", async (c) => {
 });
 
 // Sales Velocity - Speed metrics
-app.get("/make-server-f9553289/analytics/sales-velocity", async (c) => {
+app.get("/api/analytics/sales-velocity", async (c) => {
   try {
     if (!env("DATABASE_URL")) {
       return c.json({ error: "DATABASE_URL is not configured" }, 500);
@@ -4631,7 +4624,7 @@ app.get("/make-server-f9553289/analytics/sales-velocity", async (c) => {
 });
 
 // Time-based Activity Heatmap
-app.get("/make-server-f9553289/analytics/activity-heatmap", async (c) => {
+app.get("/api/analytics/activity-heatmap", async (c) => {
   try {
     if (!env("DATABASE_URL")) {
       return c.json({ error: "DATABASE_URL is not configured" }, 500);
@@ -4700,7 +4693,7 @@ app.get("/make-server-f9553289/analytics/activity-heatmap", async (c) => {
 });
 
 // Advanced Sales Forecast with multiple methods
-app.get("/make-server-f9553289/analytics/advanced-forecast", async (c) => {
+app.get("/api/analytics/advanced-forecast", async (c) => {
   try {
     const openaiKey = env("OPENAI_API_KEY");
     
@@ -4874,7 +4867,7 @@ ${historicalData.map(d => `${d.month}: ${d.revenue.toLocaleString('uz-UZ')}`).jo
 });
 
 // Export analytics data to CSV format
-app.get("/make-server-f9553289/analytics/export", async (c) => {
+app.get("/api/analytics/export", async (c) => {
   try {
     const exportType = c.req.query("type") || "all"; // abc, rfm, funnel, all
     if (!env("DATABASE_URL")) {
@@ -4937,7 +4930,7 @@ app.get("/make-server-f9553289/analytics/export", async (c) => {
 // ==================== NEW WAREHOUSE FILTERING & ANALYTICS ENDPOINTS ====================
 
 // Get Warehouse Movement History with Filters
-app.get("/make-server-f9553289/warehouse/movements", async (c) => {
+app.get("/api/warehouse/movements", async (c) => {
   try {
     const dateFrom = c.req.query('dateFrom');
     const dateTo = c.req.query('dateTo');
@@ -4957,7 +4950,7 @@ app.get("/make-server-f9553289/warehouse/movements", async (c) => {
           id: log.id,
           type: 'production',
           date: log.date,
-          warehouse: log.warehouse || 'AIKO',
+          warehouse: normalizeWarehouse(log.warehouse),
           article: log.article || '',
           amount: log.amount || 0,
           unit: log.unit || 'кг',
@@ -4980,7 +4973,7 @@ app.get("/make-server-f9553289/warehouse/movements", async (c) => {
               id: `${s.id}_${item.id}`,
               type: 'shipment',
               date: s.date || item.date,
-              warehouse: s.warehouse || 'AIKO',
+              warehouse: normalizeWarehouse(s.warehouse),
               article: item.article || '',
               amount: -(parseFloat(item.weight) || 0), // Negative for outbound
               unit: 'кг',
@@ -5098,7 +5091,7 @@ app.get("/make-server-f9553289/warehouse/movements", async (c) => {
 });
 
 // Get Monthly Statistics
-app.get("/make-server-f9553289/warehouse/monthly-stats", async (c) => {
+app.get("/api/warehouse/monthly-stats", async (c) => {
   try {
     const dateFrom = c.req.query('dateFrom');
     const dateTo = c.req.query('dateTo');
@@ -5140,7 +5133,7 @@ app.get("/make-server-f9553289/warehouse/monthly-stats", async (c) => {
     // Process production logs
     logs.forEach((log: any) => {
       const monthKey = getMonthKey(log.date);
-      const wh = log.warehouse || 'AIKO';
+      const wh = normalizeWarehouse(log.warehouse);
       
       // Apply filters
       if (dateFrom && new Date(log.date) < new Date(dateFrom)) return;
@@ -5161,7 +5154,7 @@ app.get("/make-server-f9553289/warehouse/monthly-stats", async (c) => {
       if (s.status !== 'completed') return;
       
       const monthKey = getMonthKey(s.date);
-      const wh = s.warehouse || 'AIKO';
+      const wh = normalizeWarehouse(s.warehouse);
       
       if (dateFrom && new Date(s.date) < new Date(dateFrom)) return;
       if (dateTo && new Date(s.date) > new Date(dateTo)) return;
@@ -5230,7 +5223,7 @@ app.get("/make-server-f9553289/warehouse/monthly-stats", async (c) => {
 });
 
 // Get Available Articles (for filters)
-app.get("/make-server-f9553289/warehouse/available-articles", async (c) => {
+app.get("/api/warehouse/available-articles", async (c) => {
   try {
     const articlesSet = new Set<string>();
 
@@ -5270,7 +5263,7 @@ app.use(
 app.use("/*", serveStatic({ root: "./build" }));
 
 app.get("*", async (c) => {
-  if (c.req.path.startsWith("/make-server-f9553289/")) {
+  if (c.req.path.startsWith("/api/")) {
     return c.json({ error: "Not found" }, 404);
   }
 

@@ -4,7 +4,7 @@ import path from "node:path";
 import { handleSiteWebhook } from "../siteWebhook.ts";
 
 export function registerPublicRoutes(app: Hono, env: (k: string) => string | undefined) {
-  app.get("/make-server-f9553289/static-uploads/:name", async (c) => {
+  app.get("/api/static-uploads/:name", async (c) => {
     try {
       const name = c.req.param("name");
       const safe = path.basename(name);
@@ -24,7 +24,7 @@ export function registerPublicRoutes(app: Hono, env: (k: string) => string | und
     }
   });
 
-  app.post("/make-server-f9553289/webhooks/site", async (c) => {
+  app.post("/api/webhooks/site", async (c) => {
     const secret = env("CRM_WEBHOOK_SECRET");
     if (!secret) {
       return c.json({ error: "CRM_WEBHOOK_SECRET not configured" }, 503);
@@ -46,7 +46,7 @@ export function registerPublicRoutes(app: Hono, env: (k: string) => string | und
     return c.json(r.body, r.status);
   });
 
-  app.get("/make-server-f9553289/health", (c) => {
+  app.get("/api/health", (c) => {
     console.log("Health check requested");
     return c.json({ status: "ok", timestamp: new Date().toISOString(), version: "v8" });
   });

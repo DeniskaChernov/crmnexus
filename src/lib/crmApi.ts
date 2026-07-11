@@ -1,9 +1,11 @@
+import { API_PREFIX } from "./constants.ts";
+
 /** CRM HTTP API (Railway / local). Vite dev: proxy → server :4000 */
 
 export function crmUrl(subpath: string): string {
   const s = subpath.startsWith("/") ? subpath : `/${subpath}`;
   const base = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "";
-  const full = `/make-server-f9553289${s}`;
+  const full = `${API_PREFIX}${s}`;
   return base ? `${base}${full}` : full;
 }
 

@@ -65,32 +65,14 @@ export default function Dashboard() {
       fetchWarehouseStats();
     }, 30000);
 
-    // Realtime subscription for deals changes
-    const dealsChannel = crm
-      .channel('dashboard-deals-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'deals'
-        },
-        (payload) => {
-          console.log('Deal changed, refreshing dashboard:', payload);
-          fetchStats(timeRange);
-        }
-      )
-      .subscribe();
-
-    // Check for payments updates every 15 seconds
-    const paymentsInterval = setInterval(() => {
+    const dealsInterval = setInterval(() => {
       fetchStats(timeRange);
-    }, 15000);
+    }, 30000);
 
     return () => {
       clearInterval(warehouseInterval);
       clearInterval(paymentsInterval);
-      crm.removeChannel(dealsChannel);
+      clearInterval(dealsInterval);
     };
   }, [timeRange]);
 
@@ -168,13 +150,13 @@ export default function Dashboard() {
         const errorData = await response.text();
         console.warn("Failed to fetch warehouse stats - HTTP", response.status, errorData);
         setWarehouseStats({
-             'AIKO': { produced: { total: 0, byArticle: {} }, sold: { total: 0, byArticle: {} }, current: { total: 0, byArticle: {} } }
+             'BTT': { produced: { total: 0, byArticle: {} }, sold: { total: 0, byArticle: {} }, current: { total: 0, byArticle: {} } }
         });
       }
     } catch (e) {
       console.warn("Failed to fetch warehouse stats - Network error:", e);
       setWarehouseStats({
-          'AIKO': { produced: { total: 0, byArticle: {} }, sold: { total: 0, byArticle: {} }, current: { total: 0, byArticle: {} } }
+          'BTT': { produced: { total: 0, byArticle: {} }, sold: { total: 0, byArticle: {} }, current: { total: 0, byArticle: {} } }
       });
     }
   };

@@ -157,7 +157,7 @@ export function DebugLogs() {
                                 <div>
                                     <h4 className="font-bold text-orange-900 text-lg">⚠️ Ошибка 401 при обращении к API</h4>
                                     <p className="text-sm text-orange-800 mt-2 leading-relaxed">
-                                        Telegram или внешний клиент получает отказ авторизации. Убедитесь, что URL вебхука указывает на ваш сервис с префиксом <code className="text-xs bg-orange-100 px-1 rounded">/make-server-f9553289</code>, а для публичных маршрутов (например Telegram) на сервере настроены исключения JWT.
+                                        Telegram или внешний клиент получает отказ авторизации. Убедитесь, что URL вебхука указывает на ваш сервис с префиксом <code className="text-xs bg-orange-100 px-1 rounded">/api</code>, а для публичных маршрутов (например Telegram) на сервере настроены исключения JWT.
                                     </p>
                                 </div>
                             </div>

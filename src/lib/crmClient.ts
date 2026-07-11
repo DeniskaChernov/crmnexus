@@ -182,20 +182,9 @@ function fromTable(table: string) {
   };
 }
 
-const noopSub = { unsubscribe: () => {} };
-
 /** HTTP-клиент к Postgres через `/crm/run` и JWT-сессия через `/auth/*`. */
 export const crm = {
   from: fromTable,
-  channel(_name: string) {
-    return {
-      on() {
-        return { subscribe: () => noopSub };
-      },
-      subscribe: () => noopSub,
-    };
-  },
-  removeChannel() {},
   auth: {
     async getSession() {
       const t = localStorage.getItem("crm_token");

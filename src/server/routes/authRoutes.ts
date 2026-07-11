@@ -2,7 +2,7 @@ import type { Hono } from "hono";
 import { signUserToken, verifyBearer } from "../jwt.ts";
 
 export function registerAuthRoutes(app: Hono) {
-  app.post("/make-server-f9553289/auth/login", async (c) => {
+  app.post("/api/auth/login", async (c) => {
     try {
       const { email, password } = await c.req.json();
       if (!email || !password) return c.json({ error: "Email and password required" }, 400);
@@ -23,7 +23,7 @@ export function registerAuthRoutes(app: Hono) {
     }
   });
 
-  app.get("/make-server-f9553289/auth/me", async (c) => {
+  app.get("/api/auth/me", async (c) => {
     try {
       const auth = c.req.header("authorization");
       if (!auth?.startsWith("Bearer ")) return c.json({ error: "Unauthorized" }, 401);

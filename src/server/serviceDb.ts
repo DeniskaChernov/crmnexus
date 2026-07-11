@@ -388,7 +388,7 @@ export function createClient(_url?: string | null, _key?: string | null) {
           createSignedUrl: async (fileName: string, _seconds: number) => {
             const base =
               process.env["PUBLIC_BASE_URL"]?.replace(/\/$/, "") || "http://localhost:4000";
-            const url = `${base}/make-server-f9553289/static-uploads/${encodeURIComponent(fileName)}`;
+            const url = `${base}/api/static-uploads/${encodeURIComponent(fileName)}`;
             return { data: { signedUrl: url }, error: null };
           },
         };

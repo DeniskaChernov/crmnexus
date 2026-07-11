@@ -64,7 +64,7 @@ function validateFilterTuple(f: unknown, allowedOps: Set<FilterOp>): string | nu
 }
 
 export function registerCrmRunRoute(app: Hono) {
-  app.post("/make-server-f9553289/crm/run", async (c) => {
+  app.post("/api/crm/run", async (c) => {
     try {
       const body = await c.req.json();
       if (!body?.table || !CRM_TABLES.has(body.table)) {

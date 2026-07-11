@@ -38,12 +38,11 @@ export function ProductSelect({ value, onChange, className, disabled, productTyp
                 // Aggregate
                 const map: Record<string, number> = {};
                 
-                ['AIKO', 'BTT'].forEach(wh => {
-                    const byArt = data[wh]?.current?.byArticle || {};
-                    Object.entries(byArt).forEach(([art, qty]) => {
-                        const name = art as string;
-                        map[name] = (map[name] || 0) + (qty as number);
-                    });
+                const wh = 'BTT';
+                const byArt = data[wh]?.current?.byArticle || {};
+                Object.entries(byArt).forEach(([art, qty]) => {
+                    const name = art as string;
+                    map[name] = (map[name] || 0) + (qty as number);
                 });
 
                 const list = Object.entries(map).map(([name, stock]) => ({

@@ -8,12 +8,12 @@ Telegram не отправляет заголовок `Authorization`. Если 
 
 ## Решение
 
-В коде API маршрут `POST .../make-server-f9553289/telegram-webhook` должен быть **публичным** (без обязательного Bearer), либо проверка должна опираться на данные Telegram (например секрет в query/body), а не на CRM JWT.
+В коде API маршрут `POST .../api/telegram-webhook` должен быть **публичным** (без обязательного Bearer), либо проверка должна опираться на данные Telegram (например секрет в query/body), а не на CRM JWT.
 
 После деплоя укажите в BotFather URL вида:
 
 ```text
-https://<ваш-домен-railway>/make-server-f9553289/telegram-webhook
+https://<ваш-домен-railway>/api/telegram-webhook
 ```
 
 где `<ваш-домен-railway>` совпадает с `PUBLIC_BASE_URL` без завершающего `/`.

@@ -35,7 +35,7 @@ export const createShipmentsForDeal = async (
   // Group by warehouse
   const byWarehouse: Record<string, DealItem[]> = {};
   validItems.forEach(item => {
-    const wh = item.warehouse || 'AIKO';
+    const wh = item.warehouse || 'BTT';
     if (!byWarehouse[wh]) byWarehouse[wh] = [];
     byWarehouse[wh].push(item);
   });

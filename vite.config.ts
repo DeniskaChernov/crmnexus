@@ -57,7 +57,7 @@ export default defineConfig({
       port: 3000,
       open: true,
       proxy: {
-        "/make-server-f9553289": {
+        "/api": {
           target: "http://localhost:4000",
           changeOrigin: true,
         },
