@@ -10,20 +10,25 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    crm.auth
-      .getSession()
-      .then(({ data: { session } }) => {
-        if (!cancelled) {
-          setSession(session);
-          setLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setSession(null);
-          setLoading(false);
-        }
-      });
+
+    const resolveSession = async (attempt = 0) => {
+      const { data: { session } } = await crm.auth.getSession();
+      if (cancelled) return;
+      if (session) {
+        setSession(session);
+        setLoading(false);
+        return;
+      }
+      const hasToken = Boolean(localStorage.getItem("crm_token"));
+      if (hasToken && attempt < 3) {
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+        return resolveSession(attempt + 1);
+      }
+      setSession(null);
+      setLoading(false);
+    };
+
+    void resolveSession();
 
     const {
       data: { subscription },

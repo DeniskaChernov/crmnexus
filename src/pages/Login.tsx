@@ -159,7 +159,10 @@ export default function Login() {
                     <p className="font-medium">Данные для входа после миграции</p>
                     <p className="mt-1">Email: <span className="font-mono">{MIGRATION_LOGIN.email}</span></p>
                     <p>Пароль: <span className="font-mono">{MIGRATION_LOGIN.password}</span></p>
-                    <p className="mt-2 text-xs text-amber-800">Если вручную не входит — нажмите кнопку ниже «Войти одним кликом».</p>
+                    <p className="mt-2 text-xs text-amber-800">
+                      Пароль сейчас: <span className="font-mono font-bold">{MIGRATION_LOGIN.password}</span>.
+                      Не используйте старый BttNexus2026. Нажмите «Войти одним кликом».
+                    </p>
                   </div>
                 )}
                 {!isSignUp && (

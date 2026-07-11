@@ -1,6 +1,64 @@
 import { crmUrl, authHeaders } from "./crmApi.ts";
 import { normalizeCredential } from "./normalizeCredential.ts";
 
+type SessionUser = {
+  id: string;
+  email: string;
+  user_metadata: Record<string, unknown>;
+};
+
+function decodeJwtPayload(token: string): {
+  sub?: string;
+  email?: string;
+  name?: string;
+  role?: string;
+  exp?: number;
+} | null {
+  try {
+    const part = token.split(".")[1];
+    if (!part) return null;
+    const json = atob(part.replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function isTokenExpired(payload: { exp?: number }): boolean {
+  if (!payload.exp) return false;
+  return payload.exp * 1000 < Date.now() - 30_000;
+}
+
+function sessionFromToken(token: string): { user: SessionUser } | null {
+  const payload = decodeJwtPayload(token);
+  if (!payload?.sub || isTokenExpired(payload)) return null;
+  return {
+    user: {
+      id: payload.sub,
+      email: payload.email ?? "",
+      user_metadata: {
+        name: payload.name ?? "",
+        role: payload.role ?? "",
+      },
+    },
+  };
+}
+
+async function fetchMe(token: string, attempt = 0): Promise<Response> {
+  try {
+    return await fetch(crmUrl("/auth/me"), {
+      headers: { ...authHeaders(false), Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+  } catch (e) {
+    if (attempt < 2) {
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      return fetchMe(token, attempt + 1);
+    }
+    throw e;
+  }
+}
+
 async function crmRun(body: Record<string, unknown>) {
   try {
     const res = await fetch(crmUrl("/crm/run"), {
@@ -190,14 +248,20 @@ export const crm = {
     async getSession() {
       const t = localStorage.getItem("crm_token");
       if (!t) return { data: { session: null } };
+
+      const optimistic = sessionFromToken(t);
+
       try {
-        const res = await fetch(crmUrl("/auth/me"), {
-          headers: { ...authHeaders(false), Authorization: `Bearer ${t}` },
-        });
+        const res = await fetchMe(t);
         if (!res.ok) {
           if (res.status === 401 || res.status === 403) {
             localStorage.removeItem("crm_token");
             window.dispatchEvent(new Event("crm-auth"));
+            return { data: { session: null } };
+          }
+          // Сервер временно недоступен (502/503) — не выкидываем, если токен ещё валиден
+          if (optimistic) {
+            return { data: { session: optimistic } };
           }
           return { data: { session: null } };
         }
@@ -205,6 +269,7 @@ export const crm = {
         try {
           body = await res.json();
         } catch {
+          if (optimistic) return { data: { session: optimistic } };
           localStorage.removeItem("crm_token");
           window.dispatchEvent(new Event("crm-auth"));
           return { data: { session: null } };
@@ -227,6 +292,10 @@ export const crm = {
           },
         };
       } catch {
+        // Сеть упала при перезагрузке / деплое — сохраняем сессию по JWT, не разлогиниваем
+        if (optimistic) {
+          return { data: { session: optimistic } };
+        }
         return { data: { session: null } };
       }
     },
