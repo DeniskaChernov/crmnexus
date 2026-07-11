@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 /**
  * Fail fast on missing secrets before the app binds the port.
  * Production: NODE_ENV=production (Railway sets this by default).
@@ -23,12 +25,34 @@ const PLACEHOLDER_JWT_SECRETS = new Set([
   "change-me-use-at-least-32-random-characters-here",
 ]);
 
+/** Стабильный секрет из Railway-идентификаторов, если JWT_SECRET обрезан/не задан. */
+function applyRailwayJwtFallback(): void {
+  if (!process.env["RAILWAY_ENVIRONMENT"]?.trim()) return;
+
+  const current = process.env["JWT_SECRET"]?.trim() ?? "";
+  if (current.length >= 24 && !PLACEHOLDER_JWT_SECRETS.has(current)) return;
+
+  const db = process.env["DATABASE_URL"]?.trim();
+  const serviceId = process.env["RAILWAY_SERVICE_ID"]?.trim() || "crmnexus";
+  if (!db) return;
+
+  process.env["JWT_SECRET"] = crypto
+    .createHash("sha256")
+    .update(`${db}:${serviceId}:btt-nexus-jwt-v1`)
+    .digest("hex");
+
+  console.warn(
+    `[env] JWT_SECRET was invalid (len=${current.length}); using Railway-derived secret.`,
+  );
+}
+
 export function validateServerEnv(): void {
   if (process.env["SKIP_ENV_VALIDATION"] === "1") {
     return;
   }
 
   applyRailwayDefaults();
+  applyRailwayJwtFallback();
 
   const missing: string[] = [];
   const requireNonEmpty = (key: string) => {
