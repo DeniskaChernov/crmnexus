@@ -17,12 +17,27 @@ async function issueTokenForEmail(email: string) {
   return { token, user };
 }
 
+async function resolveMigrationEmail(): Promise<string | null> {
+  const fromEnv = process.env["CRM_BOOTSTRAP_EMAIL"]?.trim().toLowerCase();
+  if (fromEnv) return fromEnv;
+
+  const { getPool } = await import("../dbPool.ts");
+  const pool = getPool();
+  const { rows } = await pool.query<{ email: string }>(
+    `SELECT email FROM crm_users WHERE role = 'owner' ORDER BY created_at ASC LIMIT 1`,
+  );
+  return rows[0]?.email?.trim().toLowerCase() ?? null;
+}
+
 export function registerAuthRoutes(app: Hono) {
   /** Вход без пароля в браузере — только для периода миграции. */
   app.post("/api/auth/migration-login", async (c) => {
     try {
-      const email = process.env["CRM_BOOTSTRAP_EMAIL"]?.trim().toLowerCase();
-      if (!email) return c.json({ error: "Migration login disabled" }, 403);
+      const email = await resolveMigrationEmail();
+      if (!email) {
+        console.warn("[auth/migration-login] no owner email (env or db)");
+        return c.json({ error: "Вход недоступен: нет владельца в системе" }, 403);
+      }
       const issued = await issueTokenForEmail(email);
       if (!issued) {
         console.warn("[auth/migration-login] user not found", { email });
