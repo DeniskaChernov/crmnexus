@@ -55,18 +55,26 @@ async function tryRefreshToken(): Promise<boolean> {
   return false;
 }
 
+export async function ensureAuthToken(): Promise<boolean> {
+  if (localStorage.getItem("crm_token")) return true;
+  return tryRefreshToken();
+}
+
 /** Авторизованный fetch: при 401 обновляет токен и повторяет запрос. */
 export async function crmFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const jsonBody = init.body != null;
-  const run = () =>
-    fetch(crmUrl(path), {
+  const run = () => {
+    const extra = (init.headers as Record<string, string> | undefined) ?? {};
+    const { Authorization: _drop, authorization: _drop2, ...rest } = extra;
+    return fetch(crmUrl(path), {
       ...init,
       cache: "no-store",
       headers: {
+        ...rest,
         ...authHeaders(jsonBody),
-        ...(init.headers as Record<string, string> | undefined),
       },
     });
+  };
 
   let res = await run();
   if (res.status === 401 && (await tryRefreshToken())) {

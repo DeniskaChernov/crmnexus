@@ -1,4 +1,5 @@
 import { crmUrl, authHeaders } from "./crmApi.ts";
+import { ensureAuthToken } from "./crmApi.ts";
 import { normalizeCredential } from "./normalizeCredential.ts";
 
 type SessionUser = {
@@ -292,8 +293,26 @@ export const crm = {
           },
         };
       } catch {
-        // Сеть упала при перезагрузке / деплое — сохраняем сессию по JWT, не разлогиниваем
         if (optimistic) {
+          if (await ensureAuthToken()) {
+            const retry = await fetchMe(localStorage.getItem("crm_token")!);
+            if (retry.ok) {
+              const body = await retry.json();
+              if (body.user?.id) {
+                return {
+                  data: {
+                    session: {
+                      user: {
+                        id: body.user.id,
+                        email: body.user.email ?? "",
+                        user_metadata: (body.user.user_metadata || {}) as Record<string, unknown>,
+                      },
+                    },
+                  },
+                };
+              }
+            }
+          }
           return { data: { session: optimistic } };
         }
         return { data: { session: null } };

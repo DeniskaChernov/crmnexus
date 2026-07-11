@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { crmUrl, authHeaders, crmFetch, crmJson } from '../lib/crmApi.ts';
+import { crmUrl, authHeaders, crmFetch, crmJson, ensureAuthToken } from '../lib/crmApi.ts';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
@@ -627,7 +627,7 @@ export default function Warehouse() {
   };
 
   const fetchShipments = async () => {
-    const { data, ok, status } = await crmJson<Shipment[]>('/shipments', { headers: authHeaders(false) });
+    const { data, ok, status } = await crmJson<Shipment[]>('/shipments');
     if (ok && Array.isArray(data)) {
       setShipments(data);
       return data.length;
@@ -638,7 +638,7 @@ export default function Warehouse() {
   };
 
   const fetchTransfers = async () => {
-    const { data, ok } = await crmJson<any[]>('/transfers', { headers: authHeaders(false) });
+    const { data, ok } = await crmJson<any[]>('/transfers');
     if (ok && Array.isArray(data)) setTransfers(data);
   };
 
@@ -647,19 +647,21 @@ export default function Warehouse() {
       setLoading(true);
       setLoadError('');
 
+      await ensureAuthToken();
+
       const health = await fetch(crmUrl('/health/db'), { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : null))
         .catch(() => null);
       if (health) setDbCounts({ shipments: health.shipments, production_logs: health.production_logs });
 
       const fetchLogsPromise = async () => {
-        const { data, ok, status } = await crmJson<ProductionLog[]>('/production-logs', { headers: authHeaders(false) });
+        const { data, ok, status } = await crmJson<ProductionLog[]>('/production-logs');
         if (ok && Array.isArray(data)) setLogs(data);
         else if (status === 401) setLoadError('Сессия истекла — обновите страницу или войдите снова');
       };
 
       const fetchStatsPromise = async () => {
-        const { data, ok } = await crmJson<InventoryStats>('/warehouse/inventory', { headers: authHeaders(false) });
+        const { data, ok } = await crmJson<InventoryStats>('/warehouse/inventory');
         if (ok && data) setStats(data);
       };
 
