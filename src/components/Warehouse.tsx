@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { crmUrl, authHeaders } from '../lib/crmApi.ts';
+import { crmUrl, authHeaders, crmFetch, crmJson } from '../lib/crmApi.ts';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
@@ -77,15 +77,16 @@ interface Employee {
 }
 
 const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, backoff = 500) => {
+  const path = url.replace(/^.*\/api/, '') || url;
   for (let i = 0; i < retries; i++) {
     try {
-      const res = await fetch(url, options);
+      const res = await crmFetch(path, options);
       if (!res.ok && (res.status >= 500 || res.status === 429)) {
          throw new Error(`Server error: ${res.status}`);
       }
       return res;
     } catch (err) {
-      console.warn(`Fetch attempt ${i + 1} failed for ${url}:`, err);
+      console.warn(`Fetch attempt ${i + 1} failed for ${path}:`, err);
       if (i === retries - 1) throw err;
       await new Promise(r => setTimeout(r, backoff * (i + 1)));
     }
@@ -506,10 +507,11 @@ export default function Warehouse() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [dbCounts, setDbCounts] = useState<{ shipments?: number; production_logs?: number } | null>(null);
   const [integrations, setIntegrations] = useState({ google: false });
   const [activeTab, setActiveTab] = useState("STOCK");
   const [recipeImages, setRecipeImages] = useState<Record<string, string>>({});
-  const [isFetching, setIsFetching] = useState(false);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEmployeesOpen, setIsEmployeesOpen] = useState(false);
@@ -625,106 +627,62 @@ export default function Warehouse() {
   };
 
   const fetchShipments = async () => {
-    try {
-      const res = await fetchWithRetry(`${crmUrl('/shipments')}`, {
-        headers: { ...authHeaders(false) }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setShipments(Array.isArray(data) ? data : []);
-      } else {
-        console.warn("Failed to fetch shipments", res.status);
-        if (res.status === 401) {
-          toast.error('Сессия истекла — войдите снова');
-        }
-      }
-    } catch (e) {
-      console.warn("Failed to fetch shipments", e);
+    const { data, ok, status } = await crmJson<Shipment[]>('/shipments', { headers: authHeaders(false) });
+    if (ok && Array.isArray(data)) {
+      setShipments(data);
+      return data.length;
     }
+    console.warn("Failed to fetch shipments", status);
+    if (status === 401) setLoadError('Сессия истекла — обновите страницу или войдите снова');
+    return 0;
   };
 
   const fetchTransfers = async () => {
-    try {
-      const res = await fetchWithRetry(`${crmUrl('/transfers')}`, {
-        headers: { ...authHeaders(false) }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTransfers(Array.isArray(data) ? data : []);
-      } else {
-        console.warn("Failed to fetch transfers", res.status);
-      }
-    } catch (e) {
-      console.warn("Failed to fetch transfers", e);
-    }
+    const { data, ok } = await crmJson<any[]>('/transfers', { headers: authHeaders(false) });
+    if (ok && Array.isArray(data)) setTransfers(data);
   };
 
   const fetchData = async () => {
-    // Prevent concurrent fetches
-    if (isFetching) {
-      console.log('Fetch already in progress, skipping...');
-      return;
-    }
-    
     try {
-      setIsFetching(true);
       setLoading(true);
+      setLoadError('');
 
-      // Define fetchers for logs and stats to run in parallel
+      const health = await fetch(crmUrl('/health/db'), { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+      if (health) setDbCounts({ shipments: health.shipments, production_logs: health.production_logs });
+
       const fetchLogsPromise = async () => {
-        try {
-          const responseLogs = await fetchWithRetry(`${crmUrl('/production-logs')}`, {
-            headers: { ...authHeaders(false) }
-          });
-          if (responseLogs.ok) {
-            const data = await responseLogs.json();
-            setLogs(Array.isArray(data) ? data : []);
-          } else if (responseLogs.status === 401) {
-            toast.error('Сессия истекла — войдите снова');
-          }
-        } catch (e) { 
-            console.warn("Failed logs", e);
-        }
+        const { data, ok, status } = await crmJson<ProductionLog[]>('/production-logs', { headers: authHeaders(false) });
+        if (ok && Array.isArray(data)) setLogs(data);
+        else if (status === 401) setLoadError('Сессия истекла — обновите страницу или войдите снова');
       };
 
       const fetchStatsPromise = async () => {
-        try {
-          const responseStats = await fetchWithRetry(`${crmUrl('/warehouse/inventory')}`, {
-            headers: { ...authHeaders(false) }
-          });
-          if (responseStats.ok) {
-            setStats(await responseStats.json());
-          } else {
-            console.warn(`Stats fetch failed with status: ${responseStats.status}`);
-            setStats({
-                 'BTT': { produced: { total: 1000, byArticle: {'Ротанг С8': 1000} }, sold: { total: 500, byArticle: {'Ротанг С8': 500} }, current: { total: 500, byArticle: {'Ротанг С8': 500} } }
-            });
-          }
-        } catch (e: any) { 
-            console.warn("Failed to fetch stats:", e.message || e); 
-            setStats({
-                 'BTT': { produced: { total: 1000, byArticle: {'Ротанг С8': 1000} }, sold: { total: 500, byArticle: {'Ротанг С8': 500} }, current: { total: 500, byArticle: {'Ротанг С8': 500} } }
-            });
-        }
+        const { data, ok } = await crmJson<InventoryStats>('/warehouse/inventory', { headers: authHeaders(false) });
+        if (ok && data) setStats(data);
       };
-      
-      // Execute ALL fetches in parallel
-      await Promise.allSettled([
+
+      const results = await Promise.all([
         fetchIntegrationStatus(),
         fetchEmployees(),
         fetchShipments(),
         fetchTransfers(),
         fetchLogsPromise(),
         fetchStatsPromise(),
-        fetchRecipes()
+        fetchRecipes(),
       ]);
-      
+
+      const shipmentCount = results[2] as number;
+
+      if (shipmentCount === 0 && (health?.shipments ?? 0) > 0) {
+        setLoadError(`В базе ${health.shipments} отгрузок, но браузер не смог их загрузить. Нажмите «Обновить» или перелогиньтесь.`);
+      }
     } catch (error: any) {
       console.error(error);
-      toast.warning('Демо режим (сервер недоступен)');
+      setLoadError('Ошибка загрузки склада — нажмите «Обновить»');
     } finally {
       setLoading(false);
-      setIsFetching(false);
     }
   };
 
@@ -2641,6 +2599,24 @@ export default function Warehouse() {
 
       {/* Info Banners */}
       <div className="space-y-3">
+        {loadError && (
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-semibold">{loadError}</p>
+                {dbCounts && (
+                  <p className="text-xs text-red-700 mt-1">
+                    В базе данных: {dbCounts.production_logs ?? 0} поступлений, {dbCounts.shipments ?? 0} отгрузок
+                  </p>
+                )}
+              </div>
+            </div>
+            <Button size="sm" variant="outline" className="border-red-300 shrink-0" onClick={() => fetchData()}>
+              Обновить
+            </Button>
+          </div>
+        )}
         {integrations.google && (
            <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-sm flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
