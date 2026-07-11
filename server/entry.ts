@@ -1,4 +1,8 @@
-import "dotenv/config";
+// В production Railway сам инжектит переменные — не даём локальному .env перебить их.
+if (process.env["NODE_ENV"] !== "production") {
+  await import("dotenv/config");
+}
+
 import { validateServerEnv } from "../src/server/validateEnv.ts";
 import { serve } from "@hono/node-server";
 
