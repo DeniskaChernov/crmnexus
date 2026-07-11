@@ -1,5 +1,4 @@
-import { crmUrl, authHeaders } from "./crmApi.ts";
-import { ensureAuthToken } from "./crmApi.ts";
+import { crmUrl, authHeaders, ensureAuthToken } from "./crmApi.ts";
 import { normalizeCredential } from "./normalizeCredential.ts";
 
 type SessionUser = {
