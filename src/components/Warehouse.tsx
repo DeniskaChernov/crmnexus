@@ -746,7 +746,7 @@ export default function Warehouse() {
         const host = apiHost || window.location.host;
         if (host.includes('localhost') || host.startsWith('127.0.0.1')) {
           setLoadError(
-            'Подключена пустая локальная база. Откройте production: https://crmnexus-production.up.railway.app/warehouse',
+            'Подключена пустая локальная база. Откройте production: https://nexus-crm-production-1e07.up.railway.app/warehouse',
           );
         } else {
           setLoadError(`Сервер ${host} отдаёт пустую базу. Проверьте DATABASE_URL на Railway.`);
@@ -2712,12 +2712,12 @@ export default function Warehouse() {
                   <p className="text-xs mt-1 text-amber-800 font-medium">
                     Локальный сервер — данные на production:{' '}
                     <a
-                      href="https://crmnexus-production.up.railway.app/warehouse"
+                      href="https://nexus-crm-production-1e07.up.railway.app/warehouse"
                       className="underline"
                       target="_blank"
                       rel="noreferrer"
                     >
-                      crmnexus-production.up.railway.app
+                      nexus-crm-production-1e07.up.railway.app
                     </a>
                   </p>
                 )}
