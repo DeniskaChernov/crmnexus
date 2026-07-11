@@ -631,11 +631,15 @@ export default function Warehouse() {
       });
       if (res.ok) {
         const data = await res.json();
-        setShipments(data);
+        setShipments(Array.isArray(data) ? data : []);
+      } else {
+        console.warn("Failed to fetch shipments", res.status);
+        if (res.status === 401) {
+          toast.error('Сессия истекла — войдите снова');
+        }
       }
     } catch (e) {
       console.warn("Failed to fetch shipments", e);
-      setShipments([]);
     }
   };
 
@@ -646,11 +650,12 @@ export default function Warehouse() {
       });
       if (res.ok) {
         const data = await res.json();
-        setTransfers(data);
+        setTransfers(Array.isArray(data) ? data : []);
+      } else {
+        console.warn("Failed to fetch transfers", res.status);
       }
     } catch (e) {
       console.warn("Failed to fetch transfers", e);
-      setTransfers([]);
     }
   };
 
@@ -672,13 +677,13 @@ export default function Warehouse() {
             headers: { ...authHeaders(false) }
           });
           if (responseLogs.ok) {
-            setLogs(await responseLogs.json());
+            const data = await responseLogs.json();
+            setLogs(Array.isArray(data) ? data : []);
+          } else if (responseLogs.status === 401) {
+            toast.error('Сессия истекла — войдите снова');
           }
         } catch (e) { 
             console.warn("Failed logs", e);
-            setLogs([
-                 { id: 'm1', date: new Date().toISOString(), user: 'Demo', amount: 50, unit: 'кг', status: 'synced', originalMessage: 'Демо запись', article: 'Ротанг С8', warehouse: 'BTT', materialType: 'Искусственный ротанг' }
-            ]);
         }
       };
 
@@ -841,7 +846,13 @@ export default function Warehouse() {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    const load = () => {
+      if (localStorage.getItem("crm_token")) fetchData();
+    };
+    load();
+
+    const onAuth = () => load();
+    window.addEventListener("crm-auth", onAuth);
     
     // Debounce timer for realtime updates
     let debounceTimer: NodeJS.Timeout | null = null;
@@ -858,17 +869,18 @@ export default function Warehouse() {
       // Set new timer - only fetch after 1 second of no updates
       debounceTimer = setTimeout(() => {
         if (isMounted.current) {
-          fetchData();
+          load();
         }
       }, 1000);
     };
 
     // Автообновление каждые 30 секунд
     const pollInterval = setInterval(() => {
-      if (isMounted.current) fetchData();
+      if (isMounted.current) load();
     }, 30000);
 
     return () => {
+      window.removeEventListener("crm-auth", onAuth);
       if (debounceTimer) clearTimeout(debounceTimer);
       clearInterval(pollInterval);
     };

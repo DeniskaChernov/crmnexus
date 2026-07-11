@@ -63,11 +63,18 @@ export const mdel = async (keys: string[]): Promise<void> => {
 
 export const getByPrefix = async (prefix: string): Promise<any[]> => {
   const pool = getPool();
-  const { rows } = await pool.query<{ value: unknown }>(
-    `SELECT value FROM crm_kv WHERE key LIKE $1 ORDER BY key`,
+  const { rows } = await pool.query<{ key: string; value: unknown }>(
+    `SELECT key, value FROM crm_kv WHERE key LIKE $1 ORDER BY key`,
     [`${prefix}%`],
   );
-  return rows.map((r) => r.value);
+  return rows.map((r) => {
+    const value = r.value;
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const obj = value as Record<string, unknown>;
+      if (!obj.id) return { ...obj, id: r.key };
+    }
+    return value;
+  });
 };
 
 /** Последние записи по updated_at (для тяжёлых префиксов без полного выборочного списка). */

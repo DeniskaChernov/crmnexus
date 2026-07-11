@@ -59,11 +59,19 @@ export function registerPublicRoutes(app: Hono, env: (k: string) => string | und
         crm_users: string | null;
         users: number;
         deals: number;
+        companies: number;
+        kv_total: number;
+        production_logs: number;
+        shipments: number;
       }>(
         `SELECT
            to_regclass('public.crm_users')::text AS crm_users,
            (SELECT COUNT(*)::int FROM crm_users) AS users,
-           (SELECT COUNT(*)::int FROM deals) AS deals`,
+           (SELECT COUNT(*)::int FROM deals) AS deals,
+           (SELECT COUNT(*)::int FROM companies) AS companies,
+           (SELECT COUNT(*)::int FROM crm_kv) AS kv_total,
+           (SELECT COUNT(*)::int FROM crm_kv WHERE key LIKE 'production_log:%') AS production_logs,
+           (SELECT COUNT(*)::int FROM crm_kv WHERE key LIKE 'shipment:%') AS shipments`,
       );
       const row = rows[0];
       const ok = Boolean(row?.crm_users);
@@ -73,6 +81,10 @@ export function registerPublicRoutes(app: Hono, env: (k: string) => string | und
           crm_users_table: row?.crm_users ?? null,
           users: row?.users ?? 0,
           deals: row?.deals ?? 0,
+          companies: row?.companies ?? 0,
+          kv_total: row?.kv_total ?? 0,
+          production_logs: row?.production_logs ?? 0,
+          shipments: row?.shipments ?? 0,
           timestamp: new Date().toISOString(),
         },
         ok ? 200 : 503,
