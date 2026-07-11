@@ -2,11 +2,19 @@ import { API_PREFIX } from "./constants.ts";
 
 /** CRM HTTP API (Railway / local). Vite dev: proxy → server :4000 */
 
-export function crmUrl(subpath: string): string {
+export function crmUrl(subpath: string, bustCache = false): string {
   const s = subpath.startsWith("/") ? subpath : `/${subpath}`;
   const base = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "";
   const full = `${API_PREFIX}${s}`;
-  return base ? `${base}${full}` : full;
+  let url = base ? `${base}${full}` : full;
+  if (!base && typeof window !== "undefined") {
+    url = `${window.location.origin}${url}`;
+  }
+  if (bustCache) {
+    const sep = url.includes("?") ? "&" : "?";
+    url = `${url}${sep}_=${Date.now()}`;
+  }
+  return url;
 }
 
 export function authHeaders(json = true): HeadersInit {

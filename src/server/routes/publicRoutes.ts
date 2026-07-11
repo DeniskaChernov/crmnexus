@@ -75,6 +75,8 @@ export function registerPublicRoutes(app: Hono, env: (k: string) => string | und
       );
       const row = rows[0];
       const ok = Boolean(row?.crm_users);
+      c.header("Cache-Control", "no-store, no-cache, must-revalidate");
+      c.header("Pragma", "no-cache");
       return c.json(
         {
           ok,

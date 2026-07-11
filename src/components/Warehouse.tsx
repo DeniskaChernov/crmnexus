@@ -508,7 +508,14 @@ export default function Warehouse() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [loadError, setLoadError] = useState('');
-  const [dbCounts, setDbCounts] = useState<{ shipments?: number; production_logs?: number } | null>(null);
+  const [dbCounts, setDbCounts] = useState<{
+    shipments?: number;
+    production_logs?: number;
+    deals?: number;
+    companies?: number;
+    kv_total?: number;
+  } | null>(null);
+  const [apiHost, setApiHost] = useState('');
   const [integrations, setIntegrations] = useState({ google: false });
   const [activeTab, setActiveTab] = useState("STOCK");
   const [recipeImages, setRecipeImages] = useState<Record<string, string>>({});
@@ -660,17 +667,33 @@ export default function Warehouse() {
   };
 
   const fetchCoreWarehouseData = async () => {
-    const health = await fetch(crmUrl('/health/db'), { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
+    const healthUrl = crmUrl('/health/db', true);
+    setApiHost(new URL(healthUrl).host);
+
+    const health = await fetch(healthUrl, { cache: 'no-store' })
+      .then(async (r) => {
+        if (!r.ok) return null;
+        try {
+          return await r.json();
+        } catch {
+          return null;
+        }
+      })
       .catch(() => null);
     if (health) {
-      setDbCounts({ shipments: health.shipments, production_logs: health.production_logs });
+      setDbCounts({
+        shipments: health.shipments,
+        production_logs: health.production_logs,
+        deals: health.deals,
+        companies: health.companies,
+        kv_total: health.kv_total,
+      });
     }
 
     const [shipmentsResult, logsResult, statsResult] = await Promise.allSettled([
-      fetch(crmUrl('/shipments'), { cache: 'no-store' }),
-      fetch(crmUrl('/production-logs'), { cache: 'no-store' }),
-      fetch(crmUrl('/warehouse/inventory'), { cache: 'no-store' }),
+      fetch(crmUrl('/shipments', true), { cache: 'no-store' }),
+      fetch(crmUrl('/production-logs', true), { cache: 'no-store' }),
+      fetch(crmUrl('/warehouse/inventory', true), { cache: 'no-store' }),
     ]);
 
     let shipmentCount = 0;
@@ -696,7 +719,7 @@ export default function Warehouse() {
       if (data && typeof data === 'object') setStats(data);
     }
 
-    return { shipmentCount, health };
+    return { shipmentCount, health, host: new URL(healthUrl).host };
   };
 
   const fetchData = async () => {
@@ -704,7 +727,7 @@ export default function Warehouse() {
       setLoading(true);
       setLoadError('');
 
-      const { shipmentCount, health } = await fetchCoreWarehouseData();
+      const { shipmentCount, health, host } = await fetchCoreWarehouseData();
 
       await Promise.allSettled([
         fetchIntegrationStatus(),
@@ -715,6 +738,19 @@ export default function Warehouse() {
 
       if (shipmentCount === 0 && (health?.shipments ?? 0) > 0) {
         setLoadError(`В базе ${health.shipments} отгрузок, но браузер не смог их загрузить. Нажмите «Обновить» или перелогиньтесь.`);
+      } else if (
+        (health?.deals ?? 0) === 0 &&
+        (health?.shipments ?? 0) === 0 &&
+        (health?.kv_total ?? 0) === 0
+      ) {
+        const host = apiHost || window.location.host;
+        if (host.includes('localhost') || host.startsWith('127.0.0.1')) {
+          setLoadError(
+            'Подключена пустая локальная база. Откройте production: https://crmnexus-production.up.railway.app/warehouse',
+          );
+        } else {
+          setLoadError(`Сервер ${host} отдаёт пустую базу. Проверьте DATABASE_URL на Railway.`);
+        }
       }
     } catch (error: any) {
       console.error(error);
@@ -2668,7 +2704,21 @@ export default function Warehouse() {
                 </p>
                 {dbCounts && (
                   <p className="text-xs mt-1 opacity-80">
-                    В базе Railway: {dbCounts.production_logs ?? 0} поступлений, {dbCounts.shipments ?? 0} отгрузок
+                    API {apiHost || window.location.host}: {dbCounts.deals ?? 0} сделок ·{' '}
+                    {dbCounts.production_logs ?? 0} поступлений · {dbCounts.shipments ?? 0} отгрузок
+                  </p>
+                )}
+                {(apiHost.includes('localhost') || apiHost.startsWith('127.0.0.1')) && (
+                  <p className="text-xs mt-1 text-amber-800 font-medium">
+                    Локальный сервер — данные на production:{' '}
+                    <a
+                      href="https://crmnexus-production.up.railway.app/warehouse"
+                      className="underline"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      crmnexus-production.up.railway.app
+                    </a>
                   </p>
                 )}
               </>
