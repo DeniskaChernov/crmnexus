@@ -1,38 +1,47 @@
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useChunkedList } from '../../hooks/useChunkedList';
 import { crm } from "@/lib/crmClient.ts";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '../../components/ui/table';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogDescription,
-  DialogTrigger,
   DialogFooter
 } from '../../components/ui/dialog';
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetDescription 
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription
 } from '../../components/ui/sheet';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Plus, Search, Phone, Mail, Trash2, Pencil, User, ShoppingBag, Banknote, ArrowUpRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Card, CardContent } from '../../components/ui/card';
+import { Progress } from '../../components/ui/progress';
+import {
+  Plus,
+  Search,
+  Phone,
+  Mail,
+  Trash2,
+  Pencil,
+  User,
+  ShoppingBag,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Users,
+  TrendingUp,
+  Banknote,
+  Loader2,
+} from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { useIsMobile } from '../../components/ui/use-mobile';
+import { clientInitials, formatUZS, parseAmount } from '../../lib/formatMoney.ts';
 
 interface Client {
   id: string;
@@ -40,14 +49,14 @@ interface Client {
   phone: string;
   email: string;
   notes: string;
-  company_id: string; // Direct link
+  company_id: string;
   createdAt: string;
 }
 
 interface Deal {
   id: string;
   title: string;
-  amount: number;
+  amount: number | string;
   status: 'open' | 'won' | 'lost';
   created_at: string;
   company_id?: string;
@@ -57,6 +66,51 @@ interface Deal {
 type SortField = 'name' | 'orders' | 'ltv';
 type SortDirection = 'asc' | 'desc' | null;
 
+function SortButton({
+  label,
+  active,
+  direction,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  direction: SortDirection;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
+        active ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
+      }`}
+    >
+      {label}
+      {active ? (
+        direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
+      ) : (
+        <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
+      )}
+    </button>
+  );
+}
+
+function ClientAvatar({ name }: { name: string }) {
+  const initials = clientInitials(name);
+  const hue = [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360;
+  return (
+    <div
+      className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ring-2 ring-white"
+      style={{
+        background: `linear-gradient(135deg, hsl(${hue} 70% 92%), hsl(${hue} 55% 85%))`,
+        color: `hsl(${hue} 45% 32%)`,
+      }}
+    >
+      {initials}
+    </div>
+  );
+}
+
 export default function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -64,17 +118,13 @@ export default function Clients() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
-  
-  // Sort States
+
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
-  
-  // Dialog States
+
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [formData, setFormData] = useState({ name: '', phone: '', email: '', notes: '' });
-  
-  // Details Sheet State
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const isMobile = useIsMobile();
@@ -86,52 +136,41 @@ export default function Clients() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      
-      // 1. Fetch companies (clients)
+
       const { data: companiesData, error: companiesError } = await crm
         .from('companies')
         .select('*')
         .order('created_at', { ascending: false });
-
       if (companiesError) throw companiesError;
 
-      // 2. Fetch Contacts to map company relationships
       const { data: contactsData, error: contactsError } = await crm
         .from('contacts')
         .select('id, company_id');
-
       if (contactsError) throw contactsError;
 
-      // 3. Fetch deals for LTV calc
       const { data: dealsData, error: dealsError } = await crm
         .from('deals')
         .select('id, title, amount, status, created_at, company_id, contact_id');
-
       if (dealsError) throw dealsError;
 
       if (companiesData) {
-        const mappedClients: Client[] = companiesData.map((c: any) => ({
+        setClients(
+          companiesData.map((c: any) => ({
             id: c.id,
             name: c.name,
             phone: c.phone || '',
-            email: c.email || '', 
+            email: c.email || '',
             notes: c.notes || '',
-            company_id: c.id, // It's the same
-            createdAt: c.created_at
-        }));
-        setClients(mappedClients);
+            company_id: c.id,
+            createdAt: c.created_at,
+          })),
+        );
       }
-      
-      if (contactsData) {
-        setContacts(contactsData);
-      }
-      
-      if (dealsData) {
-        setDeals(dealsData);
-      }
+      if (contactsData) setContacts(contactsData);
+      if (dealsData) setDeals(dealsData);
     } catch (error) {
-      console.error("Error fetching data:", error);
-      toast.error("Не удалось загрузить список клиентов");
+      console.error('Error fetching data:', error);
+      toast.error('Не удалось загрузить список клиентов');
     } finally {
       setLoading(false);
     }
@@ -139,62 +178,47 @@ export default function Clients() {
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      toast.error("Имя клиента обязательно");
+      toast.error('Имя клиента обязательно');
       return;
     }
 
     try {
       const payload = {
-          name: formData.name.trim(),
-          phone: formData.phone.trim() || null,
-          email: formData.email.trim() || null,
+        name: formData.name.trim(),
+        phone: formData.phone.trim() || null,
+        email: formData.email.trim() || null,
       };
-      
-      let error;
-      
-      if (editingClient) {
-          const { error: err } = await crm
-            .from('companies')
-            .update(payload)
-            .eq('id', editingClient.id);
-          error = err;
-      } else {
-          const { error: err } = await crm
-            .from('companies')
-            .insert(payload);
-          error = err;
-      }
+
+      const { error } = editingClient
+        ? await crm.from('companies').update(payload).eq('id', editingClient.id)
+        : await crm.from('companies').insert(payload);
 
       if (error) throw error;
 
-      toast.success(editingClient ? "Клиент обновлен" : "Клиент создан");
+      toast.success(editingClient ? 'Клиент обновлён' : 'Клиент создан');
       setIsAddOpen(false);
       setEditingClient(null);
       setFormData({ name: '', phone: '', email: '', notes: '' });
       fetchData();
     } catch (error) {
       console.error(error);
-      toast.error("Ошибка при сохранении");
+      toast.error('Ошибка при сохранении');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Вы уверены? Удалятся также все сделки этого клиента.")) return;
+    if (!confirm('Вы уверены? Удалятся также все сделки этого клиента.')) return;
 
     try {
-      const { error } = await crm
-        .from('companies')
-        .delete()
-        .eq('id', id);
-        
+      const { error } = await crm.from('companies').delete().eq('id', id);
       if (error) throw error;
 
-      toast.success("Клиент удален");
-      setClients(clients.filter(c => c.id !== id));
+      toast.success('Клиент удалён');
+      setClients(clients.filter((c) => c.id !== id));
       if (selectedClient?.id === id) setSelectedClient(null);
     } catch (error) {
       console.error(error);
-      toast.error("Ошибка при удалении");
+      toast.error('Ошибка при удалении');
     }
   };
 
@@ -204,7 +228,7 @@ export default function Clients() {
       name: client.name,
       phone: client.phone,
       email: client.email,
-      notes: client.notes
+      notes: client.notes,
     });
     setIsAddOpen(true);
   };
@@ -215,36 +239,51 @@ export default function Clients() {
     setIsAddOpen(true);
   };
 
-  const getClientDeals = useCallback((client: Client) => {
-    const companyContactIds = contacts
-      .filter(contact => contact.company_id === client.company_id)
-      .map(contact => contact.id);
+  const getClientDeals = useCallback(
+    (client: Client) => {
+      const companyContactIds = contacts
+        .filter((contact) => contact.company_id === client.company_id)
+        .map((contact) => contact.id);
 
-    return deals.filter(deal =>
-      deal.company_id === client.company_id ||
-      (deal.contact_id && companyContactIds.includes(deal.contact_id))
-    );
-  }, [contacts, deals]);
+      return deals.filter(
+        (deal) =>
+          deal.company_id === client.company_id ||
+          (deal.contact_id && companyContactIds.includes(deal.contact_id)),
+      );
+    },
+    [contacts, deals],
+  );
 
-  const getClientStats = useCallback((client: Client) => {
-    const clientDeals = getClientDeals(client);
-    const wonDeals = clientDeals.filter(d => d.status === 'won');
+  const getClientStats = useCallback(
+    (client: Client) => {
+      const clientDeals = getClientDeals(client);
+      const wonDeals = clientDeals.filter((d) => d.status === 'won');
+      const totalSpent = wonDeals.reduce((sum, d) => sum + parseAmount(d.amount), 0);
+      const lastOrder =
+        wonDeals.length > 0
+          ? new Date(Math.max(...wonDeals.map((d) => new Date(d.created_at).getTime())))
+          : null;
+      const winRate = clientDeals.length > 0 ? Math.round((wonDeals.length / clientDeals.length) * 100) : 0;
 
-    const totalSpent = wonDeals.reduce((sum, d) => sum + (d.amount || 0), 0);
-    const lastOrder = wonDeals.length > 0
-      ? new Date(Math.max(...wonDeals.map(d => new Date(d.created_at).getTime())))
-      : null;
-
-    return { totalDeals: clientDeals.length, wonDeals: wonDeals.length, ltv: totalSpent, lastOrder };
-  }, [getClientDeals]);
+      return {
+        totalDeals: clientDeals.length,
+        wonDeals: wonDeals.length,
+        ltv: totalSpent,
+        lastOrder,
+        winRate,
+      };
+    },
+    [getClientDeals],
+  );
 
   const sortedClients = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase();
     const filtered = q
-      ? clients.filter(c =>
-          c.name.toLowerCase().includes(q) ||
-          (c.phone && c.phone.toLowerCase().includes(q)) ||
-          (c.email && c.email.toLowerCase().includes(q))
+      ? clients.filter(
+          (c) =>
+            c.name.toLowerCase().includes(q) ||
+            (c.phone && c.phone.toLowerCase().includes(q)) ||
+            (c.email && c.email.toLowerCase().includes(q)),
         )
       : clients;
 
@@ -270,6 +309,19 @@ export default function Clients() {
     return arr;
   }, [clients, deferredSearch, sortField, sortDirection, getClientStats]);
 
+  const summary = useMemo(() => {
+    let totalLtv = 0;
+    let totalWon = 0;
+    let totalDeals = 0;
+    for (const client of sortedClients) {
+      const s = getClientStats(client);
+      totalLtv += s.ltv;
+      totalWon += s.wonDeals;
+      totalDeals += s.totalDeals;
+    }
+    return { count: sortedClients.length, totalLtv, totalWon, totalDeals };
+  }, [sortedClients, getClientStats]);
+
   const chunkResetKey = `${deferredSearch}|${sortField}|${sortDirection}`;
   const { visibleItems: visibleClients, sentinelRef, hasMore, visibleCount, total: clientsTotal } =
     useChunkedList(sortedClients, chunkResetKey, 28);
@@ -283,240 +335,199 @@ export default function Clients() {
     }
   };
 
-  return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">База Клиентов</h1>
-          <p className="text-slate-500">Управление контактами и LTV аналитика</p>
+  const renderClientRow = (client: Client) => {
+    const stats = getClientStats(client);
+
+    return (
+      <div
+        key={client.id}
+        role="button"
+        tabIndex={0}
+        onClick={() => setSelectedClient(client)}
+        onKeyDown={(e) => e.key === 'Enter' && setSelectedClient(client)}
+        className="group grid grid-cols-1 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_120px_140px_88px] gap-3 md:gap-4 items-center px-4 md:px-5 py-4 border-b border-slate-100 last:border-b-0 hover:bg-slate-50/80 transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <ClientAvatar name={client.name} />
+          <div className="min-w-0">
+            <p className="font-semibold text-slate-900 truncate">{client.name}</p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs text-slate-500">
+              {client.phone && (
+                <span className="inline-flex items-center gap-1">
+                  <Phone className="w-3 h-3 shrink-0" />
+                  {client.phone}
+                </span>
+              )}
+              {client.email && (
+                <span className="inline-flex items-center gap-1 truncate max-w-[200px]">
+                  <Mail className="w-3 h-3 shrink-0" />
+                  {client.email}
+                </span>
+              )}
+              {!client.phone && !client.email && <span>Контакты не указаны</span>}
+            </div>
+          </div>
         </div>
-        <Button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700">
+
+        <div className="hidden md:block">
+          <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
+            <span>Успешных сделок</span>
+            <span className="font-medium text-slate-700">
+              {stats.wonDeals} / {stats.totalDeals}
+            </span>
+          </div>
+          <Progress value={stats.winRate} className="h-1.5 bg-slate-100" />
+        </div>
+
+        <div className="md:hidden flex items-center gap-2 text-sm">
+          <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-100">
+            {stats.wonDeals} / {stats.totalDeals}
+          </Badge>
+          <span className="text-xs text-slate-400">сделок</span>
+        </div>
+
+        <div className="text-left md:text-right">
+          <p className="text-[11px] uppercase tracking-wide text-slate-400 font-medium mb-0.5">LTV</p>
+          <p className="font-bold text-emerald-700 tabular-nums text-sm md:text-base whitespace-nowrap">
+            {formatUZS(stats.ltv, isMobile)}
+          </p>
+        </div>
+
+        <div className="flex md:justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+            onClick={() => openEdit(client)}
+            aria-label="Редактировать"
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
+            onClick={() => handleDelete(client.id)}
+            aria-label="Удалить"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-5 animate-in fade-in duration-500">
+      {/* Панель действий */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            placeholder="Поиск по имени, телефону, email…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 h-11 bg-white border-slate-200 rounded-xl shadow-sm focus-visible:ring-slate-300"
+          />
+        </div>
+        <Button onClick={openAdd} className="h-11 rounded-xl bg-slate-900 hover:bg-slate-800 shadow-sm shrink-0">
           <Plus className="w-4 h-4 mr-2" />
           Добавить клиента
         </Button>
       </div>
 
-      <div className="relative group max-w-sm w-full">
-        {/* Декоративная подложка с "дорогой" тенью */}
-        <div className="absolute inset-0 bg-white rounded-full shadow-[0_2px_12px_-2px_rgba(0,0,0,0.08)] ring-1 ring-slate-200/50 transition-shadow duration-300 group-hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.12)]"></div>
-        
-        <div className="relative flex items-center px-4 py-2">
-          <Search className="w-4 h-4 text-slate-400 shrink-0 mr-2 transition-colors group-hover:text-slate-500" />
-          <Input 
-            placeholder="Поиск по имени, телефону..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="border-none shadow-none focus-visible:ring-0 h-auto p-0 bg-transparent text-slate-600 placeholder:text-slate-400/80 text-sm font-medium w-full"
-          />
-        </div>
+      {/* Сводка */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: 'Клиентов', value: summary.count.toString(), icon: Users, tone: 'text-slate-900' },
+          { label: 'Всего сделок', value: summary.totalDeals.toString(), icon: ShoppingBag, tone: 'text-slate-900' },
+          { label: 'Успешных', value: summary.totalWon.toString(), icon: TrendingUp, tone: 'text-emerald-700' },
+          { label: 'Суммарный LTV', value: formatUZS(summary.totalLtv, true), icon: Banknote, tone: 'text-emerald-700' },
+        ].map((item) => (
+          <Card key={item.label} className="border-slate-200/80 shadow-sm rounded-2xl overflow-hidden">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                <item.icon className="w-5 h-5 text-slate-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-slate-500 font-medium">{item.label}</p>
+                <p className={`text-lg font-bold truncate tabular-nums ${item.tone}`}>{item.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <div className="bg-white rounded-lg border shadow-sm">
-        {isMobile ? (
-          <div className="space-y-4 p-4">
-             {loading ? (
-                <div className="text-center py-8 text-slate-500">Загрузка...</div>
-             ) : sortedClients.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">Клиенты не найдены</div>
-             ) : (
-                visibleClients.map(client => {
-                   const stats = getClientStats(client);
-                   return (
-                      <Card key={client.id} onClick={() => setSelectedClient(client)} className="shadow-none border border-slate-200">
-                         <CardContent className="p-4 space-y-3">
-                            <div className="flex justify-between items-start">
-                               <div className="flex items-center gap-2">
-                                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                                     {(client.name || '?').slice(0, 2).toUpperCase()}
-                                  </div>
-                                  <div>
-                                     <div className="font-medium text-slate-900">{client.name}</div>
-                                     <div className="text-xs text-slate-500">{client.phone}</div>
-                                  </div>
-                               </div>
-                            </div>
-                            <div className="flex justify-between items-center text-sm border-t border-slate-100 pt-3">
-                                <div className="flex flex-col">
-                                   <span className="text-xs text-slate-500">LTV</span>
-                                   <span className="font-bold text-green-700">{stats.ltv.toLocaleString('ru-RU', { notation: "compact" })} UZS</span>
-                                </div>
-                                <div className="flex gap-2">
-                                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); openEdit(client); }}>
-                                     <Pencil className="w-4 h-4 text-slate-400" />
-                                   </Button>
-                                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handleDelete(client.id); }}>
-                                     <Trash2 className="w-4 h-4 text-slate-400" />
-                                   </Button>
-                                </div>
-                            </div>
-                         </CardContent>
-                      </Card>
-                   );
-                })
-             )}
+      {/* Список */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="hidden md:grid md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_120px_140px_88px] gap-4 px-5 py-3 bg-slate-50/80 border-b border-slate-100">
+          <SortButton label="Клиент" active={sortField === 'name'} direction={sortDirection} onClick={() => handleSort('name')} />
+          <SortButton label="Сделки" active={sortField === 'orders'} direction={sortDirection} onClick={() => handleSort('orders')} />
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Конверсия</span>
+          <SortButton label="LTV" active={sortField === 'ltv'} direction={sortDirection} onClick={() => handleSort('ltv')} />
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 text-right">Действия</span>
+        </div>
+
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 text-slate-500 gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+            <span className="text-sm">Загрузка клиентов…</span>
+          </div>
+        ) : sortedClients.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+              <Users className="w-7 h-7 text-slate-400" />
+            </div>
+            <p className="font-medium text-slate-900">Клиенты не найдены</p>
+            <p className="text-sm text-slate-500 mt-1 max-w-sm">
+              {search ? 'Попробуйте другой запрос или очистите поиск' : 'Добавьте первого клиента, чтобы начать работу'}
+            </p>
+            {!search && (
+              <Button onClick={openAdd} className="mt-4 rounded-xl" variant="outline">
+                <Plus className="w-4 h-4 mr-2" />
+                Добавить клиента
+              </Button>
+            )}
           </div>
         ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead 
-                className="cursor-pointer hover:bg-slate-50 select-none" 
-                onClick={() => handleSort('name')}
-              >
-                <div className="flex items-center gap-2">
-                  Имя Клиента
-                  {sortField === 'name' ? (
-                    sortDirection === 'asc' ? (
-                      <ArrowUp className="w-4 h-4 text-blue-600" />
-                    ) : (
-                      <ArrowDown className="w-4 h-4 text-blue-600" />
-                    )
-                  ) : (
-                    <ArrowUpDown className="w-4 h-4 text-slate-300" />
-                  )}
-                </div>
-              </TableHead>
-              <TableHead>Контакты</TableHead>
-              <TableHead 
-                className="cursor-pointer hover:bg-slate-50 select-none" 
-                onClick={() => handleSort('orders')}
-              >
-                <div className="flex items-center gap-2">
-                  Заказов (Успешных)
-                  {sortField === 'orders' ? (
-                    sortDirection === 'asc' ? (
-                      <ArrowUp className="w-4 h-4 text-blue-600" />
-                    ) : (
-                      <ArrowDown className="w-4 h-4 text-blue-600" />
-                    )
-                  ) : (
-                    <ArrowUpDown className="w-4 h-4 text-slate-300" />
-                  )}
-                </div>
-              </TableHead>
-              <TableHead 
-                className="cursor-pointer hover:bg-slate-50 select-none" 
-                onClick={() => handleSort('ltv')}
-              >
-                <div className="flex items-center gap-2">
-                  LTV (Сумма)
-                  {sortField === 'ltv' ? (
-                    sortDirection === 'asc' ? (
-                      <ArrowUp className="w-4 h-4 text-blue-600" />
-                    ) : (
-                      <ArrowDown className="w-4 h-4 text-blue-600" />
-                    )
-                  ) : (
-                    <ArrowUpDown className="w-4 h-4 text-slate-300" />
-                  )}
-                </div>
-              </TableHead>
-              <TableHead className="text-right">Действия</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-                 <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-slate-500">
-                       Загрузка...
-                    </TableCell>
-                  </TableRow>
-            ) : sortedClients.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-slate-500">
-                  Клиенты не найдены
-                </TableCell>
-              </TableRow>
-            ) : (
-              visibleClients.map(client => {
-                const stats = getClientStats(client);
-                return (
-                  <TableRow key={client.id} className="group cursor-pointer hover:bg-slate-50" onClick={() => setSelectedClient(client)}>
-                    <TableCell className="font-medium text-slate-900">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                          {(client.name || '?').slice(0, 2).toUpperCase()}
-                        </div>
-                        {client.name}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1 text-sm text-slate-500">
-                        {client.phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="w-3 h-3" /> {client.phone}
-                          </div>
-                        )}
-                        {client.email && (
-                          <div className="flex items-center gap-1">
-                            <Mail className="w-3 h-3" /> {client.email}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="bg-slate-100">
-                        {stats.wonDeals} / {stats.totalDeals}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-bold text-green-700">
-                        {stats.ltv.toLocaleString('ru-RU')} UZS
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(client)}>
-                          <Pencil className="w-4 h-4 text-slate-400 hover:text-blue-600" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(client.id)}>
-                          <Trash2 className="w-4 h-4 text-slate-400 hover:text-red-600" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+          <div>{visibleClients.map(renderClientRow)}</div>
         )}
+
         {!loading && clientsTotal > 0 && (
-          <div className="px-4 pb-3 text-center">
+          <div className="px-4 pb-3 text-center border-t border-slate-50">
             <div ref={sentinelRef} className="h-3 w-full" aria-hidden />
             {hasMore && (
-              <p className="text-xs text-muted-foreground pt-1">
-                Загружено {visibleCount} из {clientsTotal}
+              <p className="text-xs text-slate-400 pt-2">
+                Показано {visibleCount} из {clientsTotal}
               </p>
             )}
           </div>
         )}
       </div>
 
-      {/* Add/Edit Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle>{editingClient ? 'Редактировать клиента' : 'Новый клиент'}</DialogTitle>
             <DialogDescription>
-              {editingClient ? 'Измените данные клиента ниже' : 'Заполните информацию о новом клиенте'}
+              {editingClient ? 'Измените данные клиента' : 'Заполните информацию о новом клиенте'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Имя (как в сделках)</Label>
-              <Input 
-                placeholder="Например: ООО Ромашка" 
-                value={formData.name} 
-                onChange={e => setFormData({...formData, name: e.target.value})} 
+              <Input
+                placeholder="Например: ООО Ромашка"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label>Телефон</Label>
-              <Input 
-                placeholder="+998..." 
-                value={formData.phone} 
-                onChange={e => setFormData({...formData, phone: e.target.value})} 
+              <Input
+                placeholder="+998…"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
             </div>
             <div className="space-y-2">
@@ -525,90 +536,116 @@ export default function Clients() {
                 type="email"
                 placeholder="name@company.com"
                 value={formData.email}
-                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleSave}>Сохранить</Button>
+            <Button onClick={handleSave} className="rounded-xl bg-slate-900 hover:bg-slate-800">
+              Сохранить
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Client Details Sheet */}
       <Sheet open={!!selectedClient} onOpenChange={(open) => !open && setSelectedClient(null)}>
-        <SheetContent className="w-full sm:max-w-[800px] overflow-y-auto">
-          {selectedClient && (() => {
-             const stats = getClientStats(selectedClient);
-             const clientDeals = [...getClientDeals(selectedClient)].sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        <SheetContent className="w-full sm:max-w-[720px] overflow-y-auto p-0">
+          {selectedClient &&
+            (() => {
+              const stats = getClientStats(selectedClient);
+              const clientDeals = [...getClientDeals(selectedClient)].sort(
+                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+              );
 
-             return (
-              <div className="space-y-6">
-                <SheetHeader>
-                  <SheetTitle className="text-xl">{selectedClient.name}</SheetTitle>
-                  <SheetDescription>Карточка клиента</SheetDescription>
-                </SheetHeader>
-
-                <div className="grid grid-cols-2 gap-4 px-6">
-                   <Card>
-                     <CardContent className="pt-6">
-                        <div className="text-2xl font-bold text-green-600">{stats.ltv.toLocaleString('ru-RU')} UZS</div>
-                        <p className="text-xs text-muted-foreground">LTV (Всего покупок)</p>
-                     </CardContent>
-                   </Card>
-                   <Card>
-                     <CardContent className="pt-6">
-                        <div className="text-2xl font-bold">{stats.wonDeals}</div>
-                        <p className="text-xs text-muted-foreground">Успешных сделок</p>
-                     </CardContent>
-                   </Card>
-                </div>
-
-                <div className="space-y-4 px-6">
-                  <h3 className="font-medium flex items-center gap-2"><User className="w-4 h-4" /> Контакты</h3>
-                  <div className="bg-slate-50 p-4 rounded-lg space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Телефон:</span>
-                      <span className="font-medium">{selectedClient.phone || '-'}</span>
+              return (
+                <div className="flex flex-col min-h-full bg-slate-50">
+                  <SheetHeader className="p-6 bg-white border-b text-left space-y-3">
+                    <div className="flex items-center gap-4">
+                      <ClientAvatar name={selectedClient.name} />
+                      <div>
+                        <SheetTitle className="text-xl">{selectedClient.name}</SheetTitle>
+                        <SheetDescription>Карточка клиента</SheetDescription>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Email:</span>
-                      <span className="font-medium">{selectedClient.email || '—'}</span>
-                    </div>
-                  </div>
-                </div>
+                  </SheetHeader>
 
-                <div className="space-y-4 px-6">
-                  <h3 className="font-medium flex items-center gap-2"><ShoppingBag className="w-4 h-4" /> История заказов</h3>
-                  <div className="space-y-2">
-                    {clientDeals.length === 0 ? (
-                      <p className="text-sm text-slate-500 text-center py-4">Нет сделок с таким именем</p>
-                    ) : (
-                      clientDeals.map(deal => (
-                        <div key={deal.id} className="border rounded-lg p-3 flex justify-between items-center hover:bg-slate-50 transition-colors">
-                           <div>
-                              <div className="font-medium text-sm">{deal.title}</div>
-                              <div className="text-xs text-slate-500">{new Date(deal.created_at).toLocaleDateString()}</div>
-                           </div>
-                           <div className="text-right">
-                              <div className="font-bold text-sm">{deal.amount?.toLocaleString('ru-RU')} UZS</div>
-                              <Badge variant="outline" className={`text-xs ${
-                                deal.status === 'won' ? 'text-green-600 border-green-200 bg-green-50' :
-                                deal.status === 'lost' ? 'text-red-600 border-red-200 bg-red-50' :
-                                'text-blue-600 border-blue-200 bg-blue-50'
-                              }`}>
-                                {deal.status === 'won' ? 'Успех' : deal.status === 'lost' ? 'Проигрыш' : 'В работе'}
-                              </Badge>
-                           </div>
+                  <div className="p-6 space-y-6">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Card className="rounded-2xl border-emerald-100 bg-emerald-50/50">
+                        <CardContent className="p-4">
+                          <p className="text-2xl font-bold text-emerald-700 tabular-nums">{formatUZS(stats.ltv)}</p>
+                          <p className="text-xs text-emerald-800/70 mt-1">LTV (всего покупок)</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="rounded-2xl">
+                        <CardContent className="p-4">
+                          <p className="text-2xl font-bold text-slate-900">{stats.wonDeals}</p>
+                          <p className="text-xs text-slate-500 mt-1">Успешных сделок из {stats.totalDeals}</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div className="bg-white rounded-2xl border p-4 space-y-2 text-sm">
+                      <h3 className="font-medium flex items-center gap-2 text-slate-900">
+                        <User className="w-4 h-4" /> Контакты
+                      </h3>
+                      <div className="flex justify-between py-1">
+                        <span className="text-slate-500">Телефон</span>
+                        <span className="font-medium">{selectedClient.phone || '—'}</span>
+                      </div>
+                      <div className="flex justify-between py-1">
+                        <span className="text-slate-500">Email</span>
+                        <span className="font-medium">{selectedClient.email || '—'}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h3 className="font-medium flex items-center gap-2 text-slate-900">
+                        <ShoppingBag className="w-4 h-4" /> История заказов
+                      </h3>
+                      {clientDeals.length === 0 ? (
+                        <p className="text-sm text-slate-500 text-center py-6 bg-white rounded-2xl border">
+                          Нет сделок с этим клиентом
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {clientDeals.map((deal) => (
+                            <div
+                              key={deal.id}
+                              className="bg-white border rounded-xl p-3 flex justify-between items-center gap-3 hover:border-slate-300 transition-colors"
+                            >
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm text-slate-900 truncate">{deal.title}</p>
+                                <p className="text-xs text-slate-500">
+                                  {new Date(deal.created_at).toLocaleDateString('ru-RU')}
+                                </p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="font-bold text-sm tabular-nums text-slate-900">
+                                  {formatUZS(deal.amount)}
+                                </p>
+                                <Badge
+                                  variant="outline"
+                                  className={`text-xs mt-1 ${
+                                    deal.status === 'won'
+                                      ? 'text-emerald-700 border-emerald-200 bg-emerald-50'
+                                      : deal.status === 'lost'
+                                        ? 'text-red-600 border-red-200 bg-red-50'
+                                        : 'text-blue-600 border-blue-200 bg-blue-50'
+                                  }`}
+                                >
+                                  {deal.status === 'won' ? 'Успех' : deal.status === 'lost' ? 'Проигрыш' : 'В работе'}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
-
-              </div>
-             );
-          })()}
+              );
+            })()}
         </SheetContent>
       </Sheet>
     </div>

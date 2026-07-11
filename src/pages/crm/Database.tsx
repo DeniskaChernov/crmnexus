@@ -27,24 +27,24 @@ export default function Database() {
   }, [activeTab]);
 
   return (
-    <div className="space-y-6 animate-in-fade">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-5 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200">
-                    <DatabaseIcon className="w-4 h-4 text-slate-600" />
-                </div>
-                База данных
-            </h1>
-            <p className="text-slate-500 text-sm mt-1 ml-11">Управление клиентами и контрагентами</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center shadow-sm">
+              <DatabaseIcon className="w-4 h-4 text-white" />
+            </div>
+            База данных
+          </h1>
+          <p className="text-slate-500 text-sm mt-1.5 ml-12">Клиенты, компании и контакты</p>
         </div>
-        <Button variant="outline" onClick={() => navigate('/import')} className="w-full md:w-auto">
-            <Upload className="w-4 h-4 mr-2" />
-            Импорт данных
+        <Button variant="outline" onClick={() => navigate('/import')} className="rounded-xl shrink-0">
+          <Upload className="w-4 h-4 mr-2" />
+          Импорт данных
         </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-5">
         <div className="flex items-center w-full overflow-x-auto pb-2 md:pb-0">
           <TabsList className="bg-slate-100/50 p-1 rounded-xl border border-slate-200/60 inline-flex h-auto w-full md:w-auto gap-1">
             <TabsTrigger 

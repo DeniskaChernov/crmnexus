@@ -12,6 +12,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { ShoppingBag, User, Phone, Calendar, ArrowUpRight, HelpCircle } from 'lucide-react';
 import { Separator } from '../ui/separator';
+import { formatUZS, parseAmount } from '../../lib/formatMoney.ts';
 
 interface ClientDetailsSheetProps {
   contactId: string | null;
@@ -97,7 +98,7 @@ export function ClientDetailsSheet({ contactId, open, onOpenChange }: ClientDeta
 
       // Calculate stats
       const successfulDeals = dealsData.filter((d: any) => d.status === 'won');
-      const totalSpent = successfulDeals.reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
+      const totalSpent = successfulDeals.reduce((sum: number, d: any) => sum + parseAmount(d.amount), 0);
       
       setStats({
         totalSpent,
@@ -111,9 +112,7 @@ export function ClientDetailsSheet({ contactId, open, onOpenChange }: ClientDeta
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
-  };
+  const formatCurrency = (amount: unknown) => formatUZS(amount);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ru-RU');
