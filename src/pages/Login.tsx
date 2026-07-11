@@ -44,9 +44,27 @@ export default function Login() {
     setPassword(MIGRATION_LOGIN.password);
     setLoading(true);
     try {
-      const { error } = await crm.auth.signInWithPassword(MIGRATION_LOGIN);
-      if (error) throw error;
-      navigate(fromPath, { replace: true });
+      const res = await fetch(crmUrl("/auth/migration-login"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+      let body: { error?: string; token?: string } = {};
+      try {
+        body = await res.json();
+      } catch {
+        throw new Error(`Сервер вернул некорректный ответ (${res.status})`);
+      }
+      if (!res.ok || !body.token) {
+        throw new Error(body.error || `Ошибка входа (${res.status})`);
+      }
+      try {
+        localStorage.setItem("crm_token", body.token);
+      } catch {
+        throw new Error("Браузер заблокировал сохранение сессии. Отключите режим инкогнито или блокировщики.");
+      }
+      window.dispatchEvent(new Event("crm-auth"));
+      window.location.assign(fromPath);
     } catch (error: unknown) {
       console.error(error);
       const msg =
@@ -54,7 +72,6 @@ export default function Login() {
           ? (error as { message: string }).message
           : "Ошибка авторизации";
       toast.error(msg);
-    } finally {
       setLoading(false);
     }
   };

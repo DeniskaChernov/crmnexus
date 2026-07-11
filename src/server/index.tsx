@@ -5270,6 +5270,8 @@ app.get("*", async (c) => {
 
   try {
     const html = await fs.readFile("build/index.html", "utf8");
+    c.header("Cache-Control", "no-store, no-cache, must-revalidate");
+    c.header("Pragma", "no-cache");
     return c.html(html);
   } catch {
     return c.text("Frontend build not found. Run `npm run build` before starting the server.", 404);

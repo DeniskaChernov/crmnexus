@@ -5,6 +5,7 @@ const PUBLIC_PATH_PARTS = [
   "/health",
   "/signup",
   "/auth/login",
+  "/auth/migration-login",
   "/auth/me",
   "/telegram-webhook",
   "/webhooks/site",
