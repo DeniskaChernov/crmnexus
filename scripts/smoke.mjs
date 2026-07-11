@@ -4,7 +4,7 @@
  */
 const base = (process.env.SMOKE_BASE_URL || "http://127.0.0.1:4000").replace(/\/$/, "");
 const email = process.env.SMOKE_EMAIL || "denisblackman2@gmail.com";
-const password = process.env.SMOKE_PASSWORD || "BttNexus2026";
+const password = process.env.SMOKE_PASSWORD || "20260711";
 
 async function getJson(path, init) {
   const res = await fetch(`${base}${path}`, init);

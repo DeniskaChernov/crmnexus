@@ -8,6 +8,11 @@ import { Label } from '../components/ui/label';
 import { toast } from 'sonner@2.0.3';
 import { Command, ArrowRight, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
+const MIGRATION_LOGIN = {
+  email: 'denisblackman2@gmail.com',
+  password: '20260711',
+};
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,6 +38,26 @@ export default function Login() {
       cancelled = true;
     };
   }, [fromPath, navigate]);
+
+  const handleQuickLogin = async () => {
+    setEmail(MIGRATION_LOGIN.email);
+    setPassword(MIGRATION_LOGIN.password);
+    setLoading(true);
+    try {
+      const { error } = await crm.auth.signInWithPassword(MIGRATION_LOGIN);
+      if (error) throw error;
+      navigate(fromPath, { replace: true });
+    } catch (error: unknown) {
+      console.error(error);
+      const msg =
+        error && typeof error === "object" && "message" in error && typeof (error as { message: string }).message === "string"
+          ? (error as { message: string }).message
+          : "Ошибка авторизации";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,10 +140,21 @@ export default function Login() {
                 {!isSignUp && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                     <p className="font-medium">Данные для входа после миграции</p>
-                    <p className="mt-1">Email: <span className="font-mono">denisblackman2@gmail.com</span></p>
-                    <p>Пароль: <span className="font-mono">BttNexus2026</span></p>
-                    <p className="mt-2 text-xs text-amber-800">Очистите поле пароля и вставьте вручную — автозаполнение подставляет старый пароль.</p>
+                    <p className="mt-1">Email: <span className="font-mono">{MIGRATION_LOGIN.email}</span></p>
+                    <p>Пароль: <span className="font-mono">{MIGRATION_LOGIN.password}</span></p>
+                    <p className="mt-2 text-xs text-amber-800">Если вручную не входит — нажмите кнопку ниже «Войти одним кликом».</p>
                   </div>
+                )}
+                {!isSignUp && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-11 border-amber-300 text-amber-900 hover:bg-amber-100"
+                    disabled={loading}
+                    onClick={handleQuickLogin}
+                  >
+                    Войти одним кликом
+                  </Button>
                 )}
                 {isSignUp && (
                     <div className="space-y-2">

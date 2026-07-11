@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { getPool } from "./dbPool.ts";
+import { normalizeCredential } from "../lib/normalizeCredential.ts";
 
 const SALT = 10;
 
@@ -70,8 +71,8 @@ export async function verifyUserPassword(
   password: string,
 ): Promise<{ id: string; email: string; name: string | null; role: string } | null> {
   const pool = getPool();
-  const normalizedEmail = email.trim().toLowerCase();
-  const normalizedPassword = password.trim();
+  const normalizedEmail = normalizeCredential(email).toLowerCase();
+  const normalizedPassword = normalizeCredential(password);
   const { rows } = await pool.query<{
     id: string;
     email: string;

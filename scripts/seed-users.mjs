@@ -2,7 +2,7 @@ import pg from "pg";
 import bcrypt from "bcryptjs";
 
 const url = process.env.DATABASE_PUBLIC_URL || process.env.DATABASE_URL;
-const password = process.env.SEED_PASSWORD || "BttNexus2026";
+const password = process.env.SEED_PASSWORD || "20260711";
 
 const users = [
   { email: "denisblackman2@gmail.com", name: "Denis Chernov", role: "owner" },

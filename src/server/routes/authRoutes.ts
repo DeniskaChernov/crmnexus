@@ -1,16 +1,20 @@
 import type { Hono } from "hono";
 import { signUserToken, verifyBearer } from "../jwt.ts";
+import { normalizeCredential } from "../lib/normalizeCredential.ts";
 
 export function registerAuthRoutes(app: Hono) {
   app.post("/api/auth/login", async (c) => {
     try {
       const { email: emailRaw, password } = await c.req.json();
-      const email = String(emailRaw || "").trim().toLowerCase();
-      const pass = String(password || "");
+      const email = normalizeCredential(String(emailRaw || "")).toLowerCase();
+      const pass = normalizeCredential(String(password || ""));
       if (!email || !pass) return c.json({ error: "Email and password required" }, 400);
       const { verifyUserPassword } = await import("../authAdmin.ts");
       const user = await verifyUserPassword(email, pass);
-      if (!user) return c.json({ error: "Неверный email или пароль" }, 401);
+      if (!user) {
+        console.warn("[auth/login] failed", { email, passLen: pass.length });
+        return c.json({ error: "Неверный email или пароль" }, 401);
+      }
       const token = await signUserToken(user);
       return c.json({
         token,

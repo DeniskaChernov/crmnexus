@@ -1,4 +1,5 @@
 import { crmUrl, authHeaders } from "./crmApi.ts";
+import { normalizeCredential } from "./normalizeCredential.ts";
 
 async function crmRun(body: Record<string, unknown>) {
   try {
@@ -240,12 +241,16 @@ export const crm = {
       return { data: { subscription: { unsubscribe: () => window.removeEventListener("crm-auth", fn) } } };
     },
     async signInWithPassword(creds: { email: string; password: string }) {
+      const payload = {
+        email: normalizeCredential(creds.email).toLowerCase(),
+        password: normalizeCredential(creds.password),
+      };
       let res: Response;
       try {
         res = await fetch(crmUrl("/auth/login"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(creds),
+          body: JSON.stringify(payload),
         });
       } catch (e) {
         return { error: { message: e instanceof Error ? e.message : "Ошибка сети" } };
