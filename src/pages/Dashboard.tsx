@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { crmUrl, authHeaders } from '../lib/crmApi.ts';
 import { crm } from "@/lib/crmClient.ts";
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { DollarSign, Users, TrendingUp, Sparkles, Target, Briefcase, Activity, Package, MoreHorizontal, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -15,10 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
-import { Badge } from '../components/ui/badge';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
 import { toast } from 'sonner@2.0.3';
-import { TodayTasksWidget } from '../components/crm/TodayTasksWidget';
+import { BttTaskLabHome } from '../components/dashboard/BttTaskLabHome.tsx';
 import { getNotificationPermission, getNotificationPreference } from '../utils/pushNotifications';
 import { startTaskNotifications, stopTaskNotifications } from '../utils/taskNotifications';
 
@@ -49,6 +44,7 @@ export default function Dashboard() {
 
   const [pipelines, setPipelines] = useState<any[]>([]);
   const [stages, setStages] = useState<any[]>([]);
+  const [teamMembers, setTeamMembers] = useState<{ id: string; name: string }[]>([]);
   
   useEffect(() => {
     setMounted(true);
@@ -56,6 +52,7 @@ export default function Dashboard() {
     loadPlan();
     fetchWarehouseStats();
     fetchPipelines();
+    fetchTeamMembers();
   }, [timeRange]);
 
   // Auto-refresh data and realtime subscription
@@ -71,10 +68,28 @@ export default function Dashboard() {
 
     return () => {
       clearInterval(warehouseInterval);
-      clearInterval(paymentsInterval);
       clearInterval(dealsInterval);
     };
   }, [timeRange]);
+
+  const fetchTeamMembers = async () => {
+    try {
+      const res = await fetch(`${crmUrl('/employees')}`, { headers: { ...authHeaders(false) } });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setTeamMembers(
+            data
+              .filter((e: any) => e.active !== false)
+              .slice(0, 8)
+              .map((e: any) => ({ id: String(e.id), name: String(e.name || 'Сотрудник') })),
+          );
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  };
 
   const fetchPipelines = async () => {
     try {
@@ -408,438 +423,43 @@ export default function Dashboard() {
 
   const targetPlan = monthlyPlan * periodDuration;
   const planProgress = targetPlan > 0 ? (stats.revenue / targetPlan) * 100 : 0;
-
-  const FinancialWidget = () => {
-    const profit = stats.revenue - stats.payroll;
-    const data = [
-        { name: 'ФОТ (Зарплаты)', value: stats.payroll, color: '#ef4444' },
-        { name: 'Маржа', value: profit > 0 ? profit : 0, color: '#22c55e' }
-    ];
-
-    return (
-        <Card className="nexus-card p-6">
-            <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 rounded-xl bg-indigo-50 ring-1 ring-indigo-100/80">
-                    <DollarSign className="h-4 w-4 text-indigo-700" />
-                </div>
-                <div>
-                    <h3 className="font-bold text-slate-900">Финансы</h3>
-                    <p className="text-xs text-slate-500">Оценка эффективности</p>
-                </div>
-            </div>
-            
-            <div className="flex flex-col md:flex-row items-center gap-4">
-                <div className="w-[100px] h-[100px] relative shrink-0">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={data}
-                                innerRadius={35}
-                                outerRadius={50}
-                                paddingAngle={2}
-                                dataKey="value"
-                            >
-                                {data.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                            </Pie>
-                            <Tooltip 
-                                formatter={(value: number) => new Intl.NumberFormat('uz-UZ', { notation: "compact" }).format(value)}
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                            />
-                        </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                       <span className="text-[10px] font-bold text-slate-400">
-                           {stats.revenue > 0 ? ((stats.payroll / stats.revenue) * 100).toFixed(0) : 0}%
-                       </span>
-                    </div>
-                </div>
-                <div className="space-y-2 flex-1 w-full">
-                    <div className="flex justify-between items-center text-xs">
-                        <span className="text-slate-500">Выручка</span>
-                        <span className="font-bold text-slate-900">{new Intl.NumberFormat('uz-UZ', { notation: "compact" }).format(stats.revenue)}</span>
-                    </div>
-                    <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-indigo-600 to-violet-600" style={{ width: '100%' }}></div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center text-xs">
-                        <span className="text-slate-500">ФОТ</span>
-                        <span className="font-bold text-red-500">{new Intl.NumberFormat('uz-UZ', { notation: "compact" }).format(stats.payroll)}</span>
-                    </div>
-                    <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-                         <div className="bg-red-500 h-full" style={{ width: `${Math.min(stats.revenue > 0 ? (stats.payroll / stats.revenue) * 100 : 0, 100)}%` }}></div>
-                    </div>
-                </div>
-            </div>
-        </Card>
-    );
-  };
-
-  const WarehouseWidget = () => {
-    if (!warehouseStats) return null;
-    
-    // Dynamically calculate totals for all warehouses
-    const warehouses = Object.keys(warehouseStats);
-    const totalStock = warehouses.reduce((sum, wh) => sum + (warehouseStats[wh]?.current.total || 0), 0);
-    const totalProduced = warehouses.reduce((sum, wh) => sum + (warehouseStats[wh]?.produced.total || 0), 0);
-
-    // Find Low Stock Items (Simple logic: lowest positive stock)
-    const allItems: any[] = [];
-    warehouses.forEach(wh => {
-        if (warehouseStats[wh]?.current?.byArticle) {
-            Object.entries(warehouseStats[wh].current.byArticle).forEach(([art, qty]: [string, any]) => {
-                if (qty > 0 && qty < 100) { // Threshold 100kg
-                    allItems.push({ art, qty, wh });
-                }
-            });
-        }
-    });
-    const lowStock = allItems.sort((a, b) => a.qty - b.qty).slice(0, 3);
-
-    return (
-      <Card className="nexus-card">
-        <CardHeader className="pb-2">
-           <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-2">
-             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 ring-1 ring-slate-200/80">
-               <Package className="h-4 w-4 text-indigo-600" />
-             </span>
-             Склад
-           </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4 space-y-4">
-           <div className="grid grid-cols-2 gap-4">
-               <div className="bg-slate-50 p-3 rounded-2xl ring-1 ring-slate-100">
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Всего</p>
-                  <p className="text-lg font-bold text-slate-900">{totalStock.toLocaleString()} кг</p>
-               </div>
-               <div className="bg-indigo-50/80 p-3 rounded-2xl ring-1 ring-indigo-100/60">
-                  <p className="text-[10px] text-indigo-700 font-bold uppercase tracking-wider mb-1">Производство</p>
-                  <p className="text-lg font-bold text-indigo-800">{totalProduced.toLocaleString()} кг</p>
-               </div>
-           </div>
-           
-           {lowStock.length > 0 && (
-               <div>
-                   <p className="text-[10px] text-red-500 font-bold uppercase tracking-wider mb-2 flex items-center gap-1">
-                       <Activity className="h-3 w-3" /> Заканчивается
-                   </p>
-                   <div className="space-y-2">
-                       {lowStock.map((item, i) => (
-                           <div key={i} className="flex justify-between items-center text-xs border-b border-slate-50 pb-1 last:border-0">
-                               <span className="font-medium text-slate-700">{item.art}</span>
-                               <span className="font-bold text-red-600">{Number(item.qty).toFixed(2)} кг</span>
-                           </div>
-                       ))}
-                   </div>
-               </div>
-           )}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const FunnelWidget = () => (
-    <Card className="nexus-card p-6 flex flex-col min-w-0 min-h-[300px]">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 ring-1 ring-indigo-100/70">
-          <Briefcase className="h-4 w-4 text-indigo-700" />
-        </span>
-        <h3 className="font-bold text-lg text-slate-900">Воронка</h3>
-      </div>
-      {funnelData.length > 0 ? (
-          <div className="w-full min-w-0" style={{ height: 220 }}>
-             {mounted && (
-                 <ResponsiveContainer width="100%" height={220} minWidth={0} debounce={50}>
-                    <BarChart data={funnelData} layout="vertical" margin={{ top: 0, right: 30, left: 40, bottom: 0 }}>
-                      <XAxis type="number" hide />
-                      <YAxis dataKey="name" type="category" width={90} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                      <Tooltip 
-                         cursor={{fill: 'transparent'}}
-                         contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', color: '#0f172a' }}
-                         formatter={(value: number) => [value, 'Сделок']}
-                      />
-                      <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={24}>
-                        {funnelData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color || '#cbd5e1'} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                 </ResponsiveContainer>
-             )}
-          </div>
-      ) : (
-          <div className="h-[220px] flex items-center justify-center text-slate-400 text-sm">
-              Нет данных
-          </div>
-      )}
-    </Card>
-  );
-
-  const ForecastWidget = () => (
-    <Card className="nexus-card p-6">
-       <div className="flex items-center gap-2 mb-3 text-slate-600">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 ring-1 ring-emerald-100/80">
-            <TrendingUp className="h-4 w-4 text-emerald-700" />
-          </span>
-          <span className="text-xs font-bold uppercase tracking-wider">Прогноз</span>
-       </div>
-       <div className="mb-4">
-          <h3 className="text-3xl font-bold tracking-tight text-slate-900">
-            {new Intl.NumberFormat('uz-UZ').format(forecast)}
-          </h3>
-          <p className="text-xs text-slate-400 mt-1">Ожидаемая выручка</p>
-       </div>
-       <div className="space-y-2">
-          {funnelData.slice(0, 3).map((stage, idx) => (
-             <div key={idx} className="flex items-center justify-between text-xs">
-                <span className="text-slate-500">{stage.name}</span>
-                <span className="font-medium text-slate-900">
-                    {new Intl.NumberFormat('uz-UZ').format(stage.value)}
-                </span>
-             </div>
-          ))}
-       </div>
-    </Card>
-  );
-
-  const StatCard = ({ title, value, icon: Icon, trend, colorClass = "bg-white" }: any) => (
-    <div className={`nexus-card p-6 flex flex-col justify-between min-h-[8.5rem] relative overflow-hidden group hover:-translate-y-0.5 transition-all duration-300 ${colorClass}`}>
-      <div className="flex justify-between items-start z-10">
-         <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-50 to-slate-50 ring-1 ring-indigo-100/70 flex items-center justify-center text-indigo-800 shadow-sm">
-            <Icon className="w-5 h-5" />
-         </div>
-         {trend && (
-             <div className={`text-xs font-bold px-2 py-1 rounded-full ${trend > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                 {trend > 0 ? '+' : ''}{trend}%
-             </div>
-         )}
-      </div>
-      <div className="z-10 mt-auto">
-         <h3 className="text-2xl font-bold tracking-tight text-slate-900">{value}</h3>
-         <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">{title}</p>
-      </div>
-    </div>
-  );
+  const warehouseCurrent = warehouseStats?.BTT?.current?.total ?? 0;
+  const funnelChartData = funnelData.map((f) => ({
+    name: f.name,
+    value: f.count ?? 0,
+    fill: f.color || '#d4f534',
+  }));
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-slate-500">
-        <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-neutral-500">
+        <Loader2 className="h-10 w-10 animate-spin text-neutral-900" />
         <p className="text-sm font-medium">Загружаем показатели…</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in pb-10">
-      
-      {/* Header Area */}
-      <div className="nexus-page-hero pl-7 md:pl-9">
-        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 mb-1">Дашборд</p>
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight mb-2">Обзор</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
-             <span>Статистика за</span>
-             <Select value={timeRange} onValueChange={setTimeRange}>
-               <SelectTrigger className="w-[160px] h-9 rounded-full border border-slate-200 bg-slate-50/80 font-semibold text-slate-900 hover:bg-white focus:ring-indigo-200">
-                 <SelectValue />
-               </SelectTrigger>
-               <SelectContent align="start">
-                 <SelectItem value="this_month">Этот месяц</SelectItem>
-                 <SelectItem value="last_month">Прошлый месяц</SelectItem>
-                 <SelectItem value="this_year">Этот год</SelectItem>
-                 <SelectItem value="all">Все время</SelectItem>
-               </SelectContent>
-             </Select>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2 md:gap-3">
-           <Button
-             onClick={() => setAiOpen(true)}
-             variant="outline"
-             className="rounded-full border-indigo-200 bg-white text-indigo-900 shadow-sm hover:bg-indigo-50/80"
-           >
-              <Sparkles className="w-4 h-4 mr-2 text-indigo-600" /> AI-анализ
-           </Button>
-           <Button
-             onClick={() => setIsPlanDialogOpen(true)}
-             className="rounded-full bg-gradient-to-r from-slate-900 to-indigo-950 text-white shadow-md shadow-indigo-900/25 hover:opacity-95"
-           >
-              <Target className="w-4 h-4 mr-2" /> Цель продаж
-           </Button>
-        </div>
-        </div>
-      </div>
+    <div className="animate-in fade-in">
+      <BttTaskLabHome
+        timeRange={timeRange}
+        onTimeRangeChange={setTimeRange}
+        stats={stats}
+        chartData={chartData}
+        hotDeals={hotDeals}
+        funnelData={funnelChartData}
+        warehouseCurrent={warehouseCurrent}
+        monthlyPlan={monthlyPlan}
+        planProgress={planProgress}
+        teamMembers={teamMembers}
+        mounted={mounted}
+        onOpenPlan={() => setIsPlanDialogOpen(true)}
+        onOpenAi={() => setAiOpen(true)}
+        dashboardError={dashboardError}
+      />
 
-      {dashboardError && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
-          {dashboardError}
-        </div>
-      )}
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Выручка"
-          value={new Intl.NumberFormat('uz-UZ').format(stats.revenue)}
-          icon={DollarSign}
-          trend={12}
-        />
-        <StatCard
-          title="Сделки"
-          value={stats.activeDeals}
-          icon={Briefcase}
-          trend={5}
-        />
-        <StatCard
-          title="Лиды"
-          value={stats.newLeads}
-          icon={Users}
-          trend={-2}
-        />
-        <StatCard
-          title="Конверсия"
-          value={`${stats.conversion.toFixed(1)}%`}
-          icon={Activity}
-          trend={8}
-        />
-      </div>
-
-      {/* Main Content: Chart + Side Widgets */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-         
-         {/* Large Chart Card */}
-         <div className="lg:col-span-2 space-y-6 min-w-0">
-            <Card className="nexus-card p-6 min-h-[350px]">
-               <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 ring-1 ring-indigo-100/80">
-                      <Activity className="h-5 w-5 text-indigo-700" />
-                    </span>
-                    <div>
-                      <h3 className="font-bold text-lg text-slate-900">Продажи</h3>
-                      <p className="text-sm text-slate-500">Динамика выручки</p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full hover:bg-indigo-50"
-                    onClick={() => toast.info('Экспорт в разработке')}
-                    title="Дополнительные опции"
-                  >
-                      <MoreHorizontal className="h-5 w-5 text-slate-400" />
-                  </Button>
-               </div>
-               <div className="h-[250px] w-full min-w-0" style={{ height: 250 }}>
-                  {mounted && (
-                      <ResponsiveContainer width="100%" height={250} minWidth={0} debounce={50}>
-                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.22}/>
-                              <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                          <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                          <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`} />
-                          <Tooltip 
-                            contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', color: '#fff' }}
-                            itemStyle={{ color: '#fff' }}
-                            formatter={(value: number) => [new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', maximumFractionDigits: 0 }).format(value), '']}
-                          />
-                          <Area type="monotone" dataKey="amount" stroke="#4f46e5" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                  )}
-               </div>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <FunnelWidget />
-
-               {/* Hot Deals List */}
-               <Card className="nexus-card p-6 h-full overflow-hidden min-h-[300px]">
-                  <div className="flex items-center justify-between mb-4">
-                     <h3 className="font-bold text-lg text-slate-900">Активные сделки</h3>
-                     <Button variant="link" className="text-indigo-600 hover:text-indigo-800 p-0 h-auto text-xs font-semibold" asChild>
-                       <Link to="/deals">Все</Link>
-                     </Button>
-                  </div>
-                  <div className="space-y-1 overflow-y-auto max-h-[240px] pr-2 custom-scrollbar">
-                     {hotDeals.map((deal) => (
-                         <Link
-                           key={deal.id}
-                           to="/deals"
-                           className="flex items-center justify-between p-2 hover:bg-indigo-50/60 rounded-xl transition-colors cursor-pointer group border border-transparent hover:border-indigo-100"
-                         >
-                             <div className="flex items-center gap-3 min-w-0">
-                                <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-slate-100 to-indigo-50 flex items-center justify-center text-indigo-800 font-bold text-xs ring-1 ring-slate-200/80">
-                                   {deal.companies?.name?.[0] || '?'}
-                                </div>
-                                <div className="min-w-0">
-                                   <p className="font-bold text-sm text-slate-900 truncate max-w-[140px] md:max-w-[180px]">{deal.title}</p>
-                                   <p className="text-[10px] text-slate-500 truncate">{deal.companies?.name}</p>
-                                </div>
-                             </div>
-                             <div className="text-right shrink-0">
-                                <span className="font-bold text-sm text-slate-900 block tabular-nums">{new Intl.NumberFormat('uz-UZ').format(deal.amount)}</span>
-                             </div>
-                         </Link>
-                     ))}
-                  </div>
-               </Card>
-            </div>
-         </div>
-
-         {/* Right Sidebar Widgets */}
-         <div className="space-y-6">
-            
-            <ForecastWidget />
-
-            {/* Plan Card (Black Card from design) */}
-            {monthlyPlan > 0 && (
-                <Card className="nexus-card p-6 relative overflow-hidden">
-                   <div className="absolute top-0 right-0 w-44 h-44 bg-indigo-200/40 rounded-full blur-3xl -mr-12 -mt-12 pointer-events-none" />
-                   <div className="relative z-10">
-                      <div className="flex justify-between items-start mb-6">
-                         <div className="p-2 rounded-xl bg-indigo-50 ring-1 ring-indigo-100/80">
-                            <Target className="h-5 w-5 text-indigo-800" />
-                         </div>
-                         <span className="text-xs font-bold bg-indigo-100/90 px-2.5 py-1 rounded-full text-indigo-900 ring-1 ring-indigo-200/60">
-                            {planProgress.toFixed(0)}%
-                         </span>
-                      </div>
-                      <h3 className="text-3xl font-bold mb-1 text-slate-900 tabular-nums">{planProgress.toFixed(0)}%</h3>
-                      <p className="text-slate-500 text-sm mb-6">Выполнение плана</p>
-                      
-                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2 ring-1 ring-slate-200/80">
-                         <div
-                           className="h-full rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 transition-all duration-1000"
-                           style={{ width: `${Math.min(planProgress, 100)}%` }}
-                         />
-                      </div>
-                      <div className="flex justify-between text-xs text-slate-400">
-                         <span>0</span>
-                         <span>{new Intl.NumberFormat('uz-UZ', { notation: "compact" }).format(targetPlan)}</span>
-                      </div>
-                   </div>
-                </Card>
-            )}
-
-            <TodayTasksWidget />
-            <WarehouseWidget />
-         </div>
-
-      </div>
-
-      {/* Plan Dialog */}
       <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
-        <DialogContent className="nexus-card max-w-sm p-6 border-slate-200">
+        <DialogContent className="tasklab-card max-w-sm p-6 border-0">
           <DialogHeader>
             <DialogTitle>Цель продаж</DialogTitle>
             <DialogDescription>Месячная сумма в UZS для отслеживания прогресса.</DialogDescription>
@@ -853,17 +473,17 @@ export default function Dashboard() {
                   className="border-slate-200 bg-slate-50/80 h-12 text-lg font-bold focus-visible:ring-indigo-200" 
                />
             </div>
-            <Button onClick={savePlan} className="w-full h-12 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-900/15">Сохранить</Button>
+            <Button onClick={savePlan} className="w-full h-12 rounded-full bg-neutral-900 text-white hover:bg-neutral-800">Сохранить</Button>
           </div>
         </DialogContent>
       </Dialog>
       
       {/* AI Dialog */}
       <Dialog open={aiOpen} onOpenChange={setAiOpen}>
-        <DialogContent className="nexus-card max-w-2xl p-0 overflow-hidden border-slate-200">
-          <div className="crm-ai-header-glow p-6 border-b border-slate-100">
-             <DialogTitle className="flex items-center gap-2 text-slate-900">
-               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+        <DialogContent className="tasklab-card max-w-2xl p-0 overflow-hidden border-0">
+          <div className="p-6 border-b border-neutral-100">
+             <DialogTitle className="flex items-center gap-2 text-neutral-900">
+               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-900 text-[var(--tasklab-lime)] shadow-sm">
                  <Sparkles className="w-5 h-5" />
                </span>
                AI-инсайты
@@ -886,7 +506,7 @@ export default function Dashboard() {
           </div>
           <div className="p-4 bg-white border-t border-slate-100 flex justify-end gap-2">
              <Button variant="outline" onClick={() => setAiOpen(false)} className="rounded-xl border-slate-200">Закрыть</Button>
-             <Button onClick={runAIAnalysis} disabled={aiLoading} className="rounded-xl bg-indigo-600 px-6 text-white hover:bg-indigo-700 shadow-md">
+             <Button onClick={runAIAnalysis} disabled={aiLoading} className="rounded-full bg-neutral-900 px-6 text-white hover:bg-neutral-800">
                 {aiLoading ? 'Подождите…' : 'Анализировать'}
              </Button>
           </div>

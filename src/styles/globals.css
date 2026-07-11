@@ -5,6 +5,13 @@
 :root {
   --font-size: 14px;
 
+  /* TaskLab — чёрный / белый / лайм */
+  --tasklab-lime: #d4f534;
+  --tasklab-lime-soft: #e8ff9a;
+  --tasklab-ink: #111111;
+  --tasklab-surface: #f3f3f3;
+  --tasklab-card-radius: 1.75rem;
+
   /* Nexus Ops — спокойная рабочая база под CRM, аналитику и ИИ */
   --nexus-ink: #0f172a;
   --nexus-ink-soft: #1e293b;
@@ -129,10 +136,65 @@
   box-shadow: 0 8px 28px -18px rgba(15, 23, 42, 0.22);
 }
 
-/** Фон приложения — мягкий серо-голубой как в SugarCRM */
+/** Фон — TaskLab для основного shell */
+.tasklab-app {
+  background: var(--tasklab-surface);
+}
+.tasklab-sidebar {
+  @apply bg-white/90 backdrop-blur-xl border-r border-neutral-200/60;
+}
+
+.tasklab-nav-item {
+  @apply flex items-center gap-3 px-4 py-3 rounded-[1.25rem] text-sm font-medium text-neutral-500 transition-all duration-200;
+}
+
+.tasklab-nav-item:hover {
+  @apply bg-neutral-100 text-neutral-900;
+}
+
+.tasklab-nav-item-active {
+  @apply bg-neutral-900 text-white shadow-lg shadow-neutral-900/15;
+}
+
+.tasklab-nav-item-active:hover {
+  @apply bg-neutral-900 text-white;
+}
+
+.tasklab-card {
+  @apply bg-white rounded-[1.75rem] border-0;
+  box-shadow: 0 4px 24px -6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.tasklab-card-dark {
+  @apply bg-neutral-900 rounded-[1.75rem] text-white border-0;
+  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.35);
+}
+
+.tasklab-card-lime {
+  @apply rounded-[1.75rem] border-0;
+  background: var(--tasklab-lime);
+  box-shadow: 0 8px 28px -8px rgba(212, 245, 52, 0.45);
+}
+
+.tasklab-card-dashed {
+  @apply rounded-[1.75rem] border-2 border-dashed border-neutral-200 bg-white/50;
+}
+
+.tasklab-pill {
+  @apply rounded-full;
+}
+
+.tasklab-topbar {
+  @apply rounded-[1.75rem] bg-white/80 backdrop-blur-md border border-white/60;
+  box-shadow: 0 2px 16px -4px rgba(0, 0, 0, 0.06);
+}
+
+/** Фон приложения — мягкий серо-голубой (legacy страницы) */
 .nexus-app {
   background: linear-gradient(180deg, #f5f7fa 0%, #eef1f6 50%, #f3f6fa 100%);
 }
+
+/** TaskLab design system */
 
 /** Карточка верхней панели */
 .nexus-header-surface {
