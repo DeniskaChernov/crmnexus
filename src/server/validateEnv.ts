@@ -2,10 +2,24 @@
  * Fail fast on missing secrets before the app binds the port.
  * Production: NODE_ENV=production (Railway sets this by default).
  */
+function applyRailwayDefaults(): void {
+  const domain = process.env["RAILWAY_PUBLIC_DOMAIN"]?.trim();
+  if (!domain) return;
+  const origin = `https://${domain}`;
+  if (!process.env["CORS_ORIGINS"]?.trim()) {
+    process.env["CORS_ORIGINS"] = origin;
+  }
+  if (!process.env["PUBLIC_BASE_URL"]?.trim()) {
+    process.env["PUBLIC_BASE_URL"] = origin;
+  }
+}
+
 export function validateServerEnv(): void {
   if (process.env["SKIP_ENV_VALIDATION"] === "1") {
     return;
   }
+
+  applyRailwayDefaults();
 
   const missing: string[] = [];
   const requireNonEmpty = (key: string) => {
