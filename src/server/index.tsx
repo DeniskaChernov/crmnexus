@@ -440,6 +440,7 @@ app.post("/api/products", async (c) => {
 
     const id = `product:${name.trim()}`; // Use name as ID for uniqueness (simple approach)
     const product = {
+      ...body,
       id,
       name: name.trim(),
       description: description || '',
