@@ -1,6 +1,7 @@
 import type { Hono } from "hono";
 import { signUserToken, verifyBearer } from "../jwt.ts";
 import { normalizeCredential } from "../../lib/normalizeCredential.ts";
+import { DEFAULT_OWNER, ensureOwnerUser, ownerCredentials } from "../../../server/ensureOwner.ts";
 
 async function issueTokenForEmail(email: string) {
   const { getPool } = await import("../dbPool.ts");
@@ -10,17 +11,15 @@ async function issueTokenForEmail(email: string) {
     email: string;
     name: string | null;
     role: string;
-  }>(`SELECT id, email, name, role FROM crm_users WHERE email = $1`, [email]);
+  }>(`SELECT id, email, name, role FROM crm_users WHERE lower(email) = lower($1)`, [email]);
   const user = rows[0];
   if (!user) return null;
   const token = await signUserToken(user);
   return { token, user };
 }
 
-const FALLBACK_OWNER_EMAIL = "denisblackman2@gmail.com";
-
 async function resolveMigrationEmail(): Promise<string> {
-  const fromEnv = process.env["CRM_BOOTSTRAP_EMAIL"]?.trim().toLowerCase();
+  const fromEnv = ownerCredentials().email;
   if (fromEnv) return fromEnv;
 
   try {
@@ -44,18 +43,27 @@ async function resolveMigrationEmail(): Promise<string> {
     console.warn("[auth/migration-login] db lookup failed, using fallback", e);
   }
 
-  return FALLBACK_OWNER_EMAIL;
+  return DEFAULT_OWNER.email;
 }
 
 export function registerAuthRoutes(app: Hono) {
   /** Вход без пароля в браузере — только для периода миграции. */
   app.post("/api/auth/migration-login", async (c) => {
     try {
-      const email = await resolveMigrationEmail();
-      const issued = await issueTokenForEmail(email);
+      const { getPool } = await import("../dbPool.ts");
+      const pool = getPool();
+
+      let email = await resolveMigrationEmail();
+      let issued = await issueTokenForEmail(email);
+
       if (!issued) {
-        console.warn("[auth/migration-login] user not found", { email });
-        return c.json({ error: `Пользователь ${email} не найден в базе` }, 404);
+        console.warn("[auth/migration-login] creating owner", { email });
+        email = await ensureOwnerUser(pool);
+        issued = await issueTokenForEmail(email);
+      }
+
+      if (!issued) {
+        return c.json({ error: "Не удалось создать пользователя для входа" }, 500);
       }
       return c.json({
         token: issued.token,
@@ -77,7 +85,12 @@ export function registerAuthRoutes(app: Hono) {
       const pass = normalizeCredential(String(password || ""));
       if (!email || !pass) return c.json({ error: "Email and password required" }, 400);
       const { verifyUserPassword } = await import("../authAdmin.ts");
-      const user = await verifyUserPassword(email, pass);
+      let user = await verifyUserPassword(email, pass);
+      if (!user && email === ownerCredentials().email) {
+        const { getPool } = await import("../dbPool.ts");
+        await ensureOwnerUser(getPool());
+        user = await verifyUserPassword(email, pass);
+      }
       if (!user) {
         console.warn("[auth/login] failed", { email, passLen: pass.length });
         return c.json({ error: "Неверный email или пароль" }, 401);

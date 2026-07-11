@@ -79,7 +79,7 @@ export async function verifyUserPassword(
     name: string | null;
     role: string;
     password_hash: string;
-  }>(`SELECT id, email, name, role, password_hash FROM crm_users WHERE email = $1`, [
+  }>(`SELECT id, email, name, role, password_hash FROM crm_users WHERE lower(email) = lower($1)`, [
     normalizedEmail,
   ]);
   const row = rows[0];
