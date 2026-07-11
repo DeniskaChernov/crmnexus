@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { crm } from "../lib/crmClient.ts";
+import { ensureAuthToken } from "../lib/crmApi.ts";
 import { Loader2 } from 'lucide-react';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -19,8 +20,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         setLoading(false);
         return;
       }
+      if (attempt === 0) {
+        await ensureAuthToken();
+        return resolveSession(attempt + 1);
+      }
       const hasToken = Boolean(localStorage.getItem("crm_token"));
-      if (hasToken && attempt < 3) {
+      if (hasToken && attempt < 4) {
         await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
         return resolveSession(attempt + 1);
       }

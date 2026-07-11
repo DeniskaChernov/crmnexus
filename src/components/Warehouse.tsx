@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { crmUrl, authHeaders, crmFetch, crmJson, ensureAuthToken } from '../lib/crmApi.ts';
+import { crmUrl, authHeaders, crmFetch } from '../lib/crmApi.ts';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
@@ -632,8 +632,12 @@ export default function Warehouse() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          setShipments(data);
-          return data.length;
+          const normalized = data.map((s: Shipment) => ({
+            ...s,
+            items: Array.isArray(s.items) ? s.items : [],
+          }));
+          setShipments(normalized);
+          return normalized.length;
         }
       }
       console.warn("Failed to fetch shipments", res.status);
@@ -655,50 +659,59 @@ export default function Warehouse() {
     }
   };
 
+  const fetchCoreWarehouseData = async () => {
+    const health = await fetch(crmUrl('/health/db'), { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    if (health) {
+      setDbCounts({ shipments: health.shipments, production_logs: health.production_logs });
+    }
+
+    const [shipmentsResult, logsResult, statsResult] = await Promise.allSettled([
+      fetch(crmUrl('/shipments'), { cache: 'no-store' }),
+      fetch(crmUrl('/production-logs'), { cache: 'no-store' }),
+      fetch(crmUrl('/warehouse/inventory'), { cache: 'no-store' }),
+    ]);
+
+    let shipmentCount = 0;
+    if (shipmentsResult.status === 'fulfilled' && shipmentsResult.value.ok) {
+      const data = await shipmentsResult.value.json().catch(() => null);
+      if (Array.isArray(data)) {
+        const normalized = data.map((s: Shipment) => ({
+          ...s,
+          items: Array.isArray(s.items) ? s.items : [],
+        }));
+        setShipments(normalized);
+        shipmentCount = normalized.length;
+      }
+    }
+
+    if (logsResult.status === 'fulfilled' && logsResult.value.ok) {
+      const data = await logsResult.value.json().catch(() => null);
+      if (Array.isArray(data)) setLogs(data);
+    }
+
+    if (statsResult.status === 'fulfilled' && statsResult.value.ok) {
+      const data = await statsResult.value.json().catch(() => null);
+      if (data && typeof data === 'object') setStats(data);
+    }
+
+    return { shipmentCount, health };
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
       setLoadError('');
 
-      await ensureAuthToken();
+      const { shipmentCount, health } = await fetchCoreWarehouseData();
 
-      const health = await fetch(crmUrl('/health/db'), { cache: 'no-store' })
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null);
-      if (health) setDbCounts({ shipments: health.shipments, production_logs: health.production_logs });
-
-      const fetchLogsPromise = async () => {
-        try {
-          const res = await fetch(crmUrl('/production-logs'), { cache: 'no-store' });
-          if (res.ok) {
-            const data = await res.json();
-            if (Array.isArray(data)) setLogs(data);
-          }
-        } catch (e) {
-          console.warn("Failed logs", e);
-        }
-      };
-
-      const fetchStatsPromise = async () => {
-        try {
-          const res = await fetch(crmUrl('/warehouse/inventory'), { cache: 'no-store' });
-          if (res.ok) setStats(await res.json());
-        } catch (e) {
-          console.warn("Failed stats", e);
-        }
-      };
-
-      const results = await Promise.all([
+      await Promise.allSettled([
         fetchIntegrationStatus(),
         fetchEmployees(),
-        fetchShipments(),
         fetchTransfers(),
-        fetchLogsPromise(),
-        fetchStatsPromise(),
         fetchRecipes(),
       ]);
-
-      const shipmentCount = results[2] as number;
 
       if (shipmentCount === 0 && (health?.shipments ?? 0) > 0) {
         setLoadError(`В базе ${health.shipments} отгрузок, но браузер не смог их загрузить. Нажмите «Обновить» или перелогиньтесь.`);
@@ -821,6 +834,15 @@ export default function Warehouse() {
   useEffect(() => {
     fetchAvailableArticles();
   }, []);
+
+  useEffect(() => {
+    if (!loading && !stats && dbCounts && (dbCounts.shipments ?? 0) > 0) {
+      const retryTimer = setTimeout(() => {
+        void fetchCoreWarehouseData();
+      }, 2500);
+      return () => clearTimeout(retryTimer);
+    }
+  }, [loading, stats, dbCounts]);
 
   const isMounted = useRef(true);
   useEffect(() => {
@@ -1724,11 +1746,11 @@ export default function Warehouse() {
 
       selectedItems.forEach(s => {
           // Identify if shipment is "mono-article" (ignoring minor variations if needed, but here exact match)
-          const uniqueArticles = Array.from(new Set(s.items.map(i => i.stickerArticle || i.article)));
+          const uniqueArticles = Array.from(new Set((s.items || []).map(i => i.stickerArticle || i.article)));
           const shipmentBags = s.totalBags || 0;
           let bagsDistributed = false;
 
-          s.items.forEach((item, itemIndex) => {
+          (s.items || []).forEach((item, itemIndex) => {
               // Calculate effective coils for this item
               const itemCoils = item.coils || 1;
               const articleName = item.stickerArticle || item.article;
@@ -2624,6 +2646,40 @@ export default function Warehouse() {
 
       {/* Info Banners */}
       <div className="space-y-3">
+        <div
+          className={`px-4 py-3 rounded-lg text-sm border flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+            loading
+              ? 'bg-slate-50 border-slate-200 text-slate-600'
+              : shipments.length > 0 || logs.length > 0 || (stats?.BTT?.current?.total ?? 0) > 0
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                : dbCounts && ((dbCounts.shipments ?? 0) > 0 || (dbCounts.production_logs ?? 0) > 0)
+                  ? 'bg-amber-50 border-amber-200 text-amber-900'
+                  : 'bg-slate-50 border-slate-200 text-slate-600'
+          }`}
+        >
+          <div>
+            {loading ? (
+              <p className="font-medium">Загрузка данных склада…</p>
+            ) : (
+              <>
+                <p className="font-medium">
+                  В интерфейсе: {shipments.length} отгрузок · {logs.length} поступлений · остаток{' '}
+                  {(stats?.BTT?.current?.total ?? 0).toFixed(0)} кг
+                </p>
+                {dbCounts && (
+                  <p className="text-xs mt-1 opacity-80">
+                    В базе Railway: {dbCounts.production_logs ?? 0} поступлений, {dbCounts.shipments ?? 0} отгрузок
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+          {!loading && (
+            <Button size="sm" variant="outline" className="shrink-0" onClick={() => fetchData()}>
+              Обновить
+            </Button>
+          )}
+        </div>
         {loadError && (
           <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-2">
@@ -2796,8 +2852,8 @@ export default function Warehouse() {
                                <TableCell>{s.totalBags || '—'}</TableCell>
                                <TableCell>{s.items?.length || 0}</TableCell>
                                <TableCell>
-                                  <div className="max-w-[200px] truncate text-xs text-slate-600" title={Array.from(new Set(s.items.map(i => i.stickerArticle || i.article))).join(', ')}>
-                                      {Array.from(new Set(s.items.map(i => i.stickerArticle || i.article))).join(', ')}
+                                  <div className="max-w-[200px] truncate text-xs text-slate-600" title={Array.from(new Set((s.items || []).map(i => i.stickerArticle || i.article))).join(', ')}>
+                                      {Array.from(new Set((s.items || []).map(i => i.stickerArticle || i.article))).join(', ')}
                                   </div>
                                </TableCell>
                                <TableCell className="font-bold">

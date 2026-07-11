@@ -1,4 +1,4 @@
-import { crmUrl, authHeaders, ensureAuthToken } from "./crmApi.ts";
+import { crmUrl, authHeaders, ensureAuthToken, crmFetch } from "./crmApi.ts";
 import { normalizeCredential } from "./normalizeCredential.ts";
 
 type SessionUser = {
@@ -61,9 +61,10 @@ async function fetchMe(token: string, attempt = 0): Promise<Response> {
 
 async function crmRun(body: Record<string, unknown>) {
   try {
-    const res = await fetch(crmUrl("/crm/run"), {
+    await ensureAuthToken();
+    const res = await crmFetch("/crm/run", {
       method: "POST",
-      headers: authHeaders(),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     try {
