@@ -65,7 +65,7 @@ export default function Login() {
         // Auto login after signup
         const { error: signInError } = await crm.auth.signInWithPassword({
           email: email.trim(),
-          password,
+          password: password.trim(),
         });
         
         if (signInError) throw signInError;
@@ -74,7 +74,7 @@ export default function Login() {
       } else {
         const { error } = await crm.auth.signInWithPassword({
           email: email.trim(),
-          password,
+          password: password.trim(),
         });
         if (error) throw error;
         navigate(fromPath, { replace: true });

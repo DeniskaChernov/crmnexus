@@ -4,11 +4,13 @@ import { signUserToken, verifyBearer } from "../jwt.ts";
 export function registerAuthRoutes(app: Hono) {
   app.post("/api/auth/login", async (c) => {
     try {
-      const { email, password } = await c.req.json();
-      if (!email || !password) return c.json({ error: "Email and password required" }, 400);
+      const { email: emailRaw, password } = await c.req.json();
+      const email = String(emailRaw || "").trim().toLowerCase();
+      const pass = String(password || "");
+      if (!email || !pass) return c.json({ error: "Email and password required" }, 400);
       const { verifyUserPassword } = await import("../authAdmin.ts");
-      const user = await verifyUserPassword(email, password);
-      if (!user) return c.json({ error: "Invalid credentials" }, 401);
+      const user = await verifyUserPassword(email, pass);
+      if (!user) return c.json({ error: "Неверный email или пароль" }, 401);
       const token = await signUserToken(user);
       return c.json({
         token,
