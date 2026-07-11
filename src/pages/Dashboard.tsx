@@ -21,6 +21,7 @@ import { toast } from 'sonner@2.0.3';
 import { TodayTasksWidget } from '../components/crm/TodayTasksWidget';
 import { getNotificationPermission, getNotificationPreference } from '../utils/pushNotifications';
 import { startTaskNotifications, stopTaskNotifications } from '../utils/taskNotifications';
+import { SugarHome, type SugarHomeProps } from '../components/dashboard/SugarHome';
 
 export default function Dashboard() {
   const [timeRange, setTimeRange] = useState('this_month');
@@ -47,6 +48,8 @@ export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
   const [dashboardError, setDashboardError] = useState('');
 
+  const [allDeals, setAllDeals] = useState<any[]>([]);
+  const [allTasks, setAllTasks] = useState<any[]>([]);
   const [pipelines, setPipelines] = useState<any[]>([]);
   const [stages, setStages] = useState<any[]>([]);
   
@@ -71,10 +74,93 @@ export default function Dashboard() {
 
     return () => {
       clearInterval(warehouseInterval);
-      clearInterval(paymentsInterval);
       clearInterval(dealsInterval);
     };
   }, [timeRange]);
+
+  useEffect(() => {
+    crm.from('tasks').select('*').order('due_date', { ascending: true }).limit(20).then(({ data }) => {
+      if (data) setAllTasks(data);
+    });
+  }, []);
+
+  const sugarProps: SugarHomeProps = React.useMemo(() => {
+    const tones: Array<'blue' | 'red' | 'orange'> = ['blue', 'red', 'blue', 'orange', 'blue', 'red', 'blue', 'orange'];
+    const companyCounts = new Map<string, number>();
+    for (const d of allDeals) {
+      const name = d.companies?.name || d.title || 'Клиент';
+      companyCounts.set(name, (companyCounts.get(name) || 0) + 1);
+    }
+    const team = [...companyCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name, count], i) => ({
+        id: `t-${i}`,
+        name,
+        count,
+        tone: tones[i % tones.length]!,
+      }));
+
+    const openDeals = allDeals.filter((d) => d.status === 'open');
+    const wonDeals = allDeals.filter((d) => d.status === 'won');
+
+    const allocationTasks = openDeals.slice(0, 2).map((d) => ({
+      id: d.id,
+      title: `Назначить: ${d.title}`,
+      assignee: d.companies?.name,
+    }));
+
+    const identificationTasks = openDeals.slice(2, 7).map((d, i) => ({
+      id: d.id,
+      title: `Квалификация: ${d.title}`,
+      assignee: d.companies?.name,
+      highlight: i === 2,
+    }));
+
+    const resolutionTasks = openDeals.slice(7, 11).map((d) => ({
+      id: d.id,
+      title: `Закрытие: ${d.title}`,
+      assignee: d.companies?.name,
+    }));
+
+    const taskTitles = allTasks.length
+      ? allTasks.slice(0, 6).map((t) => t.title)
+      : ['Обработка заявки', 'Решение проблемы', 'Связь с клиентом', 'Тестирование', 'Документация', 'Согласование'];
+
+    const newTasks = taskTitles.map((title, i) => ({
+      id: `nt-${i}`,
+      title,
+      active: i === 0,
+    }));
+
+    const knowledgeRows = (allTasks.length ? allTasks : []).slice(0, 4).map((t) => ({
+      id: t.id,
+      subject: t.title,
+      status: (t.status === 'done' || t.status === 'completed' ? 'executed' : 'scheduled') as 'executed' | 'scheduled',
+      startDate: t.due_date ? new Date(t.due_date).toLocaleDateString('ru-RU') : '—',
+      endDate: t.due_date ? new Date(t.due_date).toLocaleDateString('ru-RU') : '—',
+      assignee: t.assignee || 'Менеджер',
+    }));
+
+    if (knowledgeRows.length === 0) {
+      knowledgeRows.push(
+        { id: '1', subject: 'Связаться с клиентом', status: 'executed', startDate: '11.07.2026', endDate: '11.07.2026', assignee: 'Менеджер' },
+        { id: '2', subject: 'Подготовить КП', status: 'scheduled', startDate: '12.07.2026', endDate: '14.07.2026', assignee: 'Отдел продаж' },
+      );
+    }
+
+    return {
+      team: team.length ? team : [{ id: '0', name: 'Команда', count: openDeals.length, tone: 'blue' as const }],
+      allocationTasks: allocationTasks.length ? allocationTasks : [{ id: 'a1', title: 'Назначить сделку менеджеру', assignee: 'CRM' }],
+      identificationTasks: identificationTasks.length ? identificationTasks : [{ id: 'i1', title: 'Определить категорию сделки', assignee: 'CRM' }],
+      resolutionTasks: resolutionTasks.length ? resolutionTasks : [{ id: 'r1', title: 'Оценить срок закрытия', assignee: 'CRM', highlight: true }],
+      newTasks,
+      knowledgeRows,
+      executedCount: wonDeals.length,
+      activeCount: openDeals.length,
+      loading: false,
+    };
+  }, [allDeals, allTasks]);
 
   const fetchPipelines = async () => {
     try {
@@ -231,7 +317,7 @@ export default function Dashboard() {
       allPayments = allPayments.filter((p: any) => deals.some(d => d.id === p.dealId));
 
       if (deals) {
-        // Calculate Period Duration
+        setAllDeals(deals);
         let duration = 1;
         if (currentRange === 'this_year') duration = 12;
         else if (currentRange === 'all' && deals.length > 0) {
@@ -624,274 +710,8 @@ export default function Dashboard() {
   );
 
   if (loading) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-slate-500">
-        <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
-        <p className="text-sm font-medium">Загружаем показатели…</p>
-      </div>
-    );
+    return <SugarHome {...sugarProps} loading />;
   }
 
-  return (
-    <div className="space-y-8 animate-in fade-in pb-10">
-      
-      {/* Header Area */}
-      <div className="nexus-page-hero pl-7 md:pl-9">
-        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 mb-1">Дашборд</p>
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight mb-2">Обзор</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
-             <span>Статистика за</span>
-             <Select value={timeRange} onValueChange={setTimeRange}>
-               <SelectTrigger className="w-[160px] h-9 rounded-full border border-slate-200 bg-slate-50/80 font-semibold text-slate-900 hover:bg-white focus:ring-indigo-200">
-                 <SelectValue />
-               </SelectTrigger>
-               <SelectContent align="start">
-                 <SelectItem value="this_month">Этот месяц</SelectItem>
-                 <SelectItem value="last_month">Прошлый месяц</SelectItem>
-                 <SelectItem value="this_year">Этот год</SelectItem>
-                 <SelectItem value="all">Все время</SelectItem>
-               </SelectContent>
-             </Select>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2 md:gap-3">
-           <Button
-             onClick={() => setAiOpen(true)}
-             variant="outline"
-             className="rounded-full border-indigo-200 bg-white text-indigo-900 shadow-sm hover:bg-indigo-50/80"
-           >
-              <Sparkles className="w-4 h-4 mr-2 text-indigo-600" /> AI-анализ
-           </Button>
-           <Button
-             onClick={() => setIsPlanDialogOpen(true)}
-             className="rounded-full bg-gradient-to-r from-slate-900 to-indigo-950 text-white shadow-md shadow-indigo-900/25 hover:opacity-95"
-           >
-              <Target className="w-4 h-4 mr-2" /> Цель продаж
-           </Button>
-        </div>
-        </div>
-      </div>
-
-      {dashboardError && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
-          {dashboardError}
-        </div>
-      )}
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Выручка"
-          value={new Intl.NumberFormat('uz-UZ').format(stats.revenue)}
-          icon={DollarSign}
-          trend={12}
-        />
-        <StatCard
-          title="Сделки"
-          value={stats.activeDeals}
-          icon={Briefcase}
-          trend={5}
-        />
-        <StatCard
-          title="Лиды"
-          value={stats.newLeads}
-          icon={Users}
-          trend={-2}
-        />
-        <StatCard
-          title="Конверсия"
-          value={`${stats.conversion.toFixed(1)}%`}
-          icon={Activity}
-          trend={8}
-        />
-      </div>
-
-      {/* Main Content: Chart + Side Widgets */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-         
-         {/* Large Chart Card */}
-         <div className="lg:col-span-2 space-y-6 min-w-0">
-            <Card className="nexus-card p-6 min-h-[350px]">
-               <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 ring-1 ring-indigo-100/80">
-                      <Activity className="h-5 w-5 text-indigo-700" />
-                    </span>
-                    <div>
-                      <h3 className="font-bold text-lg text-slate-900">Продажи</h3>
-                      <p className="text-sm text-slate-500">Динамика выручки</p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full hover:bg-indigo-50"
-                    onClick={() => toast.info('Экспорт в разработке')}
-                    title="Дополнительные опции"
-                  >
-                      <MoreHorizontal className="h-5 w-5 text-slate-400" />
-                  </Button>
-               </div>
-               <div className="h-[250px] w-full min-w-0" style={{ height: 250 }}>
-                  {mounted && (
-                      <ResponsiveContainer width="100%" height={250} minWidth={0} debounce={50}>
-                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.22}/>
-                              <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                          <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                          <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`} />
-                          <Tooltip 
-                            contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', color: '#fff' }}
-                            itemStyle={{ color: '#fff' }}
-                            formatter={(value: number) => [new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', maximumFractionDigits: 0 }).format(value), '']}
-                          />
-                          <Area type="monotone" dataKey="amount" stroke="#4f46e5" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                  )}
-               </div>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <FunnelWidget />
-
-               {/* Hot Deals List */}
-               <Card className="nexus-card p-6 h-full overflow-hidden min-h-[300px]">
-                  <div className="flex items-center justify-between mb-4">
-                     <h3 className="font-bold text-lg text-slate-900">Активные сделки</h3>
-                     <Button variant="link" className="text-indigo-600 hover:text-indigo-800 p-0 h-auto text-xs font-semibold" asChild>
-                       <Link to="/deals">Все</Link>
-                     </Button>
-                  </div>
-                  <div className="space-y-1 overflow-y-auto max-h-[240px] pr-2 custom-scrollbar">
-                     {hotDeals.map((deal) => (
-                         <Link
-                           key={deal.id}
-                           to="/deals"
-                           className="flex items-center justify-between p-2 hover:bg-indigo-50/60 rounded-xl transition-colors cursor-pointer group border border-transparent hover:border-indigo-100"
-                         >
-                             <div className="flex items-center gap-3 min-w-0">
-                                <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-slate-100 to-indigo-50 flex items-center justify-center text-indigo-800 font-bold text-xs ring-1 ring-slate-200/80">
-                                   {deal.companies?.name?.[0] || '?'}
-                                </div>
-                                <div className="min-w-0">
-                                   <p className="font-bold text-sm text-slate-900 truncate max-w-[140px] md:max-w-[180px]">{deal.title}</p>
-                                   <p className="text-[10px] text-slate-500 truncate">{deal.companies?.name}</p>
-                                </div>
-                             </div>
-                             <div className="text-right shrink-0">
-                                <span className="font-bold text-sm text-slate-900 block tabular-nums">{new Intl.NumberFormat('uz-UZ').format(deal.amount)}</span>
-                             </div>
-                         </Link>
-                     ))}
-                  </div>
-               </Card>
-            </div>
-         </div>
-
-         {/* Right Sidebar Widgets */}
-         <div className="space-y-6">
-            
-            <ForecastWidget />
-
-            {/* Plan Card (Black Card from design) */}
-            {monthlyPlan > 0 && (
-                <Card className="nexus-card p-6 relative overflow-hidden">
-                   <div className="absolute top-0 right-0 w-44 h-44 bg-indigo-200/40 rounded-full blur-3xl -mr-12 -mt-12 pointer-events-none" />
-                   <div className="relative z-10">
-                      <div className="flex justify-between items-start mb-6">
-                         <div className="p-2 rounded-xl bg-indigo-50 ring-1 ring-indigo-100/80">
-                            <Target className="h-5 w-5 text-indigo-800" />
-                         </div>
-                         <span className="text-xs font-bold bg-indigo-100/90 px-2.5 py-1 rounded-full text-indigo-900 ring-1 ring-indigo-200/60">
-                            {planProgress.toFixed(0)}%
-                         </span>
-                      </div>
-                      <h3 className="text-3xl font-bold mb-1 text-slate-900 tabular-nums">{planProgress.toFixed(0)}%</h3>
-                      <p className="text-slate-500 text-sm mb-6">Выполнение плана</p>
-                      
-                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2 ring-1 ring-slate-200/80">
-                         <div
-                           className="h-full rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 transition-all duration-1000"
-                           style={{ width: `${Math.min(planProgress, 100)}%` }}
-                         />
-                      </div>
-                      <div className="flex justify-between text-xs text-slate-400">
-                         <span>0</span>
-                         <span>{new Intl.NumberFormat('uz-UZ', { notation: "compact" }).format(targetPlan)}</span>
-                      </div>
-                   </div>
-                </Card>
-            )}
-
-            <TodayTasksWidget />
-            <WarehouseWidget />
-         </div>
-
-      </div>
-
-      {/* Plan Dialog */}
-      <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
-        <DialogContent className="nexus-card max-w-sm p-6 border-slate-200">
-          <DialogHeader>
-            <DialogTitle>Цель продаж</DialogTitle>
-            <DialogDescription>Месячная сумма в UZS для отслеживания прогресса.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-               <Label className="text-xs font-bold uppercase text-slate-400">Сумма (UZS)</Label>
-               <Input 
-                  value={planInput} 
-                  onChange={(e) => setPlanInput(e.target.value)}
-                  className="border-slate-200 bg-slate-50/80 h-12 text-lg font-bold focus-visible:ring-indigo-200" 
-               />
-            </div>
-            <Button onClick={savePlan} className="w-full h-12 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-900/15">Сохранить</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* AI Dialog */}
-      <Dialog open={aiOpen} onOpenChange={setAiOpen}>
-        <DialogContent className="nexus-card max-w-2xl p-0 overflow-hidden border-slate-200">
-          <div className="crm-ai-header-glow p-6 border-b border-slate-100">
-             <DialogTitle className="flex items-center gap-2 text-slate-900">
-               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
-                 <Sparkles className="w-5 h-5" />
-               </span>
-               AI-инсайты
-             </DialogTitle>
-             <DialogDescription className="text-sm text-slate-600 mt-2 pl-[3.25rem]">
-               Краткий разбор текущих показателей и идей по продажам
-             </DialogDescription>
-          </div>
-          <div className="p-6 md:p-8 bg-slate-50/60 min-h-[280px]">
-             {aiLoading ? (
-                 <div className="flex flex-col items-center justify-center min-h-[240px] gap-4 text-slate-500">
-                    <Loader2 className="h-9 w-9 animate-spin text-indigo-600" />
-                    <p className="text-sm font-medium">Анализируем данные…</p>
-                 </div>
-             ) : (
-                 <div className="prose prose-slate max-w-none prose-headings:text-slate-900">
-                    {aiResult || <div className="text-center text-slate-400 py-10">Нажмите «Анализировать», чтобы получить отчёт</div>}
-                 </div>
-             )}
-          </div>
-          <div className="p-4 bg-white border-t border-slate-100 flex justify-end gap-2">
-             <Button variant="outline" onClick={() => setAiOpen(false)} className="rounded-xl border-slate-200">Закрыть</Button>
-             <Button onClick={runAIAnalysis} disabled={aiLoading} className="rounded-xl bg-indigo-600 px-6 text-white hover:bg-indigo-700 shadow-md">
-                {aiLoading ? 'Подождите…' : 'Анализировать'}
-             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+  return <SugarHome {...sugarProps} />;
 }

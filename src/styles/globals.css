@@ -62,8 +62,10 @@
   --chart-4: #f59e0b;
   --chart-5: #ef4444;
   
-  /* Geometry - compact enough for a dense CRM workspace */
-  --radius: 0.875rem;
+  /* Geometry - SugarCRM soft UI */
+  --radius: 1.5rem;
+  --sugar-bg: #f3f5f9;
+  --sugar-card-shadow: 0 4px 24px -4px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
 @theme inline {
@@ -127,52 +129,53 @@
   box-shadow: 0 8px 28px -18px rgba(15, 23, 42, 0.22);
 }
 
-/** Фон приложения: мягкий, но не однотонный фон для длительной работы */
+/** Фон приложения — мягкий серо-голубой как в SugarCRM */
 .nexus-app {
-  background: linear-gradient(
-    165deg,
-    var(--nexus-shell-top) 0%,
-    var(--nexus-shell-mid) 42%,
-    var(--nexus-shell-btm) 100%
-  );
+  background: linear-gradient(180deg, #f5f7fa 0%, #eef1f6 50%, #f3f6fa 100%);
 }
 
-/** Карточка верхней панели (шапка) */
+/** Карточка верхней панели */
 .nexus-header-surface {
-  @apply rounded-xl border border-slate-200/90 bg-white/92 backdrop-blur-md shadow-sm;
-  box-shadow:
-    0 1px 2px rgb(15 23 42 / 0.04),
-    0 8px 24px -8px rgb(15 23 42 / 0.08);
+  @apply rounded-[1.75rem] border-0 bg-white/95 backdrop-blur-md;
+  box-shadow: var(--sugar-card-shadow);
 }
 
 .nav-pill-active {
-  @apply text-white rounded-lg px-5 py-2 font-medium;
-  background: linear-gradient(135deg, var(--nexus-accent) 0%, var(--nexus-accent-hover) 100%);
-  box-shadow:
-    0 4px 16px -6px rgb(15 118 110 / 0.45),
-    0 0 0 1px var(--nexus-accent-ring);
-  transition:
-    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
-    box-shadow 0.25s ease,
-    background-color 0.2s ease;
+  @apply text-white rounded-full px-5 py-2 text-sm font-medium;
+  background: #111827;
+  box-shadow: 0 4px 14px -4px rgba(17, 24, 39, 0.35);
 }
 
 .nav-pill-inactive {
-  @apply text-slate-500 hover:text-slate-900 px-4 py-2 font-medium rounded-lg;
-  transition:
-    color 0.2s ease,
-    background-color 0.2s ease,
-    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
-    box-shadow 0.2s ease;
+  @apply text-slate-500 hover:text-slate-900 px-4 py-2 text-sm font-medium rounded-full;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .nav-pill-inactive:hover {
-  @apply bg-teal-50/80 shadow-sm;
-  transform: translateY(-1px);
+  @apply bg-slate-100/80;
 }
 
-.nav-pill-inactive:active {
-  transform: translateY(0) scale(0.98);
+/** SugarCRM карточки */
+.sugar-card {
+  @apply bg-white rounded-[1.75rem] border-0;
+  box-shadow: var(--sugar-card-shadow);
+}
+
+.sugar-inner-card {
+  @apply bg-[#f8fafc] rounded-2xl border border-slate-100/80;
+}
+
+.sugar-sidebar {
+  @apply bg-white/80 backdrop-blur-sm border-r border-slate-200/60;
+  box-shadow: inset -1px 0 0 rgba(148, 163, 184, 0.08);
+}
+
+.sugar-sidebar-btn {
+  @apply h-10 w-10 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all;
+}
+
+.sugar-sidebar-btn-active {
+  @apply bg-slate-900 text-white hover:bg-slate-800 hover:text-white shadow-sm;
 }
 
 .glass-panel {
