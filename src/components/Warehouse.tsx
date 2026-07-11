@@ -627,19 +627,32 @@ export default function Warehouse() {
   };
 
   const fetchShipments = async () => {
-    const { data, ok, status } = await crmJson<Shipment[]>('/shipments');
-    if (ok && Array.isArray(data)) {
-      setShipments(data);
-      return data.length;
+    try {
+      const res = await fetch(crmUrl('/shipments'), { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setShipments(data);
+          return data.length;
+        }
+      }
+      console.warn("Failed to fetch shipments", res.status);
+    } catch (e) {
+      console.warn("Failed to fetch shipments", e);
     }
-    console.warn("Failed to fetch shipments", status);
-    if (status === 401) setLoadError('Сессия истекла — обновите страницу или войдите снова');
     return 0;
   };
 
   const fetchTransfers = async () => {
-    const { data, ok } = await crmJson<any[]>('/transfers');
-    if (ok && Array.isArray(data)) setTransfers(data);
+    try {
+      const res = await fetch(crmUrl('/transfers'), { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setTransfers(data);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch transfers", e);
+    }
   };
 
   const fetchData = async () => {
@@ -655,14 +668,24 @@ export default function Warehouse() {
       if (health) setDbCounts({ shipments: health.shipments, production_logs: health.production_logs });
 
       const fetchLogsPromise = async () => {
-        const { data, ok, status } = await crmJson<ProductionLog[]>('/production-logs');
-        if (ok && Array.isArray(data)) setLogs(data);
-        else if (status === 401) setLoadError('Сессия истекла — обновите страницу или войдите снова');
+        try {
+          const res = await fetch(crmUrl('/production-logs'), { cache: 'no-store' });
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data)) setLogs(data);
+          }
+        } catch (e) {
+          console.warn("Failed logs", e);
+        }
       };
 
       const fetchStatsPromise = async () => {
-        const { data, ok } = await crmJson<InventoryStats>('/warehouse/inventory');
-        if (ok && data) setStats(data);
+        try {
+          const res = await fetch(crmUrl('/warehouse/inventory'), { cache: 'no-store' });
+          if (res.ok) setStats(await res.json());
+        } catch (e) {
+          console.warn("Failed stats", e);
+        }
       };
 
       const results = await Promise.all([
@@ -807,7 +830,7 @@ export default function Warehouse() {
 
   useEffect(() => {
     const load = () => {
-      if (localStorage.getItem("crm_token")) fetchData();
+      fetchData();
     };
     load();
 

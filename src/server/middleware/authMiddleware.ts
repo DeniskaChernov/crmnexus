@@ -12,11 +12,31 @@ const PUBLIC_PATH_PARTS = [
   "/static-uploads/",
 ];
 
+/** GET-запросы склада — без токена (миграция; данные нужны в UI). */
+const PUBLIC_GET_PREFIXES = [
+  "/api/shipments",
+  "/api/production-logs",
+  "/api/transfers",
+  "/api/recipes",
+  "/api/employees",
+  "/api/integrations/status",
+  "/api/warehouse/inventory",
+  "/api/warehouse/movements",
+  "/api/warehouse/monthly-stats",
+  "/api/warehouse/available-articles",
+];
+
 export function registerAuthMiddleware(app: Hono) {
   app.use("/api/*", async (c, next) => {
     if (c.req.method === "OPTIONS") return next();
     const p = c.req.path;
     if (PUBLIC_PATH_PARTS.some((part) => p.includes(part))) {
+      return next();
+    }
+    if (
+      c.req.method === "GET" &&
+      PUBLIC_GET_PREFIXES.some((prefix) => p === prefix || p.startsWith(prefix + "/"))
+    ) {
       return next();
     }
     const auth = c.req.header("authorization");
