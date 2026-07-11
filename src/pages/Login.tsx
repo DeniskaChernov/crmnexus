@@ -6,13 +6,14 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner@2.0.3';
-import { Command, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Command, ArrowRight, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -110,7 +111,15 @@ export default function Login() {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleAuth} className="space-y-5">
+            <form onSubmit={handleAuth} className="space-y-5" autoComplete="off">
+                {!isSignUp && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <p className="font-medium">Данные для входа после миграции</p>
+                    <p className="mt-1">Email: <span className="font-mono">denisblackman2@gmail.com</span></p>
+                    <p>Пароль: <span className="font-mono">BttNexus2026</span></p>
+                    <p className="mt-2 text-xs text-amber-800">Очистите поле пароля и вставьте вручную — автозаполнение подставляет старый пароль.</p>
+                  </div>
+                )}
                 {isSignUp && (
                     <div className="space-y-2">
                         <Label htmlFor="name" className="text-xs font-semibold uppercase text-slate-500 tracking-wider">Имя</Label>
@@ -130,6 +139,8 @@ export default function Login() {
                     <Input 
                         id="email" 
                         type="email" 
+                        name="crm-login-email"
+                        autoComplete="off"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -154,15 +165,28 @@ export default function Login() {
                             </button>
                         )}
                     </div>
-                    <Input 
-                        id="password" 
-                        type="password" 
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        className="h-12 bg-slate-50 border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-slate-900/5 transition-all rounded-lg"
-                        placeholder="••••••••"
-                    />
+                    <div className="relative">
+                      <Input 
+                          id="password" 
+                          type={showPassword ? 'text' : 'password'}
+                          name="crm-login-password"
+                          autoComplete="new-password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          className="h-12 pr-12 bg-slate-50 border-slate-200 focus:bg-white focus:border-slate-300 focus:ring-slate-900/5 transition-all rounded-lg"
+                          placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                        aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                 </div>
 
                 <Button 

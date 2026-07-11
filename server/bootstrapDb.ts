@@ -24,22 +24,26 @@ export async function bootstrapDatabase(): Promise<void> {
     const { rows } = await pool.query<{ c: number }>(
       `SELECT COUNT(*)::int AS c FROM crm_users`,
     );
-    if (rows[0]?.c === 0) {
-      const email = process.env["CRM_BOOTSTRAP_EMAIL"]?.trim().toLowerCase();
-      const password = process.env["CRM_BOOTSTRAP_PASSWORD"]?.trim();
-      const name = process.env["CRM_BOOTSTRAP_NAME"]?.trim() || "Owner";
-      const role = process.env["CRM_BOOTSTRAP_ROLE"]?.trim() || "owner";
 
-      if (email && password) {
-        const hash = await bcrypt.hash(password, 10);
-        await pool.query(
-          `INSERT INTO crm_users (email, password_hash, name, role) VALUES ($1, $2, $3, $4)`,
-          [email, hash, name, role],
-        );
-        console.log(`[bootstrap] Created bootstrap user: ${email}`);
-      } else {
-        console.warn("[bootstrap] crm_users is empty; set CRM_BOOTSTRAP_EMAIL/PASSWORD");
-      }
+    const email = process.env["CRM_BOOTSTRAP_EMAIL"]?.trim().toLowerCase();
+    const password = process.env["CRM_BOOTSTRAP_PASSWORD"]?.trim();
+    const name = process.env["CRM_BOOTSTRAP_NAME"]?.trim() || "Owner";
+    const role = process.env["CRM_BOOTSTRAP_ROLE"]?.trim() || "owner";
+
+    if (email && password) {
+      const hash = await bcrypt.hash(password, 10);
+      await pool.query(
+        `INSERT INTO crm_users (email, password_hash, name, role)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (email) DO UPDATE SET
+           password_hash = EXCLUDED.password_hash,
+           name = EXCLUDED.name,
+           role = EXCLUDED.role`,
+        [email, hash, name, role],
+      );
+      console.log(`[bootstrap] Owner synced: ${email}`);
+    } else if ((rows[0]?.c ?? 0) === 0) {
+      console.warn("[bootstrap] crm_users is empty; set CRM_BOOTSTRAP_EMAIL/PASSWORD");
     }
   } finally {
     await pool.end();

@@ -70,6 +70,8 @@ export async function verifyUserPassword(
   password: string,
 ): Promise<{ id: string; email: string; name: string | null; role: string } | null> {
   const pool = getPool();
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedPassword = password.trim();
   const { rows } = await pool.query<{
     id: string;
     email: string;
@@ -77,11 +79,11 @@ export async function verifyUserPassword(
     role: string;
     password_hash: string;
   }>(`SELECT id, email, name, role, password_hash FROM crm_users WHERE email = $1`, [
-    email.trim().toLowerCase(),
+    normalizedEmail,
   ]);
   const row = rows[0];
   if (!row) return null;
-  const ok = await bcrypt.compare(password, row.password_hash);
+  const ok = await bcrypt.compare(normalizedPassword, row.password_hash);
   if (!ok) return null;
   return { id: row.id, email: row.email, name: row.name, role: row.role };
 }
