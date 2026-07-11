@@ -1,5 +1,7 @@
-// В production Railway сам инжектит переменные — не даём локальному .env перебить их.
-if (process.env["NODE_ENV"] !== "production") {
+const isRailway = Boolean(process.env["RAILWAY_ENVIRONMENT"]?.trim());
+
+// На Railway переменные приходят из панели — локальный .env не подгружаем.
+if (!isRailway && process.env["NODE_ENV"] !== "production") {
   await import("dotenv/config");
 }
 

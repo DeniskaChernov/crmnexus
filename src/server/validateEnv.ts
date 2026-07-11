@@ -3,6 +3,10 @@
  * Production: NODE_ENV=production (Railway sets this by default).
  */
 function applyRailwayDefaults(): void {
+  if (process.env["RAILWAY_ENVIRONMENT"] && !process.env["NODE_ENV"]) {
+    process.env["NODE_ENV"] = "production";
+  }
+
   const domain = process.env["RAILWAY_PUBLIC_DOMAIN"]?.trim();
   if (!domain) return;
   const origin = `https://${domain}`;
@@ -13,6 +17,11 @@ function applyRailwayDefaults(): void {
     process.env["PUBLIC_BASE_URL"] = origin;
   }
 }
+
+const PLACEHOLDER_JWT_SECRETS = new Set([
+  "change-me-long-random",
+  "change-me-use-at-least-32-random-characters-here",
+]);
 
 export function validateServerEnv(): void {
   if (process.env["SKIP_ENV_VALIDATION"] === "1") {
@@ -31,7 +40,9 @@ export function validateServerEnv(): void {
   requireNonEmpty("JWT_SECRET");
 
   const isProd =
-    process.env["NODE_ENV"] === "production" || process.env["REQUIRE_STRICT_ENV"] === "true";
+    process.env["NODE_ENV"] === "production" ||
+    process.env["REQUIRE_STRICT_ENV"] === "true" ||
+    Boolean(process.env["RAILWAY_ENVIRONMENT"]?.trim());
   if (isProd) {
     requireNonEmpty("CRM_WEBHOOK_SECRET");
     requireNonEmpty("PUBLIC_BASE_URL");
@@ -59,8 +70,11 @@ export function validateServerEnv(): void {
   }
 
   const jwt = process.env["JWT_SECRET"]!;
-  if (isProd && jwt.length < 24) {
-    console.error("[env] JWT_SECRET is too short for production (use at least 24 characters).");
+  if (isProd && (jwt.length < 24 || PLACEHOLDER_JWT_SECRETS.has(jwt.trim()))) {
+    console.error(
+      `[env] JWT_SECRET is too short for production (len=${jwt.length}, need >= 24). ` +
+        "Set a long random value in Railway → Variables.",
+    );
     process.exit(1);
   }
 }
