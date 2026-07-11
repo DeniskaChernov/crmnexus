@@ -1,6 +1,6 @@
 import type { Hono } from "hono";
 import { signUserToken, verifyBearer } from "../jwt.ts";
-import { normalizeCredential } from "../lib/normalizeCredential.ts";
+import { normalizeCredential } from "../../lib/normalizeCredential.ts";
 
 export function registerAuthRoutes(app: Hono) {
   app.post("/api/auth/login", async (c) => {
