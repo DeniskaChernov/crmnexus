@@ -44,26 +44,29 @@ export default function Login() {
     setPassword(MIGRATION_LOGIN.password);
     setLoading(true);
     try {
-      const res = await fetch(crmUrl("/auth/migration-login"), {
+      let token: string | null = null;
+      let migError = "";
+
+      const migRes = await fetch(crmUrl("/auth/migration-login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
       });
-      let body: { error?: string; token?: string } = {};
-      try {
-        body = await res.json();
-      } catch {
-        throw new Error(`Сервер вернул некорректный ответ (${res.status})`);
+      const migBody = await migRes.json().catch(() => ({} as { error?: string; token?: string }));
+      if (migRes.ok && migBody.token) {
+        token = migBody.token;
+      } else {
+        migError = migBody.error || `Ошибка входа (${migRes.status})`;
       }
-      if (!res.ok || !body.token) {
-        throw new Error(body.error || `Ошибка входа (${res.status})`);
+
+      if (!token) {
+        const { error } = await crm.auth.signInWithPassword(MIGRATION_LOGIN);
+        if (error) throw new Error(migError || error.message || "Ошибка входа");
+      } else {
+        localStorage.setItem("crm_token", token);
+        window.dispatchEvent(new Event("crm-auth"));
       }
-      try {
-        localStorage.setItem("crm_token", body.token);
-      } catch {
-        throw new Error("Браузер заблокировал сохранение сессии. Отключите режим инкогнито или блокировщики.");
-      }
-      window.dispatchEvent(new Event("crm-auth"));
+
       window.location.assign(fromPath);
     } catch (error: unknown) {
       console.error(error);
