@@ -3,6 +3,7 @@ import { getPool } from "../dbPool.ts";
 import { normalizePhone } from "./phone.ts";
 import { getCoilByToken, recordCoilScan } from "./coilsService.ts";
 import { pushSiteNotification } from "./notificationHelper.ts";
+import * as kv from "../kv_store.ts";
 
 export type SiteEventPayload = Record<string, unknown>;
 
@@ -200,6 +201,74 @@ async function linkCustomerDealFromCoil(customerId: string, qr_token?: string) {
   );
 }
 
+async function createLeadOnDealerConflict(
+  customer: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    phone_normalized: string;
+    country: string | null;
+  },
+  existingDealerId: string,
+  attemptedDealerId: string,
+  qr_token: string,
+) {
+  const pool = getPool();
+  const [{ rows: existingDealer }, { rows: attemptedDealer }] = await Promise.all([
+    pool.query<{ name: string }>(`SELECT name FROM companies WHERE id = $1`, [existingDealerId]),
+    pool.query<{ name: string }>(`SELECT name FROM companies WHERE id = $1`, [attemptedDealerId]),
+  ]);
+  const name = [customer.first_name, customer.last_name].filter(Boolean).join(" ") || customer.phone_normalized;
+  const id = `lead:${Date.now()}`;
+  await kv.set(id, {
+    id,
+    name,
+    phone: customer.phone_normalized,
+    info: `Конфликт QR: закреплён за «${existingDealer[0]?.name || existingDealerId}», скан от «${attemptedDealer[0]?.name || attemptedDealerId}». /qr/customers/${customer.id}`,
+    status: "new",
+    country: customer.country || "Uzbekistan",
+    source: "qr-dealer-conflict",
+    siteCustomerId: customer.id,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+async function createTaskForSiteRequest(opts: {
+  customer_id: string | null;
+  deal_id: string | null;
+  phone: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  comment?: string | null;
+}) {
+  const pool = getPool();
+  const title = `Заявка с сайта: ${[opts.first_name, opts.last_name].filter(Boolean).join(" ") || opts.phone}`;
+  const description = [
+    opts.comment,
+    opts.customer_id ? `Клиент QR: /qr/customers/${opts.customer_id}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  await pool.query(
+    `INSERT INTO tasks (title, description, deal_id, status, priority, due_date)
+     VALUES ($1, $2, $3, 'planned', 'high', now() + interval '1 day')`,
+    [title, description || null, opts.deal_id],
+  );
+}
+
+/** Пропустить повторный скан того же QR в течение окна (секунды) */
+export async function shouldRecordCoilScan(qr_token: string, windowSec = 120): Promise<boolean> {
+  const pool = getPool();
+  const since = new Date(Date.now() - windowSec * 1000).toISOString();
+  const { rows } = await pool.query(
+    `SELECT 1 FROM site_events
+     WHERE qr_token = $1 AND event_type IN ('qr_scanned','review_started','catalog_opened')
+       AND created_at > $2 LIMIT 1`,
+    [qr_token, since],
+  );
+  return rows.length === 0;
+}
+
 export async function tryAssignDealerFromQr(customerId: string, qr_token: string) {
   const pool = getPool();
   const coil = await getCoilByToken(qr_token);
@@ -209,7 +278,14 @@ export async function tryAssignDealerFromQr(customerId: string, qr_token: string
     id: string;
     assigned_dealer_id: string | null;
     country: string | null;
-  }>(`SELECT id, assigned_dealer_id, country FROM site_customers WHERE id = $1`, [customerId]);
+    first_name: string | null;
+    last_name: string | null;
+    phone_normalized: string;
+  }>(
+    `SELECT id, assigned_dealer_id, country, first_name, last_name, phone_normalized
+     FROM site_customers WHERE id = $1`,
+    [customerId],
+  );
   const customer = cust[0];
   if (!customer) return { assigned: false, conflict: false };
 
@@ -238,6 +314,12 @@ export async function tryAssignDealerFromQr(customerId: string, qr_token: string
       actionUrl: `/qr/customers/${customerId}`,
       dealerId: coil.company_id,
     });
+    await createLeadOnDealerConflict(
+      customer,
+      customer.assigned_dealer_id,
+      coil.company_id,
+      qr_token,
+    );
     return { assigned: false, conflict: true, countryMatch };
   }
 
@@ -361,6 +443,15 @@ export async function createSiteRequest(payload: SiteEventPayload) {
       [customer_id, deal_id],
     );
   }
+
+  await createTaskForSiteRequest({
+    customer_id,
+    deal_id,
+    phone: phone || "",
+    first_name: (payload["first_name"] as string) || null,
+    last_name: (payload["last_name"] as string) || null,
+    comment: (payload["comment"] || payload["message"]) as string | null,
+  });
 
   return rows[0];
 }

@@ -12,7 +12,7 @@ import {
   qrAnalyticsSummary,
   recordCoilScan,
 } from "../qr/coilsService.ts";
-import { createSiteReview, insertSiteEvent } from "../qr/siteServices.ts";
+import { createSiteReview, insertSiteEvent, shouldRecordCoilScan } from "../qr/siteServices.ts";
 import { convertSiteCustomerToContact } from "../qr/siteCustomerConvert.ts";
 import { getRequestAuth, isAdminRole, isDealer, requireCrmStaff } from "../middleware/requestAuth.ts";
 
@@ -35,13 +35,15 @@ export function registerQrPublicRoutes(app: Hono) {
       const coil = await getCoilByToken(token);
       if (!coil) return c.json({ ok: false, error: "not_found" }, 404);
 
-      await recordCoilScan(token);
-      await insertSiteEvent({
-        event_type: "qr_scanned",
-        payload: { qr_token: token, page_url: c.req.url },
-        ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim(),
-        user_agent: c.req.header("user-agent"),
-      });
+      if (await shouldRecordCoilScan(token)) {
+        await recordCoilScan(token);
+        await insertSiteEvent({
+          event_type: "qr_scanned",
+          payload: { qr_token: token, page_url: c.req.url },
+          ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim(),
+          user_agent: c.req.header("user-agent"),
+        });
+      }
 
       const pool = getPool();
       let dealer: Record<string, unknown> | null = null;
@@ -85,13 +87,15 @@ export function registerQrPublicRoutes(app: Hono) {
       const coil = await getCoilByToken(token);
       if (!coil) return c.json({ ok: false, error: "not_found" }, 404);
 
-      await recordCoilScan(token);
-      await insertSiteEvent({
-        event_type: purpose === "review" ? "review_started" : "catalog_opened",
-        payload: { qr_token: token, purpose, page_url: c.req.url },
-        ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim(),
-        user_agent: c.req.header("user-agent"),
-      });
+      if (await shouldRecordCoilScan(token)) {
+        await recordCoilScan(token);
+        await insertSiteEvent({
+          event_type: purpose === "review" ? "review_started" : "catalog_opened",
+          payload: { qr_token: token, purpose, page_url: c.req.url },
+          ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim(),
+          user_agent: c.req.header("user-agent"),
+        });
+      }
 
       const urls = publicQrUrls(coil.qr_token);
       return c.json({
@@ -421,10 +425,12 @@ export function registerQrRoutes(app: Hono) {
       const { rows: cust } = await pool.query(
         `SELECT sc.*,
           ad.name AS assigned_dealer_name,
-          sd.name AS source_dealer_name
+          sd.name AS source_dealer_name,
+          d.title AS deal_title
          FROM site_customers sc
          LEFT JOIN companies ad ON ad.id = sc.assigned_dealer_id
          LEFT JOIN companies sd ON sd.id = sc.source_dealer_id
+         LEFT JOIN deals d ON d.id = sc.deal_id
          WHERE sc.id = $1`,
         [id],
       );
@@ -455,6 +461,28 @@ export function registerQrRoutes(app: Hono) {
       const id = c.req.param("id");
       const result = await convertSiteCustomerToContact(id);
       return c.json(result);
+    } catch (e: unknown) {
+      return c.json({ error: e instanceof Error ? e.message : "error" }, 500);
+    }
+  });
+
+  app.post("/api/site-customers/:id/link-deal", async (c) => {
+    try {
+      const denied = await assertAdminQrAccess(c);
+      if (denied) return denied;
+      const id = c.req.param("id");
+      const body = await c.req.json().catch(() => ({}));
+      const deal_id = typeof body.deal_id === "string" ? body.deal_id : null;
+      if (!deal_id) return c.json({ error: "deal_id required" }, 400);
+      const pool = getPool();
+      const { rows: dealRows } = await pool.query(`SELECT id, title FROM deals WHERE id = $1`, [deal_id]);
+      if (!dealRows[0]) return c.json({ error: "Deal not found" }, 404);
+      const { rows } = await pool.query(
+        `UPDATE site_customers SET deal_id = $2, updated_at = now() WHERE id = $1 RETURNING *`,
+        [id, deal_id],
+      );
+      if (!rows[0]) return c.json({ error: "Customer not found" }, 404);
+      return c.json({ customer: rows[0], deal_title: dealRows[0].title });
     } catch (e: unknown) {
       return c.json({ error: e instanceof Error ? e.message : "error" }, 500);
     }

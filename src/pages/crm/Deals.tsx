@@ -42,6 +42,8 @@ export default function Deals() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterDealer, setFilterDealer] = useState('all');
+  const [dealers, setDealers] = useState<Array<{ id: string; name: string }>>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
@@ -98,7 +100,9 @@ export default function Deals() {
       try {
         const dr = await fetch(`${crmUrl('/qr/dealers')}`, { headers: { ...authHeaders(false) } });
         if (dr.ok) {
-          for (const row of await dr.json()) dealerMap.set(row.id, row.name);
+          const dealerList = await dr.json();
+          setDealers(dealerList);
+          for (const row of dealerList) dealerMap.set(row.id, row.name);
         }
       } catch {
         dealerMap = new Map();
@@ -199,13 +203,16 @@ export default function Deals() {
         if (filterStatus === 'paid' && hasDebt) return false;
       }
 
+      // 4. Dealer Filter
+      if (filterDealer !== 'all' && deal.dealer_id !== filterDealer) return false;
+
       return true;
     });
-  }, [deals, normalizedSearch, dateRange, filterStatus, paymentStatsByDeal]);
+  }, [deals, normalizedSearch, dateRange, filterStatus, filterDealer, paymentStatsByDeal]);
 
   useEffect(() => {
     setVisibleDealsCount(DEALS_BATCH_SIZE);
-  }, [normalizedSearch, filterStatus, dateRange?.from?.toISOString(), dateRange?.to?.toISOString()]);
+  }, [normalizedSearch, filterStatus, filterDealer, dateRange?.from?.toISOString(), dateRange?.to?.toISOString()]);
 
   useEffect(() => {
     if (visibleDealsCount >= filteredDeals.length) return;
@@ -624,6 +631,20 @@ export default function Deals() {
                     </div>
                 </DialogContent>
              </Dialog>
+
+             {dealers.length > 0 && (
+               <Select value={filterDealer} onValueChange={setFilterDealer}>
+                 <SelectTrigger className="w-full h-10 rounded-[1.75rem]">
+                   <SelectValue placeholder="Дилер" />
+                 </SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="all">Все дилеры</SelectItem>
+                   {dealers.map((d) => (
+                     <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                   ))}
+                 </SelectContent>
+               </Select>
+             )}
         </div>
 
         {/* Desktop Filter Tabs */}
@@ -653,6 +674,19 @@ export default function Deals() {
         </Tabs>
 
         <div className="hidden md:flex items-center gap-2 w-full md:w-auto md:border-l md:border-neutral-200 md:pl-4 md:ml-2">
+            {dealers.length > 0 && (
+              <Select value={filterDealer} onValueChange={setFilterDealer}>
+                <SelectTrigger className="h-10 w-[180px] rounded-full text-sm">
+                  <SelectValue placeholder="Дилер" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все дилеры</SelectItem>
+                  {dealers.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Popover>
                 <PopoverTrigger asChild>
                     <Button variant="ghost" className="h-10 gap-2 text-sm font-medium hover:bg-neutral-50 rounded-full px-4">

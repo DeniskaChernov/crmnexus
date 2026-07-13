@@ -11,6 +11,7 @@ import {
   isAdminRole,
   isDealer,
   requireDealer,
+  requireDealerAccess,
 } from "../middleware/requestAuth.ts";
 import { getCoilsByShipment, listCoils } from "../qr/coilsService.ts";
 import { listDealerNotifications } from "../qr/notificationHelper.ts";
@@ -25,8 +26,9 @@ async function requireAdminAuth(c: Parameters<typeof getRequestAuth>[0]) {
 export function registerDealerRoutes(app: Hono) {
   /** Дашборд дилера: сканы, клиенты, заявки, мотки */
   app.get("/api/dealer/dashboard", async (c) => {
-    const auth = await getRequestAuth(c);
-    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const auth = guard.auth;
     const companyId = auth.company_id!;
     const pool = getPool();
 
@@ -60,8 +62,9 @@ export function registerDealerRoutes(app: Hono) {
   });
 
   app.get("/api/dealer/customers", async (c) => {
-    const auth = await getRequestAuth(c);
-    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const auth = guard.auth;
     const pool = getPool();
     const { rows } = await pool.query(
       `SELECT * FROM site_customers
@@ -74,13 +77,16 @@ export function registerDealerRoutes(app: Hono) {
   });
 
   app.get("/api/dealer/customers/:id", async (c) => {
-    const auth = await getRequestAuth(c);
-    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const auth = guard.auth;
     const pool = getPool();
     const id = c.req.param("id");
     const { rows: cust } = await pool.query(
-      `SELECT * FROM site_customers
-       WHERE id = $1 AND (assigned_dealer_id = $2 OR source_dealer_id = $2)`,
+      `SELECT sc.*, d.title AS deal_title
+       FROM site_customers sc
+       LEFT JOIN deals d ON d.id = sc.deal_id
+       WHERE sc.id = $1 AND (sc.assigned_dealer_id = $2 OR sc.source_dealer_id = $2)`,
       [id, auth.company_id],
     );
     if (!cust[0]) return c.json({ error: "Not found" }, 404);
@@ -92,8 +98,9 @@ export function registerDealerRoutes(app: Hono) {
   });
 
   app.get("/api/dealer/requests", async (c) => {
-    const auth = await getRequestAuth(c);
-    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const auth = guard.auth;
     const pool = getPool();
     const { rows } = await pool.query(
       `SELECT * FROM site_requests WHERE dealer_id = $1 ORDER BY created_at DESC LIMIT 200`,
@@ -104,8 +111,9 @@ export function registerDealerRoutes(app: Hono) {
 
   /** Лента активности дилера: заявки, отзывы, новые клиенты */
   app.get("/api/dealer/feed", async (c) => {
-    const auth = await getRequestAuth(c);
-    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const auth = guard.auth;
     const pool = getPool();
     const companyId = auth.company_id!;
 
@@ -137,8 +145,9 @@ export function registerDealerRoutes(app: Hono) {
   });
 
   app.get("/api/dealer/reviews", async (c) => {
-    const auth = await getRequestAuth(c);
-    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const auth = guard.auth;
     const pool = getPool();
     const { rows } = await pool.query(
       `SELECT * FROM site_reviews WHERE dealer_id = $1 ORDER BY created_at DESC LIMIT 200`,
@@ -148,8 +157,9 @@ export function registerDealerRoutes(app: Hono) {
   });
 
   app.patch("/api/dealer/requests/:id", async (c) => {
-    const auth = await getRequestAuth(c);
-    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const auth = guard.auth;
     const body = await c.req.json();
     const status = String(body.status || "").trim();
     if (!["new", "in_progress", "done", "cancelled"].includes(status)) {
@@ -167,15 +177,17 @@ export function registerDealerRoutes(app: Hono) {
   });
 
   app.get("/api/dealer/notifications", async (c) => {
-    const auth = await getRequestAuth(c);
-    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const auth = guard.auth;
     const items = await listDealerNotifications(auth.company_id!);
     return c.json(items);
   });
 
   app.put("/api/dealer/notifications/:id/read", async (c) => {
-    const auth = await getRequestAuth(c);
-    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const auth = guard.auth;
     const id = c.req.param("id");
     const notification = await kv.get(id);
     if (!notification || notification.dealerId !== auth.company_id) {
@@ -187,8 +199,9 @@ export function registerDealerRoutes(app: Hono) {
   });
 
   app.put("/api/dealer/notifications/read-all", async (c) => {
-    const auth = await getRequestAuth(c);
-    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const auth = guard.auth;
     const items = await listDealerNotifications(auth.company_id!, 200);
     for (const n of items) {
       if (!n.isRead) await kv.set(n.id, { ...n, isRead: true });
@@ -197,15 +210,17 @@ export function registerDealerRoutes(app: Hono) {
   });
 
   app.get("/api/dealer/coils", async (c) => {
-    const auth = await getRequestAuth(c);
-    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const auth = guard.auth;
     const coils = await listCoils({ company_id: auth.company_id!, limit: 200 });
     return c.json(coils);
   });
 
   app.get("/api/dealer/shipments", async (c) => {
-    const auth = await getRequestAuth(c);
-    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const auth = guard.auth;
     const pool = getPool();
     const { rows: coilRows } = await pool.query<{ shipment_id: string }>(
       `SELECT DISTINCT shipment_id FROM rattan_coils

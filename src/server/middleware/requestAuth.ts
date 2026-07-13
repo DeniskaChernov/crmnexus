@@ -50,6 +50,24 @@ export function requireDealer(auth: RequestAuth | null): auth is RequestAuth {
   return Boolean(auth && isDealer(auth));
 }
 
+export async function requireDealerAccess(
+  c: Context,
+): Promise<{ ok: true; auth: RequestAuth } | { ok: false; response: Response }> {
+  const auth = await getRequestAuth(c);
+  if (!requireDealer(auth)) {
+    return { ok: false, response: c.json({ error: "Forbidden" }, 403) };
+  }
+  const pool = getPool();
+  const { rows } = await pool.query<{ dealer_portal_enabled: boolean }>(
+    `SELECT dealer_portal_enabled FROM companies WHERE id = $1`,
+    [auth.company_id],
+  );
+  if (!rows[0]?.dealer_portal_enabled) {
+    return { ok: false, response: c.json({ error: "Портал дилера отключён" }, 403) };
+  }
+  return { ok: true, auth };
+}
+
 /** Любой авторизованный пользователь CRM, кроме дилера */
 export async function requireCrmStaff(c: Context) {
   const auth = await getRequestAuth(c);
