@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { crmUrl, authHeaders, crmFetch } from '../lib/crmApi.ts';
+import { qrUrlsForToken } from '../lib/qrUrls.ts';
+import { BttCrmModuleShell } from './btt-ref/BttCrmModuleShell.tsx';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
@@ -29,7 +31,23 @@ interface ShipmentItem {
   date: string;
   stickerArticle?: string; // Optional custom article for sticker printing
   bags?: number;
+  coilIds?: string[];
 }
+
+type RattanCoil = {
+  id: string;
+  public_code: string;
+  qr_token: string;
+  qr_status: string;
+  qr_print_count: number;
+  scan_count: number;
+  article: string;
+  sticker_article?: string | null;
+  weight_kg: number | string;
+  coil_index: number;
+  url?: string;
+  urls?: { main: string; review: string; catalog: string };
+};
 
 interface Shipment {
   id: string;
@@ -122,10 +140,10 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
   const visibleItems = isListExpanded ? filteredItems : filteredItems.slice(0, limit);
 
   return (
-    <Card className={`flex flex-col h-full border-slate-200 shadow-sm transition-all duration-500 ${isExpandedMode ? 'shadow-md border-blue-200 ring-1 ring-blue-100' : 'hover:shadow-md'}`}>
+    <Card className={`tasklab-card border-0 flex flex-col h-full shadow-sm transition-all duration-500 ${isExpandedMode ? 'shadow-md border-neutral-200 ring-1 ring-neutral-200' : 'hover:shadow-md'}`}>
         <CardHeader className="pb-3 pt-5 px-5">
-            <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-3">
-                <div className={`p-2.5 bg-slate-100 rounded-xl text-slate-600 transition-all ${isCompactMode ? 'scale-75' : ''}`}>
+            <CardTitle className="text-base font-bold text-neutral-800 flex items-center gap-3">
+                <div className={`p-2.5 bg-neutral-100 rounded-xl text-neutral-600 transition-all ${isCompactMode ? 'scale-75' : ''}`}>
                      {icon}
                 </div>
                 {!isCompactMode && (
@@ -136,13 +154,13 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
                 
                 <div className="ml-auto flex items-center gap-2">
                     {!isCompactMode && (
-                        <Badge variant="secondary" className="bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap">
+                        <Badge variant="secondary" className="bg-neutral-100 text-neutral-600 hover:bg-neutral-200 whitespace-nowrap">
                             {filteredItems.reduce((acc, i) => acc + i.qty, 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} {title.includes('Кашпо') ? 'шт' : 'кг'}
                         </Badge>
                     )}
                     {isCompactMode && (
                          <div className="flex flex-col items-end">
-                            <span className="text-xs font-bold text-slate-700">
+                            <span className="text-xs font-bold text-neutral-700">
                                 {filteredItems.reduce((acc, i) => acc + i.qty, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </span>
                          </div>
@@ -152,7 +170,7 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
                       <Button 
                         variant={viewMode === 'grid' ? 'default' : 'outline'}
                         size="sm" 
-                        className="h-8 gap-1.5 text-xs font-semibold"
+                        className="tasklab-pill h-8 gap-1.5 text-xs font-semibold"
                         onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
                       >
                         {viewMode === 'grid' ? (
@@ -169,7 +187,7 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
                       </Button>
                     )}
                     
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600" onClick={onToggleExpandMode}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-neutral-400 hover:text-neutral-600" onClick={onToggleExpandMode}>
                         {isExpandedMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                     </Button>
                 </div>
@@ -190,8 +208,8 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
                 <>
                 <div className="space-y-1">
                     {filteredItems.length === 0 ? (
-                        <div className="text-center py-12 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                            <p className="text-sm text-slate-400">Нет товаров</p>
+                        <div className="text-center py-12 bg-neutral-50/50 rounded-xl border border-dashed border-neutral-200">
+                            <p className="text-sm text-neutral-400">Нет товаров</p>
                         </div>
                     ) : viewMode === 'grid' ? (
                         // Grid View with Images - Enhanced
@@ -209,7 +227,7 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.9 }}
                                 transition={{ duration: 0.2 }}
-                                className="group relative bg-white border-2 border-slate-200 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer active:scale-95"
+                                className="group relative bg-white border-2 border-neutral-200 rounded-xl overflow-hidden hover:shadow-xl hover:border-neutral-300 transition-all cursor-pointer active:scale-95"
                                 onClick={() => onEdit(art, qty)}
                             >
                                 {/* Status Badges */}
@@ -232,7 +250,7 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
                                 </div>
                                 
                                 {/* Image */}
-                                <div className="w-full h-40 sm:h-48 bg-gradient-to-br from-slate-100 to-slate-50 relative overflow-hidden">
+                                <div className="w-full h-40 sm:h-48 bg-gradient-to-br from-neutral-100 to-neutral-50 relative overflow-hidden">
                                    {imageUrl ? (
                                      <>
                                        <img 
@@ -244,10 +262,10 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
                                      </>
                                    ) : (
                                      <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-4">
-                                       <div className="bg-slate-200 rounded-full p-4 group-hover:scale-110 transition-transform">
-                                         <Package className="h-8 w-8 sm:h-10 sm:w-10 text-slate-400" />
+                                       <div className="bg-neutral-200 rounded-full p-4 group-hover:scale-110 transition-transform">
+                                         <Package className="h-8 w-8 sm:h-10 sm:w-10 text-neutral-400" />
                                        </div>
-                                       <p className="text-xs sm:text-sm text-slate-500 text-center font-medium">
+                                       <p className="text-xs sm:text-sm text-neutral-500 text-center font-medium">
                                          Нажмите для<br/>добавления фото
                                        </p>
                                      </div>
@@ -258,7 +276,7 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
                                        <Button 
                                            variant="ghost" 
                                            size="icon" 
-                                           className="h-8 w-8 bg-white/95 backdrop-blur-sm text-blue-600 hover:bg-white hover:text-blue-700 shadow-lg" 
+                                           className="h-8 w-8 bg-white/95 backdrop-blur-sm text-neutral-900 hover:bg-white hover:text-neutral-800 shadow-lg" 
                                            onClick={(e) => {
                                              e.stopPropagation();
                                              onEdit(art, qty);
@@ -282,7 +300,7 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
                                 
                                 {/* Info */}
                                 <div className="p-3 sm:p-4 space-y-2">
-                                    <h4 className="font-bold text-sm sm:text-base text-slate-800 truncate" title={art}>{art}</h4>
+                                    <h4 className="font-bold text-sm sm:text-base text-neutral-800 truncate" title={art}>{art}</h4>
                                     <div className="flex items-center justify-between">
                                         <div className="flex flex-col">
                                             <span className={`text-2xl sm:text-3xl font-bold leading-none ${
@@ -292,7 +310,7 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
                                             }`}>
                                                 {parseFloat(qty.toFixed(2)).toLocaleString()}
                                             </span>
-                                            <span className="text-xs text-slate-500 uppercase font-semibold mt-1">
+                                            <span className="text-xs text-neutral-500 uppercase font-semibold mt-1">
                                                 {getUnit(undefined, art)}
                                             </span>
                                         </div>
@@ -302,7 +320,7 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
                                             <Button 
                                                 variant="ghost" 
                                                 size="icon" 
-                                                className="h-9 w-9 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg" 
+                                                className="h-9 w-9 text-neutral-900 hover:text-neutral-700 hover:bg-neutral-50 rounded-lg" 
                                                 onClick={(e) => {
                                                   e.stopPropagation();
                                                   onEdit(art, qty);
@@ -344,30 +362,30 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
                                 animate={{ opacity: 1, height: 'auto' }}
                                 exit={{ opacity: 0, height: 0 }}
                                 transition={{ duration: 0.2 }}
-                                className="group flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg hover:shadow-md hover:border-blue-300 transition-all cursor-pointer active:scale-98"
+                                className="group flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-lg hover:shadow-md hover:border-neutral-300 transition-all cursor-pointer active:scale-98"
                                 onClick={() => onEdit(art, qty)}
                             >
                                 {/* Thumbnail */}
-                                <div className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 bg-slate-100 rounded-lg overflow-hidden">
+                                <div className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 bg-neutral-100 rounded-lg overflow-hidden">
                                     {imageUrl ? (
                                         <img src={imageUrl} alt={art} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
-                                            <Package className="h-5 w-5 text-slate-400" />
+                                            <Package className="h-5 w-5 text-neutral-400" />
                                         </div>
                                     )}
                                 </div>
                                 
                                 {/* Info */}
                                 <div className="flex-1 min-w-0">
-                                    <h4 className="font-semibold text-sm sm:text-base text-slate-800 truncate">{art}</h4>
+                                    <h4 className="font-semibold text-sm sm:text-base text-neutral-800 truncate">{art}</h4>
                                     <div className="flex items-center gap-2 mt-1">
                                         <span className={`text-lg sm:text-xl font-bold ${
                                             qty < 0 ? 'text-red-600' : isLowStock ? 'text-orange-600' : 'text-emerald-600'
                                         }`}>
                                             {parseFloat(qty.toFixed(2)).toLocaleString()}
                                         </span>
-                                        <span className="text-xs text-slate-500 uppercase font-semibold">
+                                        <span className="text-xs text-neutral-500 uppercase font-semibold">
                                             {getUnit(undefined, art)}
                                         </span>
                                         {isLowStock && (
@@ -383,7 +401,7 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
                                     <Button 
                                         variant="ghost" 
                                         size="icon" 
-                                        className="h-9 w-9 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg" 
+                                        className="h-9 w-9 text-neutral-900 hover:text-neutral-700 hover:bg-neutral-50 rounded-lg" 
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             onEdit(art, qty);
@@ -413,7 +431,7 @@ const StockCard = ({ title, items, icon, warehouseName, onEdit, onClear, getUnit
                 {filteredItems.length > 5 && !isExpandedMode && (
                     <Button 
                         variant="ghost" 
-                        className="w-full mt-4 text-xs text-slate-500 hover:text-slate-900 uppercase tracking-wider font-semibold" 
+                        className="w-full mt-4 text-xs text-neutral-500 hover:text-neutral-900 uppercase tracking-wider font-semibold" 
                         onClick={() => setIsListExpanded(!isListExpanded)}
                     >
                         {isListExpanded ? (
@@ -437,7 +455,7 @@ const StatCard = ({ title, total, unit, subtitle, icon, colorScheme, isExpanded,
 }) => {
     const colors = {
         green: { border: 'border-green-100', bg: 'bg-green-500/20', icon: 'text-green-600', text: 'text-green-600' },
-        blue: { border: 'border-blue-100', bg: 'bg-blue-500/20', icon: 'text-blue-600', text: 'text-blue-600' },
+        blue: { border: 'border-neutral-200', bg: 'bg-[var(--tasklab-lime)]/20', icon: 'text-neutral-900', text: 'text-neutral-900' },
         orange: { border: 'border-orange-100', bg: 'bg-orange-500/20', icon: 'text-orange-600', text: 'text-orange-600' }
     }[colorScheme];
 
@@ -458,10 +476,10 @@ const StatCard = ({ title, total, unit, subtitle, icon, colorScheme, isExpanded,
     const hasMixedUnits = materialsTotal > 0 && plantersTotal > 0;
 
     return (
-        <Card className={`h-full bg-white shadow-sm relative overflow-hidden transition-all duration-500 border ${colors.border} flex-1`}>
+        <Card className={`tasklab-card border-0 h-full bg-white shadow-sm relative overflow-hidden transition-all duration-500 border ${colors.border} flex-1`}>
             <div className={`absolute right-0 top-0 h-full w-1 ${colors.bg}`} />
             <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-500 flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-neutral-500 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         {React.cloneElement(icon as React.ReactElement, { className: `h-4 w-4 ${colors.icon}` })}
                         {title}
@@ -472,21 +490,21 @@ const StatCard = ({ title, total, unit, subtitle, icon, colorScheme, isExpanded,
                 {hasMixedUnits ? (
                     <div className="space-y-2">
                         <div>
-                            <div className="text-xs text-slate-500 font-medium mb-0.5">Искусственный ротанг</div>
-                            <div className="font-bold text-slate-900 text-2xl">
-                                {materialsTotal.toLocaleString()} <span className="text-base font-normal text-slate-400">кг</span>
+                            <div className="text-xs text-neutral-500 font-medium mb-0.5">Искусственный ротанг</div>
+                            <div className="font-bold text-neutral-900 text-2xl">
+                                {materialsTotal.toLocaleString()} <span className="text-base font-normal text-neutral-400">кг</span>
                             </div>
                         </div>
                         <div>
-                            <div className="text-xs text-slate-500 font-medium mb-0.5">Ка��п���</div>
-                            <div className="font-bold text-slate-700 text-xl">
-                                {plantersTotal.toLocaleString()} <span className="text-sm font-normal text-slate-400">шт</span>
+                            <div className="text-xs text-neutral-500 font-medium mb-0.5">Ка��п���</div>
+                            <div className="font-bold text-neutral-700 text-xl">
+                                {plantersTotal.toLocaleString()} <span className="text-sm font-normal text-neutral-400">шт</span>
                             </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="font-bold text-slate-900 text-3xl">
-                        {total.toLocaleString()} <span className="text-lg font-normal text-slate-400">{unit}</span>
+                    <div className="font-bold text-neutral-900 text-3xl">
+                        {total.toLocaleString()} <span className="text-lg font-normal text-neutral-400">{unit}</span>
                     </div>
                 )}
                 <p className={`text-xs mt-1 font-medium ${colors.text}`}>{subtitle}</p>
@@ -525,6 +543,8 @@ export default function Warehouse() {
   const [isShipmentOpen, setIsShipmentOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [currentShipment, setCurrentShipment] = useState<Shipment | null>(null);
+  const [shipmentCoils, setShipmentCoils] = useState<RattanCoil[]>([]);
+  const [coilsLoading, setCoilsLoading] = useState(false);
   const [transferForm, setTransferForm] = useState({
     fromWarehouse: 'BTT',
     toWarehouse: 'BTT',
@@ -607,11 +627,7 @@ export default function Warehouse() {
       }
     } catch (e) {
       console.warn("Failed to fetch recipes", e);
-      // Mock data
-      setRecipeImages({
-        'Ротанг С8': 'https://images.unsplash.com/photo-1611080626919-7cf5a9dbab5a?w=800',
-        'Кашпо 16л': 'https://images.unsplash.com/photo-1596525178657-65778a876a3e?w=800'
-      });
+      setRecipeImages({});
     }
   };
 
@@ -626,10 +642,7 @@ export default function Warehouse() {
       }
     } catch (e) {
       console.warn("Failed to fetch employees", e);
-      setEmployees([
-        { id: '1', name: 'Алексей', active: true },
-        { id: '2', name: 'Мария', active: true },
-      ]);
+      setEmployees([]);
     }
   };
 
@@ -801,9 +814,7 @@ export default function Warehouse() {
       }
     } catch (error) {
       console.warn('Error fetching movements:', error);
-      setMovements([
-          { id: 'm1', date: new Date().toISOString(), type: 'production', article: 'Ротанг С8', amount: 50, warehouse: 'BTT', user: 'Demo' }
-      ]);
+      setMovements([]);
     } finally {
       setLoadingMovements(false);
     }
@@ -834,10 +845,7 @@ export default function Warehouse() {
       }
     } catch (error) {
       console.warn('Error fetching monthly stats:', error);
-      setMonthlyStats([
-          { month: '2023-10', produced: 1000, sold: 800 },
-          { month: '2023-11', produced: 1200, sold: 900 },
-      ]);
+      setMonthlyStats([]);
     } finally {
       setLoadingMonthlyStats(false);
     }
@@ -1346,6 +1354,11 @@ export default function Warehouse() {
       setCurrentShipment({ ...shipment, warehouse: shipment.warehouse || 'BTT' });
       setIsShipmentOpen(true);
       setNewItem({ article: '', weight: '', coils: '', bags: '', date: new Date().toISOString().slice(0, 10), stickerArticle: '' });
+      if (!shipment.id.startsWith('draft-')) {
+        void loadShipmentCoils(shipment.id);
+      } else {
+        setShipmentCoils([]);
+      }
   };
 
   const [newItem, setNewItem] = useState({ article: '', weight: '', coils: '', bags: '', date: new Date().toISOString().slice(0, 10), stickerArticle: '' });
@@ -1531,11 +1544,16 @@ export default function Warehouse() {
           });
 
           if (!response.ok) throw new Error("Failed to save shipment");
+          const data = await response.json();
           
           toast.success(targetStatus === 'completed' ? "Отгрузка завершена и списана" : "Черновик сохранен");
-          setIsShipmentOpen(false);
-          // Realtime will handle the refresh automatically via debounced fetchData()
-          // No need to call fetchData() manually - prevents double fetching
+          if (data.shipment?.id) {
+            setCurrentShipment(data.shipment);
+            await loadShipmentCoils(data.shipment.id);
+          }
+          if (targetStatus === 'completed') {
+            setIsShipmentOpen(false);
+          }
       } catch (e) {
           console.error(e);
           toast.error("Ошибка при сохранении отгрузки");
@@ -1616,6 +1634,167 @@ export default function Warehouse() {
       } catch (e) {
           toast.error("Ошибка при удалении");
       }
+  };
+
+  const fetchShipmentCoils = async (shipmentId: string): Promise<RattanCoil[]> => {
+    if (shipmentId.startsWith('draft-')) return [];
+    try {
+      const res = await crmFetch(`/coils/shipment/${encodeURIComponent(shipmentId)}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      const coils = Array.isArray(data) ? data : [];
+      setShipmentCoils(coils);
+      return coils;
+    } catch {
+      setShipmentCoils([]);
+      return [];
+    }
+  };
+
+  const loadShipmentCoils = async (shipmentId: string) => {
+    setCoilsLoading(true);
+    try {
+      await fetchShipmentCoils(shipmentId);
+    } finally {
+      setCoilsLoading(false);
+    }
+  };
+
+  const ensureShipmentSavedDraft = async (): Promise<string | null> => {
+    if (!currentShipment) return null;
+    if (!currentShipment.id.startsWith('draft-')) return currentShipment.id;
+    if (currentShipment.items.length === 0) {
+      toast.error('Добавьте позиции перед генерацией QR');
+      return null;
+    }
+    try {
+      const response = await fetch(crmUrl('/shipments'), {
+        method: 'POST',
+        headers: { ...authHeaders() },
+        body: JSON.stringify({ ...currentShipment, status: 'draft' }),
+      });
+      if (!response.ok) throw new Error('Failed to save shipment');
+      const data = await response.json();
+      if (data.shipment?.id) {
+        setCurrentShipment(data.shipment);
+        return data.shipment.id;
+      }
+      return null;
+    } catch {
+      toast.error('Не удалось сохранить черновик');
+      return null;
+    }
+  };
+
+  const handleGenerateCoils = async (itemId?: string): Promise<RattanCoil[]> => {
+    const shipmentId = await ensureShipmentSavedDraft();
+    if (!shipmentId) return [];
+    try {
+      setCoilsLoading(true);
+      const res = await crmFetch('/coils/generate', {
+        method: 'POST',
+        body: JSON.stringify({ shipmentId, itemId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка генерации QR');
+      toast.success(
+        data.created > 0
+          ? `Создано QR: ${data.created} мотков`
+          : `QR уже существуют (${data.coils?.length ?? 0} мотков)`,
+      );
+      return fetchShipmentCoils(shipmentId);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Не удалось создать QR');
+      return [];
+    } finally {
+      setCoilsLoading(false);
+    }
+  };
+
+  const printCoilLabel = async (coil: RattanCoil, clientName?: string) => {
+    const QRCode = (await import('qrcode')).default;
+    const displayArticle = coil.sticker_article || coil.article;
+    const urls = coil.urls || qrUrlsForToken(coil.qr_token);
+    const [reviewQr, catalogQr] = await Promise.all([
+      QRCode.toDataURL(urls.review, { width: 88, margin: 0, errorCorrectionLevel: 'M' }),
+      QRCode.toDataURL(urls.catalog, { width: 88, margin: 0, errorCorrectionLevel: 'M' }),
+    ]);
+
+    try {
+      await crmFetch(`/coils/${coil.id}/print`, { method: 'POST' });
+    } catch {
+      /* print anyway */
+    }
+
+    if (window.navigator?.vibrate) window.navigator.vibrate(50);
+    const win = window.open('', 'Print', 'height=600,width=800');
+    if (!win) return;
+    win.document.write(`
+      <html>
+        <head>
+          <title>QR ${coil.public_code}</title>
+          <style>
+            @page { size: 40mm 58mm; margin: 0; }
+            body { margin: 0; padding: 1mm; width: 40mm; height: 58mm; font-family: sans-serif; overflow: hidden; box-sizing: border-box; }
+            .label { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; }
+            .client { font-size: 7pt; font-weight: 600; max-width: 38mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .art { font-size: 9pt; font-weight: bold; line-height: 1.05; }
+            .weight { font-size: 18pt; font-weight: 900; line-height: 1; }
+            .code { font-size: 6pt; color: #444; }
+            .qr-row { display: flex; gap: 2mm; justify-content: center; align-items: flex-end; }
+            .qr-cell { display: flex; flex-direction: column; align-items: center; gap: 0.5mm; }
+            .qr-cell img { width: 14mm; height: 14mm; }
+            .qr-label { font-size: 5pt; font-weight: 700; line-height: 1; }
+          </style>
+        </head>
+        <body>
+          <div class="label">
+            <div>
+              ${clientName ? `<div class="client">${clientName}</div>` : ''}
+              <div class="art">${displayArticle}</div>
+              <div class="weight">${coil.weight_kg} кг</div>
+              <div class="code">${coil.public_code}</div>
+            </div>
+            <div class="qr-row">
+              <div class="qr-cell">
+                <img src="${reviewQr}" alt="Отзыв" />
+                <div class="qr-label">Отзыв</div>
+              </div>
+              <div class="qr-cell">
+                <img src="${catalogQr}" alt="Каталог" />
+                <div class="qr-label">Каталог</div>
+              </div>
+            </div>
+          </div>
+          <script>window.onload = function() { window.print(); window.close(); }</script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  };
+
+  const printCoilsForItem = async (item: ShipmentItem) => {
+    const shipmentId = await ensureShipmentSavedDraft();
+    if (!shipmentId) return;
+
+    let coils = item.coilIds?.length
+      ? shipmentCoils.filter((c) => item.coilIds!.includes(c.id))
+      : shipmentCoils.filter((c) => c.article === item.article);
+
+    if (coils.length === 0) {
+      const generated = await handleGenerateCoils(item.id);
+      coils = generated.filter((c) => c.article === item.article);
+    }
+
+    if (coils.length === 0) {
+      toast.error('Нет QR для печати. Укажите число мотков и сгенерируйте QR.');
+      return;
+    }
+
+    for (const coil of coils) {
+      await printCoilLabel(coil, currentShipment?.stickerClient);
+      await new Promise((r) => setTimeout(r, 500));
+    }
   };
 
   const printLabel = (item: ShipmentItem, clientName?: string) => {
@@ -2051,7 +2230,7 @@ export default function Warehouse() {
                     <DialogHeader>
                         <DialogTitle className="text-xl sm:text-2xl">Редактирование товара</DialogTitle>
                         <DialogDescription className="text-sm sm:text-base">
-                            Упра��ление товаром <span className="font-semibold text-slate-800">{correctionData.article}</span>
+                            Упра��ление товаром <span className="font-semibold text-neutral-800">{correctionData.article}</span>
                         </DialogDescription>
                     </DialogHeader>
                     
@@ -2072,21 +2251,21 @@ export default function Warehouse() {
                         />
 
                         {/* Stock Information */}
-                        <div className="bg-slate-50 rounded-xl p-4 sm:p-5 space-y-4 border border-slate-200">
-                            <h3 className="font-semibold text-slate-700 flex items-center gap-2">
+                        <div className="bg-neutral-50 rounded-xl p-4 sm:p-5 space-y-4 border border-neutral-200">
+                            <h3 className="font-semibold text-neutral-700 flex items-center gap-2">
                                 <Database className="h-4 w-4" />
                                 Остатки
                             </h3>
                             
                             <div className="grid sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label className="text-sm text-slate-600">Текущий остаток</Label>
-                                    <div className="bg-white rounded-lg p-3 border border-slate-200">
+                                    <Label className="text-sm text-neutral-600">Текущий остаток</Label>
+                                    <div className="bg-white rounded-lg p-3 border border-neutral-200">
                                         <div className="flex items-baseline gap-2">
-                                            <span className="text-2xl font-bold text-slate-800">
+                                            <span className="text-2xl font-bold text-neutral-800">
                                                 {parseFloat(correctionData.current.toFixed(2))}
                                             </span>
-                                            <span className="text-sm text-slate-500 uppercase font-semibold">
+                                            <span className="text-sm text-neutral-500 uppercase font-semibold">
                                                 {getUnit(undefined, correctionData.article)}
                                             </span>
                                         </div>
@@ -2094,7 +2273,7 @@ export default function Warehouse() {
                                 </div>
                                 
                                 <div className="space-y-2">
-                                    <Label htmlFor="real" className="text-sm text-slate-600">
+                                    <Label htmlFor="real" className="text-sm text-neutral-600">
                                         Фактический остаток
                                     </Label>
                                     <Input
@@ -2106,7 +2285,7 @@ export default function Warehouse() {
                                         className="h-12 text-lg font-semibold"
                                         placeholder={correctionData.current.toString()}
                                     />
-                                    <p className="text-xs text-slate-500">
+                                    <p className="text-xs text-neutral-500">
                                         Оставьте пустым, если остаток не измен��лся
                                     </p>
                                 </div>
@@ -2159,11 +2338,11 @@ export default function Warehouse() {
                     <TabsContent value="history" className="flex-1 overflow-y-auto mt-4">
                         {loadingHistory ? (
                             <div className="flex items-center justify-center py-12">
-                                <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-300 border-t-slate-600" />
+                                <div className="animate-spin rounded-full h-8 w-8 border-2 border-neutral-300 border-t-neutral-900" />
                             </div>
                         ) : stockHistory.length === 0 ? (
-                            <div className="text-center py-12 text-slate-500">
-                                <Clock className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                            <div className="text-center py-12 text-neutral-500">
+                                <Clock className="h-12 w-12 mx-auto mb-3 text-neutral-300" />
                                 <p>История движений отсутствует</p>
                             </div>
                         ) : (
@@ -2171,7 +2350,7 @@ export default function Warehouse() {
                                 {stockHistory.map((item, index) => (
                                     <div 
                                         key={item.id || index}
-                                        className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
+                                        className="bg-white border border-neutral-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
                                     >
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="flex-1">
@@ -2194,10 +2373,10 @@ export default function Warehouse() {
                                                 </div>
                                                 
                                                 {item.note && (
-                                                    <p className="text-sm text-slate-600 mb-2">{item.note}</p>
+                                                    <p className="text-sm text-neutral-600 mb-2">{item.note}</p>
                                                 )}
                                                 
-                                                <div className="flex items-center gap-4 text-xs text-slate-500">
+                                                <div className="flex items-center gap-4 text-xs text-neutral-500">
                                                     <span className="flex items-center gap-1">
                                                         <Clock className="h-3 w-3" />
                                                         {new Date(item.date).toLocaleString('ru-RU', {
@@ -2215,11 +2394,11 @@ export default function Warehouse() {
                                             </div>
                                             
                                             <div className="text-right">
-                                                <div className="text-xs text-slate-500 mb-1">Остаток</div>
-                                                <div className="text-xl font-bold text-slate-800">
+                                                <div className="text-xs text-neutral-500 mb-1">Остаток</div>
+                                                <div className="text-xl font-bold text-neutral-800">
                                                     {item.balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
                                                 </div>
-                                                <div className="text-xs text-slate-500 uppercase">
+                                                <div className="text-xs text-neutral-500 uppercase">
                                                     {getUnit(undefined, correctionData.article)}
                                                 </div>
                                             </div>
@@ -2246,14 +2425,14 @@ export default function Warehouse() {
             <div className="flex flex-col xl:flex-row gap-6">
                  {/* Recent Shipments */}
                  <div className={`transition-all duration-500 ease-in-out ${expandedBottom === 'shipments' ? 'xl:flex-[3]' : expandedBottom === 'history' ? 'xl:flex-1' : 'xl:flex-1'}`}>
-                      <Card className={`transition-all duration-500 ${expandedBottom === 'shipments' ? 'shadow-md ring-1 ring-blue-100 border-blue-200' : ''}`}>
+                      <Card className={`tasklab-card border-0 transition-all duration-500 ${expandedBottom === 'shipments' ? 'shadow-md ring-1 ring-neutral-200 border-neutral-200' : ''}`}>
                          <CardHeader>
                              <CardTitle className="text-base flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4 text-slate-400" />
+                                    <Clock className="h-4 w-4 text-neutral-400" />
                                     {!expandedBottom || expandedBottom === 'shipments' || expandedBottom !== 'history' ? 'Последние поступления' : ''}
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600" onClick={() => setExpandedBottom(expandedBottom === 'shipments' ? null : 'shipments')}>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-neutral-400 hover:text-neutral-600" onClick={() => setExpandedBottom(expandedBottom === 'shipments' ? null : 'shipments')}>
                                     {expandedBottom === 'shipments' ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                                 </Button>
                              </CardTitle>
@@ -2264,10 +2443,10 @@ export default function Warehouse() {
                                      {whLogs.slice(0, expandedBottom === 'shipments' ? 100 : 5).map(log => (
                                          <TableRow key={log.id}>
                                              <TableCell className="py-3 px-4">
-                                                 <div className="font-medium text-slate-800">{log.amount} {log.unit || (getUnit(log.materialType, log.article))}</div>
-                                                 <div className="text-xs text-slate-500 line-clamp-1">{log.article || 'Без артикула'}</div>
+                                                 <div className="font-medium text-neutral-800">{log.amount} {log.unit || (getUnit(log.materialType, log.article))}</div>
+                                                 <div className="text-xs text-neutral-500 line-clamp-1">{log.article || 'Без артикула'}</div>
                                              </TableCell>
-                                             <TableCell className="py-3 px-4 text-right text-xs text-slate-500 whitespace-nowrap">
+                                             <TableCell className="py-3 px-4 text-right text-xs text-neutral-500 whitespace-nowrap">
                                                  <div>{new Date(log.date).toLocaleDateString()}</div>
                                                  <div>{new Date(log.date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
                                              </TableCell>
@@ -2275,7 +2454,7 @@ export default function Warehouse() {
                                      ))}
                                      {whLogs.length === 0 && (
                                          <TableRow>
-                                             <TableCell colSpan={2} className="text-center py-8 text-slate-400">Нет данных</TableCell>
+                                             <TableCell colSpan={2} className="text-center py-8 text-neutral-400">Нет данных</TableCell>
                                          </TableRow>
                                      )}
                                  </TableBody>
@@ -2286,32 +2465,32 @@ export default function Warehouse() {
 
                  {/* Detailed Logs History */}
                  <div className={`transition-all duration-500 ease-in-out ${expandedBottom === 'history' ? 'xl:flex-[3]' : expandedBottom === 'shipments' ? 'xl:flex-1' : 'xl:flex-[2]'}`}>
-                    <Card className={`transition-all duration-500 ${expandedBottom === 'history' ? 'shadow-md ring-1 ring-blue-100 border-blue-200' : ''}`}>
+                    <Card className={`tasklab-card border-0 transition-all duration-500 ${expandedBottom === 'history' ? 'shadow-md ring-1 ring-neutral-200 border-neutral-200' : ''}`}>
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="flex items-center gap-2">
                                 История ({warehouseName})
-                                <Badge variant="outline" className="bg-slate-100">{whLogs.length}</Badge>
+                                <Badge variant="outline" className="bg-neutral-100">{whLogs.length}</Badge>
                             </CardTitle>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600" onClick={() => setExpandedBottom(expandedBottom === 'history' ? null : 'history')}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-neutral-400 hover:text-neutral-600" onClick={() => setExpandedBottom(expandedBottom === 'history' ? null : 'history')}>
                                 {expandedBottom === 'history' ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                             </Button>
                         </CardHeader>
                 <CardContent className={isMobile ? "p-4" : ""}>
                 <div className="rounded-md border">
                     {isMobile ? (
-                        <div className="divide-y divide-slate-100">
+                        <div className="divide-y divide-neutral-100">
                           {whLogs.length === 0 ? (
-                            <div className="text-center py-8 text-slate-500">Нет данных</div>
+                            <div className="text-center py-8 text-neutral-500">Нет данных</div>
                           ) : (
                              whLogs.slice(0, expandedBottom === 'history' ? undefined : 5).map(log => (
                                <div key={log.id} className="p-3 space-y-2">
                                   <div className="flex justify-between items-start">
                                       <div>
-                                          <div className="font-medium text-slate-900 flex items-center gap-2">
+                                          <div className="font-medium text-neutral-900 flex items-center gap-2">
                                             {log.amount} {log.unit}
                                             {log.article && <Badge variant="outline" className="text-xs h-5">{log.article}</Badge>}
                                           </div>
-                                          <div className="text-xs text-slate-500 mt-1">
+                                          <div className="text-xs text-neutral-500 mt-1">
                                              {new Date(log.date).toLocaleDateString()} {new Date(log.date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                                           </div>
                                       </div>
@@ -2319,21 +2498,21 @@ export default function Warehouse() {
                                          {log.status === 'synced' ? (
                                             <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] h-5">Synced</Badge>
                                          ) : (
-                                            <Badge variant="outline" className="text-slate-400 text-[10px] h-5">Wait</Badge>
+                                            <Badge variant="outline" className="text-neutral-400 text-[10px] h-5">Wait</Badge>
                                          )}
                                       </div>
                                   </div>
                                   <div className="flex justify-between items-end">
-                                      <div className="text-xs text-slate-600">
+                                      <div className="text-xs text-neutral-600">
                                          {log.worker && <span className="block">👤 {log.worker}</span>}
-                                         {log.twistedWorker && <span className="block text-slate-500">🔄 {log.twistedWorker}</span>}
+                                         {log.twistedWorker && <span className="block text-neutral-500">🔄 {log.twistedWorker}</span>}
                                       </div>
                                       <div className="flex gap-2">
                                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(log)}>
-                                              <Pencil className="h-3.5 w-3.5 text-slate-400" />
+                                              <Pencil className="h-3.5 w-3.5 text-neutral-400" />
                                           </Button>
                                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(log.id)}>
-                                              <Trash2 className="h-3.5 w-3.5 text-slate-400" />
+                                              <Trash2 className="h-3.5 w-3.5 text-neutral-400" />
                                           </Button>
                                       </div>
                                   </div>
@@ -2361,8 +2540,8 @@ export default function Warehouse() {
                            whLogs.slice(0, expandedBottom === 'history' ? undefined : 5).map(log => (
                                <TableRow key={log.id}>
                                    <TableCell>
-                                       <div className="font-bold text-slate-800">{log.amount} {log.unit}</div>
-                                       <div className="text-xs text-slate-500">
+                                       <div className="font-bold text-neutral-800">{log.amount} {log.unit}</div>
+                                       <div className="text-xs text-neutral-500">
                                           {new Date(log.date).toLocaleDateString()} {new Date(log.date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                                        </div>
                                    </TableCell>
@@ -2372,15 +2551,15 @@ export default function Warehouse() {
                                    <TableCell>
                                        <div className="text-sm">
                                            {log.worker && <div>👤 {log.worker}</div>}
-                                           {log.twistedWorker && <div className="text-slate-500">🔄 {log.twistedWorker}</div>}
-                                           {log.originalMessage && <div className="text-xs text-slate-400 mt-1 italic">{log.originalMessage}</div>}
+                                           {log.twistedWorker && <div className="text-neutral-500">🔄 {log.twistedWorker}</div>}
+                                           {log.originalMessage && <div className="text-xs text-neutral-400 mt-1 italic">{log.originalMessage}</div>}
                                        </div>
                                    </TableCell>
                                    <TableCell>
                                        {log.status === 'synced' ? (
                                            <Badge variant="secondary" className="bg-green-100 text-green-700">Синхронизировано</Badge>
                                        ) : (
-                                           <Badge variant="outline" className="text-slate-400">Ожидание</Badge>
+                                           <Badge variant="outline" className="text-neutral-400">Ожидание</Badge>
                                        )}
                                    </TableCell>
                                    <TableCell className="text-right">
@@ -2409,6 +2588,11 @@ export default function Warehouse() {
   };
 
   return (
+    <BttCrmModuleShell
+      tag="Склад"
+      title="Склад"
+      subtitle="Остатки, поступления и отгрузки BTT Nexus"
+    >
     <div className="space-y-6">
       <EmployeesDialog open={isEmployeesOpen} onOpenChange={setIsEmployeesOpen} />
       
@@ -2424,7 +2608,7 @@ export default function Warehouse() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-2">
                           <Label>Склад</Label>
-                          <div className="h-10 flex items-center px-3 rounded-md border bg-slate-50 text-sm font-medium text-slate-700">BTT Nexus</div>
+                          <div className="h-10 flex items-center px-3 rounded-md border bg-neutral-50 text-sm font-medium text-neutral-700">BTT Nexus</div>
                       </div>
                       <div className="space-y-2">
                           <Label>Количество ({newLog.materialType === 'Кашпо' ? 'шт' : 'кг'})</Label>
@@ -2644,53 +2828,41 @@ export default function Warehouse() {
           </DialogContent>
       </Dialog>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Склад BTT Nexus</h1>
-          <p className="text-slate-500">Остатки, поступления и отгрузки в одном месте</p>
-        </div>
-        <div className="flex gap-2 md:gap-3">
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-              <DialogTrigger asChild>
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={openAddDialog}>
-                    {isMobile ? <Plus className="h-5 w-5"/> : <><Plus className="mr-2 h-4 w-4"/> Добавить поступление</>}
-                  </Button>
-              </DialogTrigger>
-          </Dialog>
-          
-          <Button variant="outline" onClick={handleOpenShipment} className="border-slate-300 text-slate-700">
-             <Truck className="h-4 w-4 mr-2" /> {isMobile ? '' : 'Отгрузка'}
-          </Button>
-
-          <Button variant="outline" size="icon" onClick={() => setIsEmployeesOpen(true)} title="Сотрудники">
-              <Settings className="h-4 w-4 text-slate-500" />
-          </Button>
-          
-          <Button variant="outline" size="icon" onClick={fetchData} disabled={loading} title="Обновить">
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-          
-          <Button variant="ghost" size="icon" onClick={handleSync} disabled={syncing} title="Синхронизация с Google Sheets">
-             <RefreshCcw className={`h-4 w-4 text-green-600 ${syncing ? 'animate-spin' : ''}`} />
-          </Button>
-          
-          <Button variant="ghost" size="icon" onClick={handleInventoryReset} title="Инвентаризация (Обнулить склад)" className="text-orange-600 hover:text-orange-800 hover:bg-orange-50">
-              <Archive className="h-4 w-4" />
-          </Button>
-        </div>
+      <div className="flex flex-wrap gap-2 md:gap-3">
+        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-neutral-900 hover:bg-neutral-800 text-white" onClick={openAddDialog}>
+              {isMobile ? <Plus className="h-5 w-5" /> : <><Plus className="mr-2 h-4 w-4" /> Добавить поступление</>}
+            </Button>
+          </DialogTrigger>
+        </Dialog>
+        <Button variant="outline" onClick={handleOpenShipment} className="border-neutral-300 text-neutral-700">
+          <Truck className="h-4 w-4 mr-2" /> {isMobile ? '' : 'Отгрузка'}
+        </Button>
+        <Button variant="outline" size="icon" onClick={() => setIsEmployeesOpen(true)} title="Сотрудники">
+          <Settings className="h-4 w-4 text-neutral-500" />
+        </Button>
+        <Button variant="outline" size="icon" onClick={fetchData} disabled={loading} title="Обновить">
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={handleSync} disabled={syncing} title="Синхронизация с Google Sheets">
+          <RefreshCcw className={`h-4 w-4 text-green-600 ${syncing ? 'animate-spin' : ''}`} />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={handleInventoryReset} title="Инвентаризация" className="text-orange-600 hover:text-orange-800 hover:bg-orange-50">
+          <Archive className="h-4 w-4" />
+        </Button>
       </div>
 
-      {/* Info Banners */}
       <div className="space-y-3">
         <div
           className={`px-4 py-3 rounded-lg text-sm border flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
             loading
-              ? 'bg-slate-50 border-slate-200 text-slate-600'
+              ? 'bg-neutral-50 border-neutral-200 text-neutral-600'
               : shipments.length > 0 || logs.length > 0 || (stats?.BTT?.current?.total ?? 0) > 0
                 ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
                 : dbCounts && ((dbCounts.shipments ?? 0) > 0 || (dbCounts.production_logs ?? 0) > 0)
                   ? 'bg-amber-50 border-amber-200 text-amber-900'
-                  : 'bg-slate-50 border-slate-200 text-slate-600'
+                  : 'bg-neutral-50 border-neutral-200 text-neutral-600'
           }`}
         >
           <div>
@@ -2765,13 +2937,13 @@ export default function Warehouse() {
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg text-sm"
+          className="bg-[var(--tasklab-lime)]/10 border border-neutral-200 text-neutral-800 px-4 py-3 rounded-lg text-sm"
         >
           <div className="flex items-start gap-3">
             <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
               <p className="font-semibold mb-1">Совет:</p>
-              <p className="text-xs sm:text-sm text-blue-700">
+              <p className="text-xs sm:text-sm text-neutral-800">
                 <span className="hidden sm:inline">Нажмите на карточку товара чтобы добавить фото или скорректировать остатки. Перетащите изображение для быстрой загрузки.</span>
                 <span className="sm:hidden">Нажмите на товар для редактирования и добавления фото</span>
               </p>
@@ -2801,23 +2973,23 @@ export default function Warehouse() {
                <div className="space-y-6">
                  <div className="flex flex-col md:flex-row gap-6">
                    {[1, 2, 3].map(i => (
-                     <div key={i} className="flex-1 bg-white rounded-xl border border-slate-200 p-6">
+                     <div key={i} className="flex-1 bg-white rounded-xl border border-neutral-200 p-6">
                        <div className="animate-pulse space-y-4">
-                         <div className="h-4 w-24 bg-slate-200 rounded" />
-                         <div className="h-8 w-32 bg-slate-200 rounded" />
-                         <div className="h-3 w-20 bg-slate-200 rounded" />
+                         <div className="h-4 w-24 bg-neutral-200 rounded" />
+                         <div className="h-8 w-32 bg-neutral-200 rounded" />
+                         <div className="h-3 w-20 bg-neutral-200 rounded" />
                        </div>
                      </div>
                    ))}
                  </div>
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                    {[1, 2, 3, 4, 5, 6].map(i => (
-                     <div key={i} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                     <div key={i} className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
                        <div className="animate-pulse">
-                         <div className="h-48 bg-slate-200" />
+                         <div className="h-48 bg-neutral-200" />
                          <div className="p-4 space-y-3">
-                           <div className="h-4 bg-slate-200 rounded w-3/4" />
-                           <div className="h-6 bg-slate-200 rounded w-1/2" />
+                           <div className="h-4 bg-neutral-200 rounded w-3/4" />
+                           <div className="h-6 bg-neutral-200 rounded w-1/2" />
                          </div>
                        </div>
                      </div>
@@ -2830,17 +3002,17 @@ export default function Warehouse() {
         </TabsContent>
 
         <TabsContent value="SHIPMENTS">
-              <Card className={`transition-all duration-300 ${expandedShipmentsLog ? 'fixed inset-4 z-50 h-[calc(100vh-2rem)] shadow-2xl overflow-hidden flex flex-col' : ''}`}>
+              <Card className={`tasklab-card border-0 transition-all duration-300 ${expandedShipmentsLog ? 'fixed inset-4 z-50 h-[calc(100vh-2rem)] shadow-2xl overflow-hidden flex flex-col' : ''}`}>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div className="flex items-center gap-4">
                     <CardTitle>Журнал отгрузок</CardTitle>
                     {selectedShipments.size > 0 && (
                         <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-4 duration-300">
-                            <span className="text-sm text-slate-500 hidden sm:inline">Выбрано: {selectedShipments.size}</span>
+                            <span className="text-sm text-neutral-500 hidden sm:inline">Выбрано: {selectedShipments.size}</span>
                             <Button 
                                 size="sm" 
                                 variant="default" 
-                                className="bg-slate-800 text-white gap-2"
+                                className="bg-neutral-800 text-white gap-2"
                                 onClick={printCombinedWaybill}
                             >
                                 <Printer className="h-4 w-4" />
@@ -2849,13 +3021,13 @@ export default function Warehouse() {
                         </div>
                     )}
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600" onClick={() => setExpandedShipmentsLog(!expandedShipmentsLog)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-neutral-400 hover:text-neutral-600" onClick={() => setExpandedShipmentsLog(!expandedShipmentsLog)}>
                        {expandedShipmentsLog ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                   </Button>
                 </CardHeader>
                 <CardContent className={expandedShipmentsLog ? "flex-1 overflow-auto" : ""}>
                   {loading && shipments.length === 0 ? (
-                      <div className="text-center py-10 text-slate-500">Загрузка...</div>
+                      <div className="text-center py-10 text-neutral-500">Загрузка...</div>
                   ) : (
                   <Table>
                     <TableHeader>
@@ -2902,7 +3074,7 @@ export default function Warehouse() {
                                <TableCell>{s.totalBags || '—'}</TableCell>
                                <TableCell>{s.items?.length || 0}</TableCell>
                                <TableCell>
-                                  <div className="max-w-[200px] truncate text-xs text-slate-600" title={Array.from(new Set((s.items || []).map(i => i.stickerArticle || i.article))).join(', ')}>
+                                  <div className="max-w-[200px] truncate text-xs text-neutral-600" title={Array.from(new Set((s.items || []).map(i => i.stickerArticle || i.article))).join(', ')}>
                                       {Array.from(new Set((s.items || []).map(i => i.stickerArticle || i.article))).join(', ')}
                                   </div>
                                </TableCell>
@@ -2940,7 +3112,7 @@ export default function Warehouse() {
                          <div className="flex flex-col md:flex-row items-start md:items-end gap-4">
                             <div className="grid gap-2 w-full md:w-1/4">
                                 <Label>Склад отгрузки</Label>
-                                <div className="h-10 flex items-center px-3 rounded-md border bg-slate-50 text-sm font-medium text-slate-700">BTT Nexus</div>
+                                <div className="h-10 flex items-center px-3 rounded-md border bg-neutral-50 text-sm font-medium text-neutral-700">BTT Nexus</div>
                             </div>
                             <div className="grid gap-2 w-full md:w-1/4">
                                 <Label>Направление</Label>
@@ -2980,7 +3152,7 @@ export default function Warehouse() {
                             </div>
                          </div>
 
-                         <div className="flex flex-col md:flex-row gap-4 items-end bg-slate-50 p-4 rounded-lg border">
+                         <div className="flex flex-col md:flex-row gap-4 items-end bg-neutral-50 p-4 rounded-lg border">
                             <div className="grid gap-2 w-full md:w-1/4">
                                 <Label>Артикул (система)</Label>
                                 <Select 
@@ -2995,7 +3167,7 @@ export default function Warehouse() {
                                             <SelectItem key={article} value={article}>
                                                 <div className="flex justify-between w-full gap-4">
                                                     <span>{article}</span>
-                                                    <span className="text-slate-400 font-mono text-xs">{qty} кг</span>
+                                                    <span className="text-neutral-400 font-mono text-xs">{qty} кг</span>
                                                 </div>
                                             </SelectItem>
                                         ))}
@@ -3008,7 +3180,7 @@ export default function Warehouse() {
                             <div className="grid gap-2 w-full md:w-1/4">
                                 <Label className="flex items-center gap-1">
                                     Артикул на стикере
-                                    <span className="text-xs text-slate-400">(опц.)</span>
+                                    <span className="text-xs text-neutral-400">(опц.)</span>
                                 </Label>
                                 <Input 
                                     type="text"
@@ -3017,19 +3189,20 @@ export default function Warehouse() {
                                     onChange={e => setNewItem({...newItem, stickerArticle: e.target.value})}
                                 />
                                 {newItem.article && newItem.stickerArticle && (
-                                    <p className="text-xs text-blue-600 -mt-1">
+                                    <p className="text-xs text-neutral-900 -mt-1">
                                         📄 На стикере: {newItem.stickerArticle}
                                     </p>
                                 )}
                             </div>
                             <div className="grid gap-2 w-full md:w-1/6">
-                                {/* <Label>Мешков</Label>
-                                <Input 
+                                <Label>Мотков (бухт)</Label>
+                                <Input
                                     type="number"
-                                    placeholder="0" 
-                                    value={newItem.bags}
-                                    onChange={e => setNewItem({...newItem, bags: e.target.value})}
-                                /> */}
+                                    min={1}
+                                    placeholder="1"
+                                    value={newItem.coils}
+                                    onChange={(e) => setNewItem({ ...newItem, coils: e.target.value })}
+                                />
                             </div>
                             <div className="grid gap-2 w-full md:w-1/5">
                                 <Label>Вес (кг)</Label>
@@ -3052,13 +3225,55 @@ export default function Warehouse() {
                                     onChange={e => setNewItem({...newItem, date: e.target.value})}
                                 />
                             </div>
-                            <Button onClick={handleAddItem} className="w-full md:w-1/5 bg-blue-600 hover:bg-blue-700">
+                            <Button onClick={handleAddItem} className="w-full md:w-1/5 bg-neutral-900 hover:bg-neutral-800">
                                 <Plus className="mr-2 h-4 w-4" /> Добавить
                             </Button>
                         </div>
                       </div>
 
                       <div className="mt-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                            <div className="text-sm text-neutral-600">
+                              QR-мотки: {shipmentCoils.length}
+                              {coilsLoading ? ' · загрузка…' : ''}
+                              <span className="block text-xs text-neutral-500 mt-0.5">На стикере 2 QR: отзыв на сайте и каталог</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={coilsLoading || !currentShipment?.items.length}
+                                onClick={() => handleGenerateCoils()}
+                              >
+                                Сгенерировать QR
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={coilsLoading || !currentShipment?.items.length}
+                                onClick={async () => {
+                                  const shipmentId = await ensureShipmentSavedDraft();
+                                  if (!shipmentId) return;
+                                  let coils = shipmentCoils;
+                                  if (coils.length === 0) {
+                                    coils = await handleGenerateCoils();
+                                  }
+                                  if (coils.length === 0) {
+                                    toast.error('Нет QR для печати. Укажите число мотков и сгенерируйте QR.');
+                                    return;
+                                  }
+                                  for (const coil of coils) {
+                                    await printCoilLabel(coil, currentShipment?.stickerClient);
+                                    await new Promise((r) => setTimeout(r, 500));
+                                  }
+                                }}
+                              >
+                                Печать всех QR
+                              </Button>
+                            </div>
+                          </div>
                           {isMobile ? (
                               <div className="space-y-3">
                                   {currentShipment?.items.length === 0 ? (
@@ -3073,21 +3288,21 @@ export default function Warehouse() {
                                                       <div className="font-medium text-lg">
                                                           {item.stickerArticle ? (
                                                               <>
-                                                                  {item.article} <span className="text-blue-600">→ {item.stickerArticle}</span>
+                                                                  {item.article} <span className="text-neutral-900">→ {item.stickerArticle}</span>
                                                               </>
                                                           ) : (
                                                               item.article
                                                           )}
                                                       </div>
-                                                      <div className="text-sm font-bold text-slate-700">{item.weight} кг</div>
+                                                      <div className="text-sm font-bold text-neutral-700">{item.weight} кг</div>
                                                       {item.stickerArticle && (
-                                                          <div className="text-xs text-slate-500 mt-1">
+                                                          <div className="text-xs text-neutral-500 mt-1">
                                                               На стикере: {item.stickerArticle}
                                                           </div>
                                                       )}
                                                   </div>
                                                   <div className="flex gap-2">
-                                                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => printLabel(item, currentShipment?.stickerClient)}>
+                                                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => printCoilsForItem(item)} title="Печать QR-стикеров">
                                                           <Printer className="h-4 w-4" />
                                                       </Button>
                                                       <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => handleRemoveItem(item.id)}>
@@ -3115,17 +3330,22 @@ export default function Warehouse() {
                                           <TableCell className="font-medium">{item.article}</TableCell>
                                           <TableCell>
                                               {item.stickerArticle ? (
-                                                  <span className="text-blue-600 font-medium">
+                                                  <span className="text-neutral-900 font-medium">
                                                       {item.article} - {item.stickerArticle}
                                                   </span>
                                               ) : (
-                                                  <span className="text-slate-400 text-sm">—</span>
+                                                  <span className="text-neutral-400 text-sm">—</span>
                                               )}
                                           </TableCell>
                                           <TableCell>{item.weight} кг</TableCell>
                                           <TableCell className="text-right">
-                                              <div className="flex justify-end gap-2">
-                                                  <Button variant="outline" size="sm" onClick={() => printLabel(item, currentShipment?.stickerClient)}>
+                                              <div className="flex justify-end gap-2 items-center">
+                                                  {(item.coilIds?.length || shipmentCoils.filter((c) => c.article === item.article).length) > 0 && (
+                                                    <Badge variant="secondary" className="text-xs">
+                                                      QR {item.coilIds?.length || shipmentCoils.filter((c) => c.article === item.article).length}
+                                                    </Badge>
+                                                  )}
+                                                  <Button variant="outline" size="sm" onClick={() => printCoilsForItem(item)} title="Печать QR-стикеров">
                                                       <Printer className="h-4 w-4" />
                                                   </Button>
                                                   <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(item.id)}>
@@ -3148,7 +3368,7 @@ export default function Warehouse() {
                       </div>
 
                       <DialogFooter className="flex justify-between items-center sm:justify-between gap-4">
-                          <div className="text-sm font-bold text-slate-700 hidden sm:block">
+                          <div className="text-sm font-bold text-neutral-700 hidden sm:block">
                               Итого: {currentShipment?.items.length || 0} мест, {currentShipment?.items.reduce((acc, i) => acc + i.weight, 0).toFixed(2)} кг
                           </div>
                           <div className="flex gap-2 w-full sm:w-auto justify-end">
@@ -3168,7 +3388,7 @@ export default function Warehouse() {
                                     </Button>
                                 </>
                               ) : (
-                                <Button onClick={() => handleSaveShipment('completed')} className="bg-blue-600 hover:bg-blue-700">
+                                <Button onClick={() => handleSaveShipment('completed')} className="bg-neutral-900 hover:bg-neutral-800">
                                     Сохранить изменения
                                 </Button>
                               )}
@@ -3178,16 +3398,16 @@ export default function Warehouse() {
               </Dialog>
 
               {/* Transfers History */}
-              <Card className="mt-6">
+              <Card className="tasklab-card border-0 mt-6">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
-                    <ArrowUpCircle className="h-4 w-4 text-slate-400" />
+                    <ArrowUpCircle className="h-4 w-4 text-neutral-400" />
                     История перемещений
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {transfers.length === 0 ? (
-                    <div className="text-center py-10 text-slate-500">Нет перемещений</div>
+                    <div className="text-center py-10 text-neutral-500">Нет перемещений</div>
                   ) : (
                     <Table>
                       <TableHeader>
@@ -3219,7 +3439,7 @@ export default function Warehouse() {
                             </TableCell>
                             <TableCell className="font-medium">{t.article}</TableCell>
                             <TableCell className="font-bold">{t.quantity} кг</TableCell>
-                            <TableCell className="text-xs text-slate-500">{t.note || '—'}</TableCell>
+                            <TableCell className="text-xs text-neutral-500">{t.note || '—'}</TableCell>
                             <TableCell className="text-right">
                               <Button variant="ghost" size="sm" onClick={() => handleDeleteTransfer(t.id)}>
                                 <Trash2 className="h-4 w-4 text-red-500" />
@@ -3248,13 +3468,13 @@ export default function Warehouse() {
 
                 {/* Monthly Statistics */}
                 <div>
-                  <h2 className="text-lg font-bold text-slate-800 mb-4">Статистика по месяцам</h2>
+                  <h2 className="text-lg font-bold text-neutral-800 mb-4">Статистика по месяцам</h2>
                   {loadingMonthlyStats ? (
-                    <Card>
+                    <Card className="tasklab-card border-0">
                       <CardContent className="py-12">
                         <div className="text-center">
-                          <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-blue-500 mx-auto mb-3"></div>
-                          <p className="text-sm text-slate-500">Загрузка статистики...</p>
+                          <div className="animate-spin rounded-full h-12 w-12 border-4 border-neutral-200 border-t-[var(--tasklab-lime)] mx-auto mb-3"></div>
+                          <p className="text-sm text-neutral-500">Загрузка статистики...</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -3268,7 +3488,7 @@ export default function Warehouse() {
 
                 {/* Movements History */}
                 <div>
-                  <h2 className="text-lg font-bold text-slate-800 mb-4">История всех движений</h2>
+                  <h2 className="text-lg font-bold text-neutral-800 mb-4">История всех движений</h2>
                   <WarehouseMovementsTable 
                     movements={movements}
                     loading={loadingMovements}
@@ -3279,5 +3499,6 @@ export default function Warehouse() {
       </Tabs>
 
     </div>
+    </BttCrmModuleShell>
   );
 }

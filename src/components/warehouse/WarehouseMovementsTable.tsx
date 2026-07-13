@@ -51,8 +51,8 @@ const MOVEMENT_TYPE_CONFIG = {
   transfer: {
     label: 'Перемещение',
     icon: Truck,
-    color: 'bg-blue-100 text-blue-700 border-blue-200',
-    iconColor: 'text-blue-600'
+    color: 'bg-[var(--tasklab-lime)]/20 text-neutral-900 border-neutral-200',
+    iconColor: 'text-neutral-900'
   },
   correction: {
     label: 'Корректировка',
@@ -103,11 +103,11 @@ export const WarehouseMovementsTable = ({ movements, loading = false }: Warehous
 
   if (loading) {
     return (
-      <Card>
+      <Card className="tasklab-card border-0">
         <CardContent className="py-12">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-blue-500 mx-auto mb-3"></div>
-            <p className="text-sm text-slate-500">Загрузка движений...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-neutral-200 border-t-[var(--tasklab-lime)] mx-auto mb-3"></div>
+            <p className="text-sm text-neutral-500">Загрузка движений...</p>
           </div>
         </CardContent>
       </Card>
@@ -116,12 +116,12 @@ export const WarehouseMovementsTable = ({ movements, loading = false }: Warehous
 
   if (movements.length === 0) {
     return (
-      <Card>
+      <Card className="tasklab-card border-0">
         <CardContent className="py-12">
-          <div className="text-center text-slate-500">
-            <ArrowUpCircle className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+          <div className="text-center text-neutral-500">
+            <ArrowUpCircle className="h-12 w-12 mx-auto mb-3 text-neutral-300" />
             <p className="text-sm">Движения не найдены</p>
-            <p className="text-xs text-slate-400 mt-1">Попробуйте изменить фильтры</p>
+            <p className="text-xs text-neutral-400 mt-1">Попробуйте изменить фильтры</p>
           </div>
         </CardContent>
       </Card>
@@ -134,10 +134,10 @@ export const WarehouseMovementsTable = ({ movements, loading = false }: Warehous
   const currentMovements = movements.slice(startIndex, endIndex);
 
   return (
-    <Card>
+    <Card className="tasklab-card border-0">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-bold text-slate-800">
+          <CardTitle className="text-base font-bold text-neutral-800">
             История движений ({movements.length.toLocaleString()})
           </CardTitle>
           <Button
@@ -175,7 +175,7 @@ export const WarehouseMovementsTable = ({ movements, loading = false }: Warehous
                   return (
                     <React.Fragment key={movement.id}>
                       <TableRow 
-                        className="hover:bg-slate-50 cursor-pointer transition-colors"
+                        className="hover:bg-neutral-50 cursor-pointer transition-colors"
                         onClick={() => toggleRow(movement.id)}
                       >
                         <TableCell>
@@ -216,9 +216,9 @@ export const WarehouseMovementsTable = ({ movements, loading = false }: Warehous
                           }`}>
                             {movement.amount > 0 ? '+' : ''}{movement.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                           </span>
-                          <span className="text-xs text-slate-500 ml-1">{movement.unit}</span>
+                          <span className="text-xs text-neutral-500 ml-1">{movement.unit}</span>
                         </TableCell>
-                        <TableCell className="text-xs text-slate-600 truncate max-w-[200px]">
+                        <TableCell className="text-xs text-neutral-600 truncate max-w-[200px]">
                           {movement.note || '-'}
                         </TableCell>
                       </TableRow>
@@ -226,7 +226,7 @@ export const WarehouseMovementsTable = ({ movements, loading = false }: Warehous
                       {/* Expanded details */}
                       {isExpanded && (
                         <TableRow>
-                          <TableCell colSpan={7} className="bg-slate-50">
+                          <TableCell colSpan={7} className="bg-neutral-50">
                             <motion.div
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: 'auto' }}
@@ -238,31 +238,31 @@ export const WarehouseMovementsTable = ({ movements, loading = false }: Warehous
                                   <>
                                     {movement.bags && (
                                         <div>
-                                            <span className="text-slate-500">Мешков:</span>
+                                            <span className="text-neutral-500">Мешков:</span>
                                             <span className="ml-2 font-medium">{movement.bags} шт</span>
                                         </div>
                                     )}
                                     {movement.materialType && (
                                       <div>
-                                        <span className="text-slate-500">Тип материала:</span>
+                                        <span className="text-neutral-500">Тип материала:</span>
                                         <span className="ml-2 font-medium">{movement.materialType}</span>
                                       </div>
                                     )}
                                     {movement.worker && (
                                       <div>
-                                        <span className="text-slate-500">Сотрудник:</span>
+                                        <span className="text-neutral-500">Сотрудник:</span>
                                         <span className="ml-2 font-medium">{movement.worker}</span>
                                       </div>
                                     )}
                                     {movement.twistedWorker && (
                                       <div>
-                                        <span className="text-slate-500">Крутильщик:</span>
+                                        <span className="text-neutral-500">Крутильщик:</span>
                                         <span className="ml-2 font-medium">{movement.twistedWorker}</span>
                                       </div>
                                     )}
                                     {movement.user && (
                                       <div>
-                                        <span className="text-slate-500">Добавил:</span>
+                                        <span className="text-neutral-500">Добавил:</span>
                                         <span className="ml-2 font-medium">{movement.user}</span>
                                       </div>
                                     )}
@@ -273,13 +273,13 @@ export const WarehouseMovementsTable = ({ movements, loading = false }: Warehous
                                   <>
                                     {movement.stickerClient && (
                                       <div>
-                                        <span className="text-slate-500">Клиент:</span>
+                                        <span className="text-neutral-500">Клиент:</span>
                                         <span className="ml-2 font-medium">{movement.stickerClient}</span>
                                       </div>
                                     )}
                                     {movement.dealId && (
                                       <div>
-                                        <span className="text-slate-500">ID сделки:</span>
+                                        <span className="text-neutral-500">ID сделки:</span>
                                         <span className="ml-2 font-medium">{movement.dealId}</span>
                                       </div>
                                     )}
@@ -289,19 +289,19 @@ export const WarehouseMovementsTable = ({ movements, loading = false }: Warehous
                                 {movement.type === 'transfer' && (
                                   <>
                                     <div>
-                                      <span className="text-slate-500">Откуда:</span>
+                                      <span className="text-neutral-500">Откуда:</span>
                                       <Badge variant="secondary" className="ml-2">
                                         {movement.transferFrom}
                                       </Badge>
                                     </div>
                                     <div>
-                                      <span className="text-slate-500">Куда:</span>
+                                      <span className="text-neutral-500">Куда:</span>
                                       <Badge variant="secondary" className="ml-2">
                                         {movement.transferTo}
                                       </Badge>
                                     </div>
                                     <div>
-                                      <span className="text-slate-500">Направление:</span>
+                                      <span className="text-neutral-500">Направление:</span>
                                       <Badge 
                                         variant="outline" 
                                         className={`ml-2 ${movement.subType === 'in' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
@@ -316,24 +316,24 @@ export const WarehouseMovementsTable = ({ movements, loading = false }: Warehous
                                   <>
                                     {movement.systemAmount !== undefined && (
                                       <div>
-                                        <span className="text-slate-500">Было в системе:</span>
+                                        <span className="text-neutral-500">Было в системе:</span>
                                         <span className="ml-2 font-medium">{movement.systemAmount.toLocaleString()} {movement.unit}</span>
                                       </div>
                                     )}
                                     {movement.realAmount !== undefined && (
                                       <div>
-                                        <span className="text-slate-500">Фактически:</span>
+                                        <span className="text-neutral-500">Фактически:</span>
                                         <span className="ml-2 font-medium">{movement.realAmount.toLocaleString()} {movement.unit}</span>
                                       </div>
                                     )}
                                     {movement.image && (
                                       <div>
-                                        <span className="text-slate-500">Фото:</span>
+                                        <span className="text-neutral-500">Фото:</span>
                                         <a 
                                           href={movement.image} 
                                           target="_blank" 
                                           rel="noopener noreferrer"
-                                          className="ml-2 text-blue-600 hover:underline"
+                                          className="ml-2 text-neutral-900 hover:underline"
                                         >
                                           Открыть
                                         </a>
@@ -344,9 +344,9 @@ export const WarehouseMovementsTable = ({ movements, loading = false }: Warehous
                               </div>
                               
                               {movement.note && (
-                                <div className="pt-2 border-t border-slate-200">
-                                  <span className="text-slate-500 text-xs">Полная заметка:</span>
-                                  <p className="mt-1 text-sm text-slate-700">{movement.note}</p>
+                                <div className="pt-2 border-t border-neutral-200">
+                                  <span className="text-neutral-500 text-xs">Полная заметка:</span>
+                                  <p className="mt-1 text-sm text-neutral-700">{movement.note}</p>
                                 </div>
                               )}
                             </motion.div>
@@ -363,8 +363,8 @@ export const WarehouseMovementsTable = ({ movements, loading = false }: Warehous
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200">
-            <div className="text-sm text-slate-600">
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-neutral-200">
+            <div className="text-sm text-neutral-600">
               Показаны {startIndex + 1}-{Math.min(endIndex, movements.length)} из {movements.length.toLocaleString()}
             </div>
             <div className="flex items-center gap-2">
@@ -376,7 +376,7 @@ export const WarehouseMovementsTable = ({ movements, loading = false }: Warehous
               >
                 Назад
               </Button>
-              <div className="text-sm font-medium text-slate-700">
+              <div className="text-sm font-medium text-neutral-700">
                 {currentPage} / {totalPages}
               </div>
               <Button

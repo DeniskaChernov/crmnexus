@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -57,7 +57,7 @@ export function IntegrationDialog({ open, onOpenChange, integration, onSave }: I
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="tasklab-card border-0 sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {integration.icon}
@@ -94,15 +94,15 @@ export function IntegrationDialog({ open, onOpenChange, integration, onSave }: I
             )}
 
             {integration.docUrl && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                <p className="text-sm text-blue-900 dark:text-blue-100 mb-2">
+              <div className="p-3 bg-[var(--tasklab-lime)]/10 dark:bg-[var(--tasklab-lime)]/5 rounded-lg">
+                <p className="text-sm text-neutral-900 dark:text-neutral-100 mb-2">
                   📚 Нужна помощь с настройкой?
                 </p>
                 <a
                   href={integration.docUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                  className="text-sm text-neutral-900 dark:text-neutral-300 hover:underline flex items-center gap-1"
                 >
                   Прочитайте инструкцию
                   <ExternalLink className="h-3 w-3" />
@@ -111,11 +111,11 @@ export function IntegrationDialog({ open, onOpenChange, integration, onSave }: I
             )}
 
             {integration.name === 'Telegram Bot' && (
-              <div className="p-3 bg-purple-50 dark:bg-purple-950 rounded-lg space-y-2">
-                <p className="text-sm font-medium text-purple-900 dark:text-purple-100">
+              <div className="p-3 bg-neutral-50 dark:bg-neutral-900 rounded-lg space-y-2">
+                <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                   Как подключить:
                 </p>
-                <ol className="text-sm text-purple-800 dark:text-purple-200 space-y-1 ml-4 list-decimal">
+                <ol className="text-sm text-neutral-700 dark:text-neutral-300 space-y-1 ml-4 list-decimal">
                   <li>Откройте @BotFather в Telegram</li>
                   <li>Создайте нового бота командой /newbot</li>
                   <li>Скопируйте API токен</li>
@@ -147,7 +147,7 @@ export function IntegrationDialog({ open, onOpenChange, integration, onSave }: I
             >
               Отмена
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="bg-neutral-900 hover:bg-neutral-800 text-white">
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

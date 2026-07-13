@@ -9,6 +9,7 @@ const PUBLIC_PATH_PARTS = [
   "/auth/me",
   "/telegram-webhook",
   "/webhooks/site",
+  "/public/qr/",
   "/static-uploads/",
 ];
 

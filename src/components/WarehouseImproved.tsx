@@ -60,7 +60,7 @@ const ImageUploadZone = ({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+        <Label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
           <Camera className="h-4 w-4" />
           Фото товара
         </Label>
@@ -70,7 +70,7 @@ const ImageUploadZone = ({
       </div>
       
       {imageUrl ? (
-        <div className="relative w-full h-56 sm:h-64 bg-slate-100 rounded-xl overflow-hidden group border-2 border-slate-200">
+        <div className="relative w-full h-56 sm:h-64 bg-neutral-100 rounded-xl overflow-hidden group border-2 border-neutral-200">
           <img 
             src={imageUrl} 
             alt={articleName}
@@ -79,7 +79,7 @@ const ImageUploadZone = ({
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
             <Label 
               htmlFor="article-image-upload"
-              className="cursor-pointer bg-white text-slate-800 px-4 py-2.5 rounded-lg hover:bg-slate-100 transition-colors flex items-center gap-2 font-medium shadow-lg"
+              className="cursor-pointer bg-white text-neutral-800 px-4 py-2.5 rounded-lg hover:bg-neutral-100 transition-colors flex items-center gap-2 font-medium shadow-lg"
             >
               <Upload className="h-4 w-4" />
               Изменить фото
@@ -98,24 +98,24 @@ const ImageUploadZone = ({
             className={`flex flex-col items-center justify-center w-full h-48 sm:h-56 border-2 ${
               isDragging 
                 ? 'border-blue-400 bg-blue-50 border-solid' 
-                : 'border-slate-300 border-dashed bg-slate-50'
-            } rounded-xl cursor-pointer hover:bg-slate-100 transition-all group`}
+                : 'border-neutral-300 border-dashed bg-neutral-50'
+            } rounded-xl cursor-pointer hover:bg-neutral-100 transition-all group`}
           >
             <div className="flex flex-col items-center justify-center p-6 text-center">
               {uploading ? (
                 <>
-                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-blue-500 mb-3" />
-                  <p className="text-sm text-slate-600 font-medium">Загрузка...</p>
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-neutral-200 border-t-[var(--tasklab-lime)] mb-3" />
+                  <p className="text-sm text-neutral-600 font-medium">Загрузка...</p>
                 </>
               ) : (
                 <>
                   <div className="bg-blue-100 rounded-full p-4 mb-3 group-hover:scale-110 transition-transform">
                     <Upload className="w-8 h-8 text-blue-600" />
                   </div>
-                  <p className="text-sm sm:text-base text-slate-700 font-semibold mb-1">
+                  <p className="text-sm sm:text-base text-neutral-700 font-semibold mb-1">
                     {isDragging ? 'Отпустите для загрузки' : 'Нажмите или перетащите фото'}
                   </p>
-                  <p className="text-xs text-slate-500">PNG, JPG, WEBP (макс. 5MB)</p>
+                  <p className="text-xs text-neutral-500">PNG, JPG, WEBP (макс. 5MB)</p>
                 </>
               )}
             </div>

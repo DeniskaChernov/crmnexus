@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { crmUrl, authHeaders } from '../../lib/crmApi.ts';
 import {
   Dialog,
@@ -106,7 +106,7 @@ export function EditPipelineDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="tasklab-card border-0 sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Редактировать воронку</DialogTitle>
@@ -167,7 +167,7 @@ export function EditPipelineDialog({
             >
               Отмена
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="bg-neutral-900 hover:bg-neutral-800 text-white">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

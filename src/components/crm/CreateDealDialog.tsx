@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { crmUrl, authHeaders } from '../../lib/crmApi.ts';
 import { useForm } from 'react-hook-form@7.55.0';
 import { crm } from "@/lib/crmClient.ts";
@@ -30,9 +30,10 @@ import { cn } from '../ui/utils';
 import { DealItemsEditor, DealItem } from './DealItemsEditor';
 interface CreateDealDialogProps {
   onSuccess: () => void;
-  // NEW: Allow triggering externally
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  trigger?: React.ReactNode;
+  triggerClassName?: string;
   initialData?: {
     clientName?: string;
     clientPhone?: string;
@@ -40,7 +41,7 @@ interface CreateDealDialogProps {
   };
 }
 
-export function CreateDealDialog({ onSuccess, isOpen, onOpenChange, initialData }: CreateDealDialogProps) {
+export function CreateDealDialog({ onSuccess, isOpen, onOpenChange, trigger, triggerClassName, initialData }: CreateDealDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = isOpen !== undefined ? isOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
@@ -306,12 +307,15 @@ export function CreateDealDialog({ onSuccess, isOpen, onOpenChange, initialData 
     <Dialog open={open} onOpenChange={setOpen}>
       {!isOpen && (
         <DialogTrigger asChild>
-            <Button>
-            <Plus className="mr-2 h-4 w-4" /> Добавить продажу
-            </Button>
+          {trigger ?? (
+            <button type="button" className={cn('btt-hero-tool', triggerClassName)}>
+              <Plus />
+              Добавить продажу
+            </button>
+          )}
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="tasklab-card border-0 sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Новая сделка</DialogTitle>
           <DialogDescription>
@@ -375,8 +379,8 @@ export function CreateDealDialog({ onSuccess, isOpen, onOpenChange, initialData 
                                                     setSearchQuery('');
                                                 }}
                                                 className={cn(
-                                                    "w-full flex items-start gap-2 p-2 rounded-md hover:bg-slate-100 text-left transition-colors",
-                                                    selectedCompany?.id === company.id && "bg-slate-100"
+                                                    "w-full flex items-start gap-2 p-2 rounded-md hover:bg-neutral-100 text-left transition-colors",
+                                                    selectedCompany?.id === company.id && "bg-neutral-100"
                                                 )}
                                             >
                                                 <Check
@@ -480,7 +484,7 @@ export function CreateDealDialog({ onSuccess, isOpen, onOpenChange, initialData 
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="bg-neutral-900 hover:bg-neutral-800 text-white">
               {loading ? 'Сохранение...' : 'Добавить продажу'}
             </Button>
           </DialogFooter>

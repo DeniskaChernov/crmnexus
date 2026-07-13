@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form@7.55.0';
 import { crm } from "@/lib/crmClient.ts";
 import { Button } from '../ui/button';
@@ -121,7 +121,7 @@ export function EditTaskDialog({ task, open, onOpenChange, onSuccess }: EditTask
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="tasklab-card border-0 sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Редактировать задачу</DialogTitle>
           <DialogDescription>
@@ -257,7 +257,7 @@ export function EditTaskDialog({ task, open, onOpenChange, onSuccess }: EditTask
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="bg-neutral-900 hover:bg-neutral-800 text-white">
               {loading ? 'Сохранение...' : 'Сохранить'}
             </Button>
           </DialogFooter>

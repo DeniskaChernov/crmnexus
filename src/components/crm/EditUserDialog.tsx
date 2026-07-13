@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { crmUrl, authHeaders } from '../../lib/crmApi.ts';
 import {
   Dialog,
@@ -97,7 +97,7 @@ export function EditUserDialog({ open, onOpenChange, user, onUserUpdated }: Edit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="tasklab-card border-0 sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Edit className="h-5 w-5" />
@@ -161,7 +161,7 @@ export function EditUserDialog({ open, onOpenChange, user, onUserUpdated }: Edit
             >
               Отмена
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="bg-neutral-900 hover:bg-neutral-800 text-white">
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

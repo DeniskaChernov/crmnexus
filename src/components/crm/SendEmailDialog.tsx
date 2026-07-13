@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { crmUrl, authHeaders } from '../../lib/crmApi.ts';
 import { Button } from '../ui/button';
 import {
@@ -100,7 +100,7 @@ export function SendEmailDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="tasklab-card border-0 sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
@@ -169,7 +169,7 @@ export function SendEmailDialog({
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
               Отмена
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="bg-neutral-900 hover:bg-neutral-800 text-white">
               {loading ? (
                 <>
                   <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />

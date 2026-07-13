@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
+﻿import React, { useEffect, useState, useMemo } from 'react';
+import { BttCrmModuleShell } from '../../components/btt-ref/BttCrmModuleShell.tsx';
 import { crm } from "@/lib/crmClient.ts";
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -132,33 +133,27 @@ export default function DealsArchive() {
   };
 
   const totalAmount = filteredDeals.reduce((sum, deal) => sum + (deal.amount || 0), 0);
+  const totalLabel = new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', minimumFractionDigits: 0 }).format(totalAmount);
 
   return (
-    <div className="h-full flex flex-col space-y-6 p-2">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={() => navigate('/deals')}>
+    <BttCrmModuleShell
+      tag="Заказы"
+      title="Архив сделок"
+      subtitle={`Всего: ${filteredDeals.length} · Сумма: ${totalLabel}`}
+      actions={
+        <>
+          <Button variant="outline" size="icon" onClick={() => navigate('/deals')} title="Назад к заказам">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Архив сделок</h2>
-            <p className="text-muted-foreground text-sm">
-              Всего: {filteredDeals.length} • Сумма: {new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', minimumFractionDigits: 0 }).format(totalAmount)}
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <Button variant="outline" onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" />
             Экспорт
           </Button>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 items-end sm:items-center bg-white p-4 rounded-lg border shadow-sm">
+      <div className="flex flex-col sm:flex-row gap-4 items-end sm:items-center tasklab-card p-4">
         <div className="grid gap-2 w-full sm:w-auto">
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -206,11 +201,11 @@ export default function DealsArchive() {
       </div>
 
       {/* Table */}
-      <div className="border rounded-md bg-white shadow-sm overflow-hidden flex-1">
+      <div className="tasklab-card border-0 overflow-hidden flex-1">
         <div className="overflow-auto h-full">
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50 hover:bg-slate-50">
+              <TableRow className="bg-neutral-50 hover:bg-neutral-50">
                 <TableHead>Название</TableHead>
                 <TableHead>Клиент</TableHead>
                 <TableHead>Сумма</TableHead>
@@ -233,7 +228,7 @@ export default function DealsArchive() {
                 </TableRow>
               ) : (
                 filteredDeals.map((deal) => (
-                  <TableRow key={deal.id} className="hover:bg-slate-50">
+                  <TableRow key={deal.id} className="hover:bg-neutral-50">
                     <TableCell className="font-medium">
                       <div className="flex flex-col">
                         <span>{deal.title}</span>
@@ -249,7 +244,7 @@ export default function DealsArchive() {
                         <span>{deal.companies?.name || '—'}</span>
                         <div className="flex flex-col gap-0.5">
                             <span className="text-xs text-muted-foreground">{deal.contacts?.email}</span>
-                            {deal.contacts?.phone && <span className="text-xs text-slate-500">{deal.contacts.phone}</span>}
+                            {deal.contacts?.phone && <span className="text-xs text-neutral-500">{deal.contacts.phone}</span>}
                         </div>
                       </div>
                     </TableCell>
@@ -271,6 +266,6 @@ export default function DealsArchive() {
           </Table>
         </div>
       </div>
-    </div>
+    </BttCrmModuleShell>
   );
 }

@@ -1,6 +1,5 @@
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { crmUrl, authHeaders } from '../../lib/crmApi.ts';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
@@ -8,7 +7,7 @@ import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogTrigger } from '../../components/ui/dialog';
 import { Label } from '../../components/ui/label';
-import { Plus, Search, DollarSign, Calendar as CalendarIcon, MoreHorizontal, ArrowUpRight, ArrowDownLeft, Trash2, FileText, CheckCircle2, AlertCircle, ChevronDown, Wand2, Download } from 'lucide-react';
+import { Plus, Search, DollarSign, Calendar as CalendarIcon, MoreHorizontal, ArrowUpRight, ArrowDownLeft, Trash2, FileText, CheckCircle2, AlertCircle, ChevronDown, Download, CircleCheck } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { crm } from "@/lib/crmClient.ts";
 import { format, parseISO, isSameMonth, subMonths, isSameYear, startOfMonth, endOfMonth, startOfYear, isWithinInterval } from 'date-fns';
@@ -33,6 +32,7 @@ import {
     DropdownMenuTrigger 
 } from '../../components/ui/dropdown-menu';
 import { Pencil } from 'lucide-react';
+import { TaskLabPage, TaskLabStat } from '../../components/tasklab';
 
 export default function Deals() {
   const { setFocus, clearFocus } = useCrmAiClient();
@@ -414,25 +414,45 @@ export default function Deals() {
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-8 max-w-[1600px] mx-auto pb-24">
-      
-      {/* Mobile Header & Actions */}
+    <TaskLabPage
+      tag="Заказы"
+      title="Заказы"
+      subtitle="Сделки, поступления и контроль оплат"
+      className="p-4 md:p-8 pb-24"
+      actions={
+        <div className="btt-hero-toolbar hidden md:flex">
+          <div className="btt-hero-search">
+            <Search aria-hidden />
+            <input
+              placeholder="Поиск сделки..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <button type="button" className="btt-hero-tool" onClick={handlePayAll} title="Автоматически погасить все долги">
+            <CircleCheck aria-hidden />
+            Погасить всё
+          </button>
+          <button type="button" className="btt-hero-tool btt-hero-tool--icon" onClick={handleExport} title="Экспорт в CSV">
+            <Download aria-hidden />
+          </button>
+          <CreateDealDialog onSuccess={() => fetchData(true)} />
+        </div>
+      }
+    >
+      <div className="space-y-8">
+      {/* Mobile Actions */}
       <div className="md:hidden space-y-4">
-          <div className="flex justify-between items-center">
-              <div>
-                  <h1 className="text-2xl font-bold text-slate-900">Сделки</h1>
-                  <p className="text-xs text-slate-500">Финансы и контроль</p>
-              </div>
-              <div className="flex gap-2">
+          <div className="flex justify-end items-center gap-2">
                   <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="icon" className="h-10 w-10 rounded-full border-slate-200">
-                              <MoreHorizontal className="h-5 w-5 text-slate-500" />
+                          <Button variant="outline" size="icon" className="h-10 w-10 rounded-full border-neutral-200">
+                              <MoreHorizontal className="h-5 w-5 text-neutral-500" />
                           </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={handlePayAll}>
-                              <Wand2 className="h-4 w-4 mr-2" /> Погасить всё
+                              <CircleCheck className="h-4 w-4 mr-2" /> Погасить всё
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={handleExport}>
                               <Download className="h-4 w-4 mr-2" /> Экспорт CSV
@@ -440,98 +460,49 @@ export default function Deals() {
                       </DropdownMenuContent>
                   </DropdownMenu>
                   <CreateDealDialog onSuccess={() => fetchData(true)} trigger={
-                      <Button size="icon" className="h-10 w-10 rounded-full bg-slate-900 shadow-lg shadow-slate-900/20">
+                      <Button size="icon" className="h-10 w-10 rounded-full bg-neutral-900 shadow-lg shadow-neutral-900/20">
                           <Plus className="h-5 w-5" />
                       </Button>
                   } />
               </div>
-          </div>
           
           <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
               <Input 
                   placeholder="Поиск по названию..." 
-                  className="pl-9 w-full bg-white border-slate-200 rounded-xl h-11 shadow-sm"
+                  className="pl-9 w-full bg-white border-neutral-200 rounded-[1.75rem] h-11 shadow-sm"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
               />
           </div>
       </div>
 
-      {/* Desktop Header */}
-      <div className="hidden md:flex justify-between items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Финансы сделок</h1>
-          <p className="text-slate-500 mt-1">Контроль поступлений и кассовых разрывов</p>
-        </div>
-        <div className="flex gap-3">
-             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input 
-                    placeholder="Поиск сделки..." 
-                    className="pl-9 w-64 bg-white"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-             </div>
-             <Button variant="outline" className="text-slate-500 hover:text-emerald-600 border-dashed" onClick={handlePayAll} title="Автоматически погасить все долги">
-                <Wand2 className="h-4 w-4 mr-2" />
-                Погасить всё
-             </Button>
-             <Button variant="outline" className="text-slate-500 hover:text-blue-600 border-dashed" onClick={handleExport} title="Экспорт в CSV">
-                <Download className="h-4 w-4" />
-             </Button>
-             <CreateDealDialog onSuccess={() => fetchData(true)} />
-        </div>
-      </div>
-
       {/* Stats Summary - Hide Scrollbar */}
       <div className="flex overflow-x-auto pb-2 gap-4 md:grid md:grid-cols-3 md:gap-6 snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <Card className="bg-slate-900 text-white border-none shadow-lg min-w-[75vw] md:min-w-0 snap-center">
-            <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-300">Ожидаемая выручка</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="text-3xl font-bold">
-                    {new Intl.NumberFormat('uz-UZ').format(
-                        summary.expectedRevenue
-                    )}
-                </div>
-                <div className="text-xs text-slate-400 mt-1">Сумма контрактов (отображаемых)</div>
-            </CardContent>
-        </Card>
-        
-        <Card className="bg-emerald-600 text-white border-none shadow-lg min-w-[75vw] md:min-w-0 snap-center">
-            <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-emerald-100">Фактически получено</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="text-3xl font-bold">
-                    {new Intl.NumberFormat('uz-UZ').format(
-                        summary.receivedRevenue
-                    )}
-                </div>
-                <div className="text-xs text-emerald-100 mt-1">Оплаты по отображаемым сделкам</div>
-            </CardContent>
-        </Card>
-
-        <Card className="bg-white border-slate-200 shadow-sm min-w-[75vw] md:min-w-0 snap-center">
-            <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-500">Дебиторская задолженность</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="text-3xl font-bold text-red-500">
-                    {new Intl.NumberFormat('uz-UZ').format(
-                        summary.debtTotal
-                    )}
-                </div>
-                <div className="text-xs text-slate-400 mt-1">Долг по отображаемым сделкам</div>
-            </CardContent>
-        </Card>
+        <TaskLabStat
+          variant="dark"
+          className="min-w-[75vw] md:min-w-0 snap-center"
+          label="Ожидаемая выручка"
+          value={new Intl.NumberFormat('uz-UZ').format(summary.expectedRevenue)}
+          hint="Сумма контрактов (отображаемых)"
+        />
+        <TaskLabStat
+          variant="lime"
+          className="min-w-[75vw] md:min-w-0 snap-center"
+          label="Фактически получено"
+          value={new Intl.NumberFormat('uz-UZ').format(summary.receivedRevenue)}
+          hint="Оплаты по отображаемым сделкам"
+        />
+        <TaskLabStat
+          className="min-w-[75vw] md:min-w-0 snap-center"
+          label="Дебиторская задолженность"
+          value={<span className="text-red-500">{new Intl.NumberFormat('uz-UZ').format(summary.debtTotal)}</span>}
+          hint="Долг по отображаемым сделкам"
+        />
       </div>
 
       {/* Filters Toolbar - Mobile Optimized */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-transparent md:bg-white md:p-1.5 md:rounded-[2rem] md:border md:border-slate-200 md:shadow-sm md:px-6">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-transparent md:bg-white md:p-1.5 md:rounded-[2rem] md:border md:border-neutral-200 md:shadow-sm md:px-6">
         
         {/* Mobile Filter Chips */}
         <div className="flex flex-col gap-3 md:hidden w-full">
@@ -539,20 +510,20 @@ export default function Deals() {
             <div className="flex w-full gap-2">
                  <button
                     onClick={() => setFilterStatus('all')}
-                    className={`flex-1 flex justify-center items-center py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    className={`flex-1 flex justify-center items-center py-2.5 rounded-[1.75rem] text-sm font-medium transition-all ${
                         filterStatus === 'all' 
-                        ? 'bg-slate-900 text-white shadow-md shadow-slate-900/10' 
-                        : 'bg-white border border-slate-200 text-slate-600'
+                        ? 'bg-neutral-900 text-white shadow-md shadow-neutral-900/10' 
+                        : 'bg-white border border-neutral-200 text-neutral-600'
                     }`}
                  >
                     Все
                  </button>
                  <button
                     onClick={() => setFilterStatus('debt')}
-                    className={`flex-1 flex justify-center items-center py-2.5 rounded-xl text-sm font-medium transition-all gap-1.5 ${
+                    className={`flex-1 flex justify-center items-center py-2.5 rounded-[1.75rem] text-sm font-medium transition-all gap-1.5 ${
                         filterStatus === 'debt' 
                         ? 'bg-orange-100 text-orange-800 border-transparent' 
-                        : 'bg-white border border-slate-200 text-slate-600'
+                        : 'bg-white border border-neutral-200 text-neutral-600'
                     }`}
                  >
                     <AlertCircle className="w-3.5 h-3.5" />
@@ -560,10 +531,10 @@ export default function Deals() {
                  </button>
                  <button
                     onClick={() => setFilterStatus('paid')}
-                    className={`flex-1 flex justify-center items-center py-2.5 rounded-xl text-sm font-medium transition-all gap-1.5 ${
+                    className={`flex-1 flex justify-center items-center py-2.5 rounded-[1.75rem] text-sm font-medium transition-all gap-1.5 ${
                         filterStatus === 'paid' 
-                        ? 'bg-emerald-100 text-emerald-800 border-transparent' 
-                        : 'bg-white border border-slate-200 text-slate-600'
+                        ? 'bg-[var(--tasklab-lime)]/25 text-neutral-900 border-transparent' 
+                        : 'bg-white border border-neutral-200 text-neutral-600'
                     }`}
                  >
                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -574,10 +545,10 @@ export default function Deals() {
              {/* Date Filter - Full Width Row */}
              <Dialog>
                 <DialogTrigger asChild>
-                    <button className={`w-full flex items-center justify-center py-2.5 rounded-xl text-sm font-medium transition-all gap-2 ${
+                    <button className={`w-full flex items-center justify-center py-2.5 rounded-[1.75rem] text-sm font-medium transition-all gap-2 ${
                         dateRange?.from 
-                        ? 'bg-blue-50 text-blue-700 border border-blue-100' 
-                        : 'bg-white border border-slate-200 text-slate-600'
+                        ? 'bg-[var(--tasklab-lime)]/15 text-neutral-900 border border-neutral-200' 
+                        : 'bg-white border border-neutral-200 text-neutral-600'
                     }`}>
                         <CalendarIcon className="w-4 h-4" />
                         {getFilterLabel()}
@@ -592,7 +563,7 @@ export default function Deals() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex flex-col">
-                         <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50/50 border-y border-slate-100">
+                         <div className="grid grid-cols-2 gap-2 p-3 bg-neutral-50/50 border-y border-neutral-100">
                              <Button 
                                  variant="outline" 
                                  size="sm"
@@ -647,20 +618,20 @@ export default function Deals() {
             <TabsList className="h-10 bg-transparent p-0 gap-1">
                 <TabsTrigger 
                     value="all" 
-                    className="data-[state=active]:bg-slate-900 data-[state=active]:text-white text-slate-500 rounded-full px-4 transition-all"
+                    className="data-[state=active]:bg-neutral-900 data-[state=active]:text-white text-neutral-500 rounded-full px-4 transition-all"
                 >
                     Все сделки
                 </TabsTrigger>
                 <TabsTrigger 
                     value="debt" 
-                    className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-700 text-slate-500 rounded-full px-4 gap-2 transition-all"
+                    className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-700 text-neutral-500 rounded-full px-4 gap-2 transition-all"
                 >
                     <AlertCircle className="w-4 h-4" />
                     С долгами
                 </TabsTrigger>
                 <TabsTrigger 
                     value="paid" 
-                    className="data-[state=active]:bg-emerald-100 data-[state=active]:text-emerald-700 text-slate-500 rounded-full px-4 gap-2 transition-all"
+                    className="data-[state=active]:bg-[var(--tasklab-lime)]/25 data-[state=active]:text-neutral-900 text-neutral-500 rounded-full px-4 gap-2 transition-all"
                 >
                     <CheckCircle2 className="w-4 h-4" />
                     Оплачены
@@ -668,19 +639,19 @@ export default function Deals() {
             </TabsList>
         </Tabs>
 
-        <div className="hidden md:flex items-center gap-2 w-full md:w-auto md:border-l md:border-slate-200 md:pl-4 md:ml-2">
+        <div className="hidden md:flex items-center gap-2 w-full md:w-auto md:border-l md:border-neutral-200 md:pl-4 md:ml-2">
             <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant="ghost" className="h-10 gap-2 text-sm font-medium hover:bg-slate-50 rounded-full px-4">
-                        <CalendarIcon className="w-4 h-4 text-slate-500" />
-                        <span className="capitalize text-slate-900">{getFilterLabel()}</span>
-                        <ChevronDown className="w-3 h-3 text-slate-400 opacity-50" />
+                    <Button variant="ghost" className="h-10 gap-2 text-sm font-medium hover:bg-neutral-50 rounded-full px-4">
+                        <CalendarIcon className="w-4 h-4 text-neutral-500" />
+                        <span className="capitalize text-neutral-900">{getFilterLabel()}</span>
+                        <ChevronDown className="w-3 h-3 text-neutral-400 opacity-50" />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 rounded-xl shadow-xl" align="end">
+                <PopoverContent className="w-auto p-0 rounded-[1.75rem] shadow-xl" align="end">
                     <div className="flex flex-col sm:flex-row">
-                        <div className="border-b sm:border-b-0 sm:border-r border-slate-100 p-2 flex flex-col gap-1 min-w-[140px] bg-slate-50/50">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1 mb-1">Период</div>
+                        <div className="border-b sm:border-b-0 sm:border-r border-neutral-100 p-2 flex flex-col gap-1 min-w-[140px] bg-neutral-50/50">
+                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-2 py-1 mb-1">Период</div>
                             <Button 
                                 variant="ghost" 
                                 className="justify-start text-xs font-medium h-8 px-2"
@@ -702,7 +673,7 @@ export default function Deals() {
                             >
                                 С начала года
                             </Button>
-                            <div className="h-px bg-slate-200 my-1 mx-2" />
+                            <div className="h-px bg-neutral-200 my-1 mx-2" />
                             <Button 
                                 variant="ghost" 
                                 className="justify-start text-xs font-medium h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -735,13 +706,13 @@ export default function Deals() {
               {Array.from({ length: 4 }).map((_, idx) => (
                 <div
                   key={idx}
-                  className="h-36 rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 animate-pulse"
+                  className="h-36 rounded-2xl border border-neutral-200 bg-gradient-to-r from-neutral-100 via-neutral-50 to-neutral-100 animate-pulse"
                 />
               ))}
             </div>
         ) : filteredDeals.length === 0 ? (
-            <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                <p className="text-slate-500">Сделки не найдены</p>
+            <div className="text-center py-12 tasklab-card-dashed">
+                <p className="text-neutral-500">Сделки не найдены</p>
             </div>
         ) : (
             <AnimatePresence>
@@ -775,7 +746,7 @@ export default function Deals() {
       </div>
       {!loading && hasMoreDeals && (
         <div ref={loadMoreDealsRef} className="h-10 flex items-center justify-center">
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-neutral-400">
             Загружено {visibleDeals.length} из {filteredDeals.length}
           </span>
         </div>
@@ -785,18 +756,18 @@ export default function Deals() {
       <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
         <DialogContent className="max-w-md rounded-2xl p-6">
             <DialogHeader className="mb-4">
-                <DialogTitle className="text-xl font-bold text-slate-900">Внести оплату</DialogTitle>
-                <DialogDescription className="text-slate-500">
+                <DialogTitle className="text-xl font-bold text-neutral-900">Внести оплату</DialogTitle>
+                <DialogDescription className="text-neutral-500">
                     {selectedDeal ? `По сделке: ${selectedDeal.title}` : 'Укажите сумму и дату оплаты'}
                 </DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-2">
                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right font-medium text-slate-600">Сумма</Label>
+                    <Label className="text-right font-medium text-neutral-600">Сумма</Label>
                     <div className="col-span-3 relative">
                         <Input 
                             type="number" 
-                            className="bg-slate-50 border-slate-200 rounded-xl pr-14 h-10" 
+                            className="bg-neutral-50 border-neutral-200 rounded-[1.75rem] pr-14 h-10" 
                             placeholder="0"
                             value={newPayment.amount}
                             onChange={(e) => setNewPayment({...newPayment, amount: e.target.value})}
@@ -805,7 +776,7 @@ export default function Deals() {
                          {selectedDeal && (
                              <button 
                                 type="button"
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-600 px-2 py-1 rounded-md font-bold transition-colors shadow-sm"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] bg-neutral-200 hover:bg-neutral-300 text-neutral-600 px-2 py-1 rounded-md font-bold transition-colors shadow-sm"
                                 onClick={() => {
                                     const stats = getDealStats(selectedDeal);
                                     if (stats.balance > 0) {
@@ -820,18 +791,18 @@ export default function Deals() {
                     </div>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right font-medium text-slate-600">Дата</Label>
+                    <Label className="text-right font-medium text-neutral-600">Дата</Label>
                     <Input 
                         type="date" 
-                        className="col-span-3 bg-slate-50 border-slate-200 rounded-xl h-10"
+                        className="col-span-3 bg-neutral-50 border-neutral-200 rounded-[1.75rem] h-10"
                         value={newPayment.date}
                         onChange={(e) => setNewPayment({...newPayment, date: e.target.value})}
                     />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right font-medium text-slate-600">Примеч.</Label>
+                    <Label className="text-right font-medium text-neutral-600">Примеч.</Label>
                     <Input 
-                        className="col-span-3 bg-slate-50 border-slate-200 rounded-xl h-10" 
+                        className="col-span-3 bg-neutral-50 border-neutral-200 rounded-[1.75rem] h-10" 
                         placeholder="Например: Аванс"
                         value={newPayment.note}
                         onChange={(e) => setNewPayment({...newPayment, note: e.target.value})}
@@ -842,13 +813,13 @@ export default function Deals() {
                 <Button 
                     variant="ghost" 
                     onClick={() => setIsPaymentOpen(false)}
-                    className="text-slate-500 hover:text-slate-900"
+                    className="text-neutral-500 hover:text-neutral-900"
                 >
                     Отмена
                 </Button>
                 <Button 
                     onClick={handleAddPayment} 
-                    className="bg-slate-900 text-white hover:bg-slate-800 rounded-xl px-6"
+                    className="bg-neutral-900 text-white hover:bg-neutral-800 rounded-[1.75rem] px-6"
                 >
                     Сохранить
                 </Button>
@@ -880,6 +851,7 @@ export default function Deals() {
         onPaymentAdded={() => fetchData(true)}
         onPaymentDeleted={handleDeletePayment}
       />
-    </div>
+      </div>
+    </TaskLabPage>
   );
 }

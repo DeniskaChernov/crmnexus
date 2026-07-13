@@ -6,7 +6,6 @@ import {
   Navigate,
 } from "react-router-dom";
 import { Toaster } from "sonner@2.0.3";
-import { Loader2 } from "lucide-react";
 import AuthGuard from "./components/AuthGuard";
 
 const loadLayout = () => import("./components/Layout");
@@ -26,6 +25,8 @@ const loadRecipes = () => import("./pages/Recipes");
 const loadProductionCalendar = () => import("./pages/ProductionCalendar");
 const loadLeads = () => import("./pages/crm/Leads");
 const loadSalesAnalytics = () => import("./pages/SalesAnalytics");
+const loadQrHub = () => import("./pages/qr/QrHub");
+const loadQrCoilDetail = () => import("./pages/qr/QrCoilDetail");
 const loadGlobalSearch = () => import("./components/GlobalSearch");
 
 const Layout = lazy(loadLayout);
@@ -45,17 +46,16 @@ const Recipes = lazy(loadRecipes);
 const ProductionCalendar = lazy(loadProductionCalendar);
 const Leads = lazy(loadLeads);
 const SalesAnalytics = lazy(loadSalesAnalytics);
+const QrHub = lazy(loadQrHub);
+const QrCoilDetail = lazy(loadQrCoilDetail);
 const GlobalSearch = lazy(loadGlobalSearch);
 const GlobalHelp = lazy(() =>
   import("./components/GlobalHelp").then((m) => ({ default: m.GlobalHelp })),
 );
 function AppFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100">
-      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <Loader2 className="h-5 w-5 animate-spin text-slate-700" />
-        <span className="text-sm text-slate-600">Загрузка интерфейса…</span>
-      </div>
+    <div className="btt-crm-body min-h-screen flex items-center justify-center">
+      <div className="btt-module-content px-6 py-4 text-sm">Загрузка интерфейса…</div>
     </div>
   );
 }
@@ -115,6 +115,8 @@ export default function App() {
                 path="sales-analytics"
                 element={<SalesAnalytics />}
               />
+              <Route path="qr" element={<QrHub />} />
+              <Route path="qr/coils/:id" element={<QrCoilDetail />} />
             </Route>
 
             <Route

@@ -1,6 +1,8 @@
 node_modules/
 build/
 dist/
+_import/
+.ref-btt-crm/
 .env
 .env.local
 .env.*.local

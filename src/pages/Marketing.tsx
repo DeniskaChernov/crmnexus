@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+﻿import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { BttCrmModuleShell } from '../components/btt-ref/BttCrmModuleShell.tsx';
 import { crmUrl, authHeaders } from '../lib/crmApi.ts';
 import { 
   Card, 
@@ -648,21 +649,18 @@ export default function Marketing() {
   };
 
   return (
-    <div className="space-y-8 pb-10">
-      
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Маркетинг Enterprise</h1>
-          <p className="text-slate-500 mt-1">Центр управления ростом и планирования</p>
-        </div>
+    <BttCrmModuleShell
+      tag="Аналитика"
+      title="Аналитика"
+      subtitle="Центр управления ростом и планирования"
+      actions={
         <div className="flex flex-col md:flex-row gap-3">
              <Popover>
                <PopoverTrigger asChild>
                  <Button
                    variant={"outline"}
                    className={cn(
-                     "w-[240px] justify-start text-left font-normal bg-white border-slate-300",
+                     "w-[240px] justify-start text-left font-normal bg-white border-neutral-300",
                      !dateRange && "text-muted-foreground"
                    )}
                  >
@@ -708,11 +706,11 @@ export default function Marketing() {
 
              <Dialog open={isTargetDialogOpen} onOpenChange={setIsTargetDialogOpen}>
                <DialogTrigger asChild>
-                 <Button variant="outline" className="border-slate-300">
+                 <Button variant="outline" className="border-neutral-300">
                    <Target className="mr-2 h-4 w-4" /> Цель: {formatLargeNumber(Number(monthlyTarget) || 0)}
                  </Button>
                </DialogTrigger>
-               <DialogContent>
+               <DialogContent className="tasklab-card border-0">
                  <DialogHeader>
                    <DialogTitle>Установить цель по продажам</DialogTitle>
                    <DialogDescription>Укажите желаемую сумму продаж на текущий месяц</DialogDescription>
@@ -722,22 +720,22 @@ export default function Marketing() {
                    <Input type="number" value={monthlyTarget} onChange={(e) => setMonthlyTarget(e.target.value)} className="mt-2"/>
                  </div>
                  <DialogFooter>
-                   <Button onClick={handleUpdateTarget}>Сохранить</Button>
+                   <Button onClick={handleUpdateTarget} className="bg-neutral-900 hover:bg-neutral-800 text-white">Сохранить</Button>
                  </DialogFooter>
                </DialogContent>
              </Dialog>
 
-             <Button variant="outline" className="border-slate-300" onClick={handleGenerateExampleData}>
+             <Button variant="outline" className="border-neutral-300" onClick={handleGenerateExampleData}>
                  <Wand2 className="mr-2 h-4 w-4" /> Демо-данные
              </Button>
 
              <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-slate-900 text-white">
+                <Button className="bg-neutral-900 text-white">
                   <Plus className="mr-2 h-4 w-4" /> Добавить отчет
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-lg">
+              <DialogContent className="tasklab-card border-0 max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Импорт данных</DialogTitle>
                   <DialogDescription>Заполните форму или загрузите CSV</DialogDescription>
@@ -781,20 +779,21 @@ export default function Marketing() {
                         <div className="grid gap-2"><Label>Продажи (шт)</Label><Input type="number" value={newReport.purchases} onChange={e => setNewReport({...newReport, purchases: e.target.value})} /></div>
                       </div>
                     </div>
-                    <DialogFooter className="mt-4"><Button onClick={handleManualImport}>Сохранить</Button></DialogFooter>
+                    <DialogFooter className="mt-4"><Button onClick={handleManualImport} className="bg-neutral-900 hover:bg-neutral-800 text-white">Сохранить</Button></DialogFooter>
                   </TabsContent>
                   <TabsContent value="file">
-                     <div className="bg-slate-50 border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center">
-                        <Upload className="h-8 w-8 text-slate-400 mb-2" />
+                     <div className="bg-neutral-50 border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center">
+                        <Upload className="h-8 w-8 text-neutral-400 mb-2" />
                         <Input type="file" accept=".csv" onChange={(e) => setFileToUpload(e.target.files ? e.target.files[0] : null)} />
                      </div>
-                     <DialogFooter className="mt-4"><Button onClick={handleFileImport} disabled={!fileToUpload}>Импортировать</Button></DialogFooter>
+                     <DialogFooter className="mt-4"><Button onClick={handleFileImport} disabled={!fileToUpload} className="bg-neutral-900 hover:bg-neutral-800 text-white">Импортировать</Button></DialogFooter>
                   </TabsContent>
                 </Tabs>
               </DialogContent>
             </Dialog>
         </div>
-      </div>
+      }
+    >
 
       <Tabs defaultValue="dashboard">
         <TabsList>
@@ -808,12 +807,12 @@ export default function Marketing() {
           {/* Top KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <Card 
-              className="h-full flex flex-col justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              className="tasklab-card border-0 h-full flex flex-col justify-between cursor-pointer hover:bg-neutral-50 transition-colors"
               onClick={() => setSelectedMetric('revenue')}
             >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-500">Продажи (Месяц)</CardTitle>
-                    <DollarSign className="h-4 w-4 text-slate-500" />
+                    <CardTitle className="text-sm font-medium text-neutral-500">Продажи (Месяц)</CardTitle>
+                    <DollarSign className="h-4 w-4 text-neutral-500" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{formatLargeNumber(totals.revenue)}</div>
@@ -822,29 +821,29 @@ export default function Marketing() {
                         {Math.abs(revenueGrowth).toFixed(1)}% к прошлому мес.
                     </p>
                     <Progress value={targetProgress} className="h-1 mt-3" />
-                    <p className="text-[10px] text-right text-slate-400 mt-1">{targetProgress.toFixed(0)}% от плана</p>
+                    <p className="text-[10px] text-right text-neutral-400 mt-1">{targetProgress.toFixed(0)}% от плана</p>
                 </CardContent>
             </Card>
             <Card 
-              className="h-full flex flex-col justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              className="tasklab-card border-0 h-full flex flex-col justify-between cursor-pointer hover:bg-neutral-50 transition-colors"
               onClick={() => setSelectedMetric('roas')}
             >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-500">ROAS</CardTitle>
-                    <TrendingUp className="h-4 w-4 text-slate-500" />
+                    <CardTitle className="text-sm font-medium text-neutral-500">ROAS</CardTitle>
+                    <TrendingUp className="h-4 w-4 text-neutral-500" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{roas.toFixed(0)}%</div>
-                    <p className="text-xs text-slate-500 mt-1">Окупаемость рекламы</p>
+                    <p className="text-xs text-neutral-500 mt-1">Окупаемость рекламы</p>
                 </CardContent>
             </Card>
             <Card 
-              className="h-full flex flex-col justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              className="tasklab-card border-0 h-full flex flex-col justify-between cursor-pointer hover:bg-neutral-50 transition-colors"
               onClick={() => setSelectedMetric('leads')}
             >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-500">Лиды</CardTitle>
-                    <Users className="h-4 w-4 text-slate-500" />
+                    <CardTitle className="text-sm font-medium text-neutral-500">Лиды</CardTitle>
+                    <Users className="h-4 w-4 text-neutral-500" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{totals.leads}</div>
@@ -855,16 +854,16 @@ export default function Marketing() {
                 </CardContent>
             </Card>
             <Card 
-              className="h-full flex flex-col justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              className="tasklab-card border-0 h-full flex flex-col justify-between cursor-pointer hover:bg-neutral-50 transition-colors"
               onClick={() => setSelectedMetric('cpl')}
             >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-500">CPL</CardTitle>
-                    <Target className="h-4 w-4 text-slate-500" />
+                    <CardTitle className="text-sm font-medium text-neutral-500">CPL</CardTitle>
+                    <Target className="h-4 w-4 text-neutral-500" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{formatCurrency(cpl)}</div>
-                    <p className="text-xs text-slate-500 mt-1">Стоимость заявки</p>
+                    <p className="text-xs text-neutral-500 mt-1">Стоимость заявки</p>
                 </CardContent>
             </Card>
           </div>
@@ -872,55 +871,55 @@ export default function Marketing() {
           {/* Second Row - Additional Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <Card 
-              className="h-full flex flex-col justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              className="tasklab-card border-0 h-full flex flex-col justify-between cursor-pointer hover:bg-neutral-50 transition-colors"
               onClick={() => setSelectedMetric('ctr')}
             >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-500">CTR</CardTitle>
-                    <Eye className="h-4 w-4 text-slate-500" />
+                    <CardTitle className="text-sm font-medium text-neutral-500">CTR</CardTitle>
+                    <Eye className="h-4 w-4 text-neutral-500" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{clickThroughRate.toFixed(2)}%</div>
-                    <p className="text-xs text-slate-500 mt-1">Кликабельность</p>
+                    <p className="text-xs text-neutral-500 mt-1">Кликабельность</p>
                 </CardContent>
             </Card>
             <Card 
-              className="h-full flex flex-col justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              className="tasklab-card border-0 h-full flex flex-col justify-between cursor-pointer hover:bg-neutral-50 transition-colors"
               onClick={() => setSelectedMetric('conversion')}
             >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-500">Конверсия</CardTitle>
-                    <Users className="h-4 w-4 text-slate-500" />
+                    <CardTitle className="text-sm font-medium text-neutral-500">Конверсия</CardTitle>
+                    <Users className="h-4 w-4 text-neutral-500" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{conversionRate.toFixed(1)}%</div>
-                    <p className="text-xs text-slate-500 mt-1">Клик → Лид</p>
+                    <p className="text-xs text-neutral-500 mt-1">Клик → Лид</p>
                 </CardContent>
             </Card>
             <Card 
-              className="h-full flex flex-col justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              className="tasklab-card border-0 h-full flex flex-col justify-between cursor-pointer hover:bg-neutral-50 transition-colors"
               onClick={() => setSelectedMetric('cpc')}
             >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-500">CPC</CardTitle>
-                    <MousePointerClick className="h-4 w-4 text-slate-500" />
+                    <CardTitle className="text-sm font-medium text-neutral-500">CPC</CardTitle>
+                    <MousePointerClick className="h-4 w-4 text-neutral-500" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{formatCurrency(cpc)}</div>
-                    <p className="text-xs text-slate-500 mt-1">Стоимость клика</p>
+                    <p className="text-xs text-neutral-500 mt-1">Стоимость клика</p>
                 </CardContent>
             </Card>
             <Card 
-              className="h-full flex flex-col justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              className="tasklab-card border-0 h-full flex flex-col justify-between cursor-pointer hover:bg-neutral-50 transition-colors"
               onClick={() => setSelectedMetric('cpa')}
             >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-500">CPA</CardTitle>
-                    <ShoppingBag className="h-4 w-4 text-slate-500" />
+                    <CardTitle className="text-sm font-medium text-neutral-500">CPA</CardTitle>
+                    <ShoppingBag className="h-4 w-4 text-neutral-500" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{formatCurrency(cpa)}</div>
-                    <p className="text-xs text-slate-500 mt-1">Стоимость продажи</p>
+                    <p className="text-xs text-neutral-500 mt-1">Стоимость продажи</p>
                 </CardContent>
             </Card>
           </div>
@@ -928,7 +927,7 @@ export default function Marketing() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
              {/* Main Chart Section with Tabs */}
              <Tabs value={activeChartTab} onValueChange={setActiveChartTab} className="lg:col-span-2">
-                 <Card className="h-full">
+                 <Card className="tasklab-card border-0 h-full">
                      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                          <div>
                             <CardTitle>Аналитика продаж</CardTitle>
@@ -974,17 +973,17 @@ export default function Marketing() {
              </Tabs>
 
              {/* Funnel */}
-             <Card className="h-full">
+             <Card className="tasklab-card border-0 h-full">
                  <CardHeader><CardTitle>Воронка</CardTitle></CardHeader>
                  <CardContent>
-                     <div className="space-y-6">
+                     <div className="space-y-4">
                         {funnelData.map((stage, i) => (
                              <div key={stage.name} className="relative">
                                  <div className="flex justify-between text-sm mb-1">
-                                     <span className="flex items-center gap-2 text-slate-600"><stage.icon className="w-4 h-4" />{stage.name}</span>
+                                     <span className="flex items-center gap-2 text-neutral-600"><stage.icon className="w-4 h-4" />{stage.name}</span>
                                      <span className="font-bold">{formatLargeNumber(stage.value)}</span>
                                  </div>
-                                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                 <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
                                      <div 
                                         className="h-full rounded-full transition-all duration-500" 
                                         style={{ 
@@ -1004,7 +1003,7 @@ export default function Marketing() {
               {/* Smart Analysis Component */}
               <div className="lg:col-span-2 space-y-6">
                  {/* Channel Performance Table */}
-                 <Card>
+                 <Card className="tasklab-card border-0">
                     <CardHeader>
                         <CardTitle>Сводка по {filterChannel === 'all' ? 'каналам' : 'кампаниям'}</CardTitle>
                     </CardHeader>
@@ -1022,8 +1021,8 @@ export default function Marketing() {
                                 {chartData.slice(0, 5).map((item) => (
                                     <TableRow key={item.name}>
                                         <TableCell className="font-medium">{item.name}</TableCell>
-                                        <TableCell className="text-right text-slate-500">{formatCurrency(item.spend)}</TableCell>
-                                        <TableCell className="text-right font-bold text-slate-900">{formatCurrency(item.revenue)}</TableCell>
+                                        <TableCell className="text-right text-neutral-500">{formatCurrency(item.spend)}</TableCell>
+                                        <TableCell className="text-right font-bold text-neutral-900">{formatCurrency(item.revenue)}</TableCell>
                                         <TableCell className="text-right">
                                             <Badge variant={item.roas > 300 ? 'default' : item.roas > 100 ? 'secondary' : 'destructive'} className={item.roas > 300 ? 'bg-green-500' : ''}>
                                                 {item.roas}%
@@ -1040,7 +1039,7 @@ export default function Marketing() {
               </div>
 
               {/* Share of Sales */}
-              <Card className="h-full">
+              <Card className="tasklab-card border-0 h-full">
                   <CardHeader><CardTitle>Доля продаж</CardTitle></CardHeader>
                   <CardContent className="flex flex-col items-center">
                       <div ref={setPieChartContainerRef} style={{ width: '100%', height: 250 }} className="relative">
@@ -1063,7 +1062,7 @@ export default function Marketing() {
                               </PieChart>
                           )}
                           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-                              <p className="text-xs text-slate-500">Всего</p>
+                              <p className="text-xs text-neutral-500">Всего</p>
                               <p className="font-bold text-sm">{formatLargeNumber(totals.revenue)}</p>
                           </div>
                       </div>
@@ -1086,7 +1085,7 @@ export default function Marketing() {
         </TabsContent>
 
         <TabsContent value="data">
-             <Card>
+             <Card className="tasklab-card border-0">
                  <CardHeader><CardTitle>Все данные</CardTitle></CardHeader>
                  <CardContent>
                     <Table>
@@ -1106,7 +1105,7 @@ export default function Marketing() {
                                     <TableCell>
                                         <div className="flex flex-col">
                                             <span>{row.campaignName}</span>
-                                            <span className="text-[10px] text-slate-500">{row.channel}</span>
+                                            <span className="text-[10px] text-neutral-500">{row.channel}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right">{formatCurrency(row.spend)}</TableCell>
@@ -1125,7 +1124,7 @@ export default function Marketing() {
         </TabsContent>
       </Tabs>
       <Dialog open={!!selectedMetric} onOpenChange={(open) => !open && setSelectedMetric(null)}>
-        <DialogContent>
+        <DialogContent className="tasklab-card border-0">
           <DialogHeader>
             <DialogTitle>{selectedMetric ? METRIC_DEFINITIONS[selectedMetric].title : ''}</DialogTitle>
             <DialogDescription className="sr-only">
@@ -1135,15 +1134,15 @@ export default function Marketing() {
           <div className="space-y-4">
             <div>
               <h4 className="font-medium mb-1">Что это?</h4>
-              <p className="text-sm text-slate-500">{selectedMetric ? METRIC_DEFINITIONS[selectedMetric].description : ''}</p>
+              <p className="text-sm text-neutral-500">{selectedMetric ? METRIC_DEFINITIONS[selectedMetric].description : ''}</p>
             </div>
             <div>
               <h4 className="font-medium mb-1">Зачем это нужно?</h4>
-              <p className="text-sm text-slate-500">{selectedMetric ? METRIC_DEFINITIONS[selectedMetric].why : ''}</p>
+              <p className="text-sm text-neutral-500">{selectedMetric ? METRIC_DEFINITIONS[selectedMetric].why : ''}</p>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </BttCrmModuleShell>
   );
 }

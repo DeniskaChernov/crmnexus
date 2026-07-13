@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+﻿import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { crmUrl, authHeaders } from "../../lib/crmApi.ts";
@@ -44,7 +44,7 @@ const QUICK_PROMPTS: { label: string; text: string; icon?: "zap" | "target" }[] 
   { label: "Просрочки", text: "Какие просроченные задачи критичны и что сделать сегодня?", icon: "zap" },
   { label: "План месяца", text: "Как идём к плану продаж месяца и что дожать?", icon: "target" },
   { label: "Лиды", text: "Как обработать холодную базу лидов приоритетно?", icon: "zap" },
-  { label: "Производство", text: "Как связать открытые сделки с загрузкой производства?", icon: "target" },
+  { label: "Склад", text: "Как связать открытые сделки с остатками на складе?", icon: "target" },
 ];
 
 interface Message {
@@ -324,7 +324,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
 
   const outerClass =
     variant === "page"
-      ? "flex flex-col h-[calc(100vh-8rem)] bg-white rounded-2xl shadow-md shadow-slate-900/5 border border-slate-200/90 ring-1 ring-slate-100 overflow-hidden transition-shadow duration-300 hover:shadow-lg hover:shadow-indigo-900/5"
+      ? "flex flex-col h-[calc(100vh-8rem)] bg-white rounded-2xl shadow-md shadow-neutral-900/5 border border-neutral-200/90 ring-1 ring-neutral-100 overflow-hidden transition-shadow duration-300 hover:shadow-lg hover:shadow-neutral-900/5"
       : "flex flex-col h-full min-h-0 bg-white overflow-hidden";
 
   const bubbleSpring = { type: "spring" as const, stiffness: 420, damping: 32, mass: 0.85 };
@@ -338,7 +338,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
       >
         <div className={`flex items-center min-w-0 ${variant === "sheet" ? "gap-2" : "gap-3"}`}>
           <motion.div
-            className={`flex items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 shadow-md shrink-0 ring-2 ring-violet-200/60 ${
+            className={`flex items-center justify-center rounded-full bg-gradient-to-br from-neutral-900 to-neutral-800 shadow-md shrink-0 ring-2 ring-[var(--tasklab-lime)]/40 ${
               variant === "sheet" ? "w-8 h-8" : "w-10 h-10"
             }`}
             animate={loading ? { scale: [1, 1.06, 1], rotate: [0, 4, -4, 0] } : { scale: 1, rotate: 0 }}
@@ -349,7 +349,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1
-                className={`font-semibold text-slate-900 truncate ${
+                className={`font-semibold text-neutral-900 truncate ${
                   variant === "sheet" ? "text-sm" : "text-base sm:text-lg"
                 }`}
               >
@@ -359,7 +359,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
                 <motion.span
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="inline-flex items-center gap-1 rounded-full bg-violet-600/10 text-violet-800 border border-violet-200/80 text-[10px] sm:text-[11px] font-medium px-2 py-0.5"
+                  className="inline-flex items-center gap-1 rounded-full bg-[var(--tasklab-lime)]/15 text-neutral-900 border border-[var(--tasklab-lime)]/30 text-[10px] sm:text-[11px] font-medium px-2 py-0.5"
                 >
                   <Target className="h-3 w-3 shrink-0" />
                   <span className="truncate max-w-[9rem] sm:max-w-[12rem]">
@@ -369,7 +369,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
               )}
             </div>
             {variant !== "sheet" && (
-              <p className="text-[11px] sm:text-xs text-slate-500 truncate">
+              <p className="text-[11px] sm:text-xs text-neutral-500 truncate">
                 Данные CRM в контексте каждого ответа · {pageLabel}
               </p>
             )}
@@ -382,7 +382,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
               disabled={historyLoading}
               variant="ghost"
               size="sm"
-              className="text-slate-400 hover:text-red-600 hover:bg-red-50 shrink-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
+              className="text-neutral-400 hover:text-red-600 hover:bg-red-50 shrink-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
             >
               <Trash2 className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Очистить</span>
@@ -396,7 +396,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
 
       <div className="relative flex-1 min-h-0 flex flex-col">
         <div
-          className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 sm:px-6 sm:py-6 bg-slate-50/30 scroll-smooth custom-scrollbar transition-opacity duration-300 ${historyLoading ? "opacity-40 pointer-events-none" : "opacity-100"}`}
+          className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 sm:px-6 sm:py-6 bg-neutral-50/30 scroll-smooth custom-scrollbar transition-opacity duration-300 ${historyLoading ? "opacity-40 pointer-events-none" : "opacity-100"}`}
           ref={scrollRef}
         >
           <div className={`space-y-5 sm:space-y-6 mx-auto ${variant === "page" ? "max-w-4xl" : "max-w-full"}`}>
@@ -412,7 +412,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
                 >
                   {message.role === "assistant" && (
                     <div className="flex items-start shrink-0 pt-0.5">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 shadow-md ring-1 ring-white/40">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-neutral-900 to-neutral-800 shadow-md ring-1 ring-white/40">
                         <Bot className="h-4 w-4 text-white" />
                       </div>
                     </div>
@@ -422,8 +422,8 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
                     layout
                     className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 sm:px-5 sm:py-4 shadow-sm transition-shadow duration-200 hover:shadow-md ${
                       message.role === "user"
-                        ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white ring-1 ring-blue-500/30"
-                        : "bg-white border border-slate-100/90 text-slate-800"
+                        ? "bg-neutral-900 text-white ring-1 ring-neutral-800/30"
+                        : "bg-white border border-neutral-100/90 text-neutral-800"
                     }`}
                   >
                     {message.imageUrl && (
@@ -438,7 +438,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
                     <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
                     <p
                       className={`text-xs mt-2 tabular-nums ${
-                        message.role === "user" ? "text-blue-100/90" : "text-slate-400"
+                        message.role === "user" ? "text-neutral-300" : "text-neutral-400"
                       }`}
                     >
                       {message.timestamp.toLocaleTimeString("ru-RU", {
@@ -450,7 +450,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
 
                   {message.role === "user" && (
                     <div className="flex items-start shrink-0 pt-0.5">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 shadow-md ring-1 ring-white/30">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-neutral-900 shadow-md ring-1 ring-white/30">
                         <User className="h-4 w-4 text-white" />
                       </div>
                     </div>
@@ -466,17 +466,17 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
                 exit={{ opacity: 0 }}
                 className="flex gap-4 justify-start"
               >
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 shadow-md">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-neutral-900 to-neutral-800 shadow-md">
                   <Bot className="h-4 w-4 text-white" />
                 </div>
-                <div className="bg-white border border-slate-100 rounded-2xl px-5 py-4 shadow-sm min-w-[200px]">
+                <div className="bg-white border border-neutral-100 rounded-2xl px-5 py-4 shadow-sm min-w-[200px]">
                   <div className="flex items-center gap-3">
-                    <Loader2 className="h-4 w-4 animate-spin text-violet-500 shrink-0" />
+                    <Loader2 className="h-4 w-4 animate-spin text-neutral-700 shrink-0" />
                     <div className="space-y-1.5 flex-1">
-                      <span className="text-sm text-slate-600 block">Сверяю ответ с данными CRM…</span>
-                      <div className="h-1 rounded-full bg-slate-100 overflow-hidden">
+                      <span className="text-sm text-neutral-600 block">Сверяю ответ с данными CRM…</span>
+                      <div className="h-1 rounded-full bg-neutral-100 overflow-hidden">
                         <motion.div
-                          className="h-full w-1/3 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500"
+                          className="h-full w-1/3 rounded-full bg-gradient-to-r from-[var(--tasklab-lime)] to-[var(--tasklab-lime)]"
                           animate={{ x: ["-100%", "280%"] }}
                           transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
                         />
@@ -497,16 +497,16 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
               exit={{ opacity: 0 }}
               className="absolute inset-0 z-10 flex items-center justify-center bg-white/55 backdrop-blur-[2px]"
             >
-              <div className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/95 px-8 py-6 shadow-lg">
-                <Loader2 className="h-9 w-9 animate-spin text-violet-600" />
-                <p className="text-sm font-medium text-slate-700">Загружаю историю…</p>
+              <div className="flex flex-col items-center gap-3 rounded-2xl border border-neutral-200/80 bg-white/95 px-8 py-6 shadow-lg">
+                <Loader2 className="h-9 w-9 animate-spin text-neutral-900" />
+                <p className="text-sm font-medium text-neutral-700">Загружаю историю…</p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      <div className="p-4 sm:p-6 bg-gradient-to-t from-slate-50/80 to-white border-t border-slate-100/80 shrink-0 transition-colors duration-300">
+      <div className="p-4 sm:p-6 bg-gradient-to-t from-neutral-50/80 to-white border-t border-neutral-100/80 shrink-0 transition-colors duration-300">
         <div className={`mx-auto space-y-3 ${variant === "page" ? "max-w-4xl" : "max-w-full"}`}>
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 custom-scrollbar sm:flex-wrap sm:overflow-visible">
             {QUICK_PROMPTS.map((q) => (
@@ -517,12 +517,12 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
                 whileTap={{ scale: 0.97 }}
                 disabled={loading || historyLoading || !userId}
                 onClick={() => void sendMessage(q.text)}
-                className="inline-flex items-center gap-1.5 shrink-0 rounded-full border border-violet-200/80 bg-white px-3 py-1.5 text-xs font-medium text-violet-900 shadow-sm hover:bg-violet-50 hover:border-violet-300 disabled:opacity-40 disabled:pointer-events-none transition-colors duration-200"
+                className="inline-flex items-center gap-1.5 shrink-0 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-900 shadow-sm hover:bg-[var(--tasklab-lime)]/10 hover:border-[var(--tasklab-lime)]/30 disabled:opacity-40 disabled:pointer-events-none transition-colors duration-200"
               >
                 {q.icon === "zap" ? (
                   <Zap className="h-3.5 w-3.5 text-amber-500" />
                 ) : (
-                  <Target className="h-3.5 w-3.5 text-violet-600" />
+                  <Target className="h-3.5 w-3.5 text-neutral-700" />
                 )}
                 {q.label}
               </motion.button>
@@ -535,7 +535,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
               animate={{ opacity: 1, scale: 1 }}
               className="relative inline-block"
             >
-              <div className="rounded-xl overflow-hidden border border-slate-200 shadow-md w-32 h-32 bg-slate-50 flex items-center justify-center relative ring-2 ring-violet-100">
+              <div className="rounded-xl overflow-hidden border border-neutral-200 shadow-md w-32 h-32 bg-neutral-50 flex items-center justify-center relative ring-2 ring-[var(--tasklab-lime)]/30">
                 <img src={selectedImage} alt="" className="w-full h-full object-cover" />
                 <button
                   type="button"
@@ -566,7 +566,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
                   variant="outline"
                   size="icon"
                   disabled={loading}
-                  className="h-11 w-11 sm:h-12 sm:w-12 border-slate-200 hover:bg-violet-50/80 hover:border-violet-200 text-slate-600 shrink-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
+                  className="h-11 w-11 sm:h-12 sm:w-12 border-neutral-200 hover:bg-[var(--tasklab-lime)]/10 hover:border-[var(--tasklab-lime)]/30 text-neutral-600 shrink-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
                 >
                   <Paperclip className="h-5 w-5" />
                 </Button>
@@ -580,7 +580,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={loading}
-              className="flex-1 bg-slate-50/90 border-slate-200 focus:bg-white focus-visible:ring-violet-200/80 transition-all duration-200 h-11 sm:h-12 text-sm sm:text-base shadow-sm rounded-xl"
+              className="flex-1 bg-neutral-50/90 border-neutral-200 focus:bg-white focus-visible:ring-[var(--tasklab-lime)]/50 transition-all duration-200 h-11 sm:h-12 text-sm sm:text-base shadow-sm rounded-xl"
             />
             <Tooltip>
               <TooltipTrigger asChild>
@@ -589,7 +589,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
                   onClick={() => void sendMessage()}
                   disabled={loading || (!input.trim() && !selectedImage)}
                   size="icon"
-                  className={`h-11 w-11 sm:h-12 sm:w-12 rounded-xl text-white shadow-md shrink-0 transition-all duration-200 bg-gradient-to-br from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 hover:shadow-lg disabled:opacity-45 hover:scale-[1.03] active:scale-95 ${loading ? "crm-ai-send-pulse" : ""}`}
+                  className={`h-11 w-11 sm:h-12 sm:w-12 rounded-xl text-white shadow-md shrink-0 transition-all duration-200 bg-gradient-to-br from-neutral-900 to-neutral-800 hover:from-neutral-800 hover:to-neutral-900 hover:shadow-lg disabled:opacity-45 hover:scale-[1.03] active:scale-95 ${loading ? "crm-ai-send-pulse" : ""}`}
                 >
                   {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                 </Button>
@@ -597,7 +597,7 @@ export function CrmAiChatPanel({ variant = "page" }: CrmAiChatPanelProps) {
               <TooltipContent side="top">Отправить · Enter без Shift</TooltipContent>
             </Tooltip>
           </div>
-          <p className="text-[11px] sm:text-xs text-center text-slate-400 mt-1 sm:mt-2 leading-snug">
+          <p className="text-[11px] sm:text-xs text-center text-neutral-400 mt-1 sm:mt-2 leading-snug">
             Ответы по снимку CRM на момент запроса. Рыночные данные вне системы уточняйте отдельно.
           </p>
         </div>

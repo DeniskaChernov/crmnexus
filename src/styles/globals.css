@@ -25,52 +25,43 @@
 
   /* "Sugar" Design System - Neumorphic/Soft UI (совмещаем с Nexus) */
 
-  /* Base — чуть теплее фон для длительной работы */
-  --background: var(--nexus-shell-mid);
-  --foreground: var(--nexus-ink);
+  /* TaskLab shadcn tokens */
+  --background: var(--tasklab-surface);
+  --foreground: var(--tasklab-ink);
   
-  /* Surface */
   --card: #FFFFFF;
-  --card-foreground: #1A1A1A;
+  --card-foreground: #111111;
   --popover: #FFFFFF;
-  --popover-foreground: #1A1A1A;
+  --popover-foreground: #111111;
   
-  /* Primary — графит/сланец вместо чистого чёрного (лучше сочетается с акцентом) */
-  --primary: var(--nexus-ink);
+  --primary: var(--tasklab-ink);
   --primary-foreground: #ffffff;
   
-  /* Secondary */
-  --secondary: #F0F2F5;
-  --secondary-foreground: #1A1A1A;
+  --secondary: #ebebeb;
+  --secondary-foreground: #111111;
   
-  /* Muted */
-  --muted: #E4E7EB;
-  --muted-foreground: #6B7280;
+  --muted: #e8e8e8;
+  --muted-foreground: #737373;
   
-  /* Accent */
-  --accent: #F0F2F5;
-  --accent-foreground: #1A1A1A;
+  --accent: #f0f0f0;
+  --accent-foreground: #111111;
   
-  /* Functional Colors */
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
   --success: #10B981;
   --warning: #F59E0B;
   
-  /* Borders */
-  --border: #E5E7EB; /* Very subtle borders */
-  --input: #F0F2F5; /* Inputs match background often */
-  --ring: var(--nexus-accent);
+  --border: #e5e5e5;
+  --input: #f0f0f0;
+  --ring: var(--tasklab-lime);
   
-  /* Data Visualization */
-  --chart-1: #0f766e;
-  --chart-2: #2563eb;
-  --chart-3: #7c3aed;
+  --chart-1: #d4f534;
+  --chart-2: #111111;
+  --chart-3: #a3a3a3;
   --chart-4: #f59e0b;
   --chart-5: #ef4444;
   
-  /* Geometry - SugarCRM soft UI */
-  --radius: 1.5rem;
+  --radius: 1.75rem;
   --sugar-bg: #f3f5f9;
   --sugar-card-shadow: 0 4px 24px -4px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
 }
@@ -119,15 +110,37 @@
   }
   
   body {
-    @apply bg-background text-foreground antialiased font-sans selection:bg-teal-700 selection:text-white;
-    color: #475569; /* slate-600 — тело текста */
+    @apply bg-background text-foreground antialiased font-sans selection:bg-neutral-900 selection:text-white;
+    color: #525252;
   }
 
-  /* Headings are darker */
   h1, h2, h3, h4, h5, h6 {
-    color: #111827; /* Slate-900 */
+    color: var(--tasklab-ink);
     @apply font-bold tracking-tight; 
   }
+
+  .btt-module-hero h2 {
+    color: #ffffff;
+  }
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --card: #171717;
+  --card-foreground: #fafafa;
+  --popover: #171717;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #111111;
+  --secondary: #262626;
+  --secondary-foreground: #fafafa;
+  --muted: #262626;
+  --muted-foreground: #a3a3a3;
+  --accent: #262626;
+  --accent-foreground: #fafafa;
+  --border: #262626;
+  --input: #262626;
 }
 
 /* Utilities */
@@ -187,6 +200,51 @@
 .tasklab-topbar {
   @apply rounded-[1.75rem] bg-white/80 backdrop-blur-md border border-white/60;
   box-shadow: 0 2px 16px -4px rgba(0, 0, 0, 0.06);
+}
+
+.tasklab-page {
+  @apply space-y-5 pb-8 max-w-[1600px] mx-auto w-full;
+}
+
+.tasklab-page-hero {
+  @apply rounded-[1.75rem] bg-white/90 backdrop-blur-md p-5 md:p-7 border-0;
+  box-shadow: 0 4px 24px -6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.tasklab-input {
+  @apply rounded-full border-0 bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[var(--tasklab-lime)]/50;
+}
+
+.tasklab-table {
+  @apply w-full text-sm;
+}
+
+.tasklab-table thead th {
+  @apply text-neutral-500 font-semibold text-xs uppercase tracking-wide py-3 px-4 text-left;
+}
+
+.tasklab-table tbody tr {
+  @apply border-b border-neutral-100 hover:bg-neutral-50 transition-colors;
+}
+
+.tasklab-table tbody td {
+  @apply py-3 px-4 text-neutral-700;
+}
+
+.tasklab-badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+}
+
+.tasklab-badge-lime {
+  @apply bg-[var(--tasklab-lime)]/30 text-neutral-900;
+}
+
+.tasklab-badge-dark {
+  @apply bg-neutral-900 text-white;
+}
+
+.tasklab-skeleton {
+  @apply animate-pulse rounded-[1.75rem] bg-neutral-200/80;
 }
 
 /** Фон приложения — мягкий серо-голубой (legacy страницы) */
@@ -308,33 +366,22 @@
   transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/** Карточки дашборда / виджетов — единая оболочка */
+/** @deprecated use tasklab-card */
 .nexus-card {
-  @apply rounded-xl border border-slate-200/90 bg-white shadow-sm;
-  box-shadow:
-    0 1px 2px rgb(15 23 42 / 0.04),
-    0 6px 20px -8px rgb(15 23 42 / 0.08);
+  @apply rounded-[1.75rem] border-0 bg-white;
+  box-shadow: 0 4px 24px -6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .nexus-card:hover {
-  @apply border-teal-100/80 shadow-md;
+  box-shadow: 0 8px 28px -8px rgba(0, 0, 0, 0.12);
 }
 
-/** Герой-секция страницы (заголовок + действия) */
+/** @deprecated use tasklab-page-hero */
 .nexus-page-hero {
-  @apply relative overflow-hidden rounded-xl border border-slate-200/90 bg-white/95 p-5 md:p-7 shadow-sm;
-  box-shadow:
-    0 1px 2px rgb(15 23 42 / 0.04),
-    0 10px 28px -12px rgb(15 118 110 / 0.14);
+  @apply rounded-[1.75rem] bg-white/90 backdrop-blur-md p-5 md:p-7 border-0;
+  box-shadow: 0 4px 24px -6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .nexus-page-hero::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  border-radius: 4px 0 0 4px;
-  background: linear-gradient(180deg, var(--nexus-accent) 0%, #f59e0b 100%);
+  display: none;
 }

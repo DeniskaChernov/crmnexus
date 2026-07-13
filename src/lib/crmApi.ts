@@ -41,25 +41,6 @@ async function tryRefreshToken(): Promise<boolean> {
   } catch {
     /* ignore */
   }
-  try {
-    const res = await fetch(crmUrl("/auth/login"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: "denisblackman2@gmail.com",
-        password: "20260711",
-      }),
-      cache: "no-store",
-    });
-    const body = await res.json().catch(() => ({} as { token?: string }));
-    if (res.ok && body.token) {
-      localStorage.setItem("crm_token", body.token);
-      window.dispatchEvent(new Event("crm-auth"));
-      return true;
-    }
-  } catch {
-    /* ignore */
-  }
   return false;
 }
 

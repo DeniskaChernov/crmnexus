@@ -82,7 +82,7 @@ function SortButton({
       type="button"
       onClick={onClick}
       className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${
-        active ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
+        active ? 'text-neutral-900' : 'text-neutral-400 hover:text-neutral-600'
       }`}
     >
       {label}
@@ -345,13 +345,13 @@ export default function Clients() {
         tabIndex={0}
         onClick={() => setSelectedClient(client)}
         onKeyDown={(e) => e.key === 'Enter' && setSelectedClient(client)}
-        className="group grid grid-cols-1 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_120px_140px_88px] gap-3 md:gap-4 items-center px-4 md:px-5 py-4 border-b border-slate-100 last:border-b-0 hover:bg-slate-50/80 transition-colors cursor-pointer"
+        className="group grid grid-cols-1 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_120px_140px_88px] gap-3 md:gap-4 items-center px-4 md:px-5 py-4 border-b border-neutral-100 last:border-b-0 hover:bg-neutral-50/80 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3 min-w-0">
           <ClientAvatar name={client.name} />
           <div className="min-w-0">
-            <p className="font-semibold text-slate-900 truncate">{client.name}</p>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs text-slate-500">
+            <p className="font-semibold text-neutral-900 truncate">{client.name}</p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs text-neutral-500">
               {client.phone && (
                 <span className="inline-flex items-center gap-1">
                   <Phone className="w-3 h-3 shrink-0" />
@@ -370,24 +370,24 @@ export default function Clients() {
         </div>
 
         <div className="hidden md:block">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
+          <div className="flex items-center justify-between text-xs text-neutral-500 mb-1.5">
             <span>Успешных сделок</span>
-            <span className="font-medium text-slate-700">
+            <span className="font-medium text-neutral-700">
               {stats.wonDeals} / {stats.totalDeals}
             </span>
           </div>
-          <Progress value={stats.winRate} className="h-1.5 bg-slate-100" />
+          <Progress value={stats.winRate} className="h-1.5 bg-neutral-100" />
         </div>
 
         <div className="md:hidden flex items-center gap-2 text-sm">
           <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-100">
             {stats.wonDeals} / {stats.totalDeals}
           </Badge>
-          <span className="text-xs text-slate-400">сделок</span>
+          <span className="text-xs text-neutral-400">сделок</span>
         </div>
 
         <div className="text-left md:text-right">
-          <p className="text-[11px] uppercase tracking-wide text-slate-400 font-medium mb-0.5">LTV</p>
+          <p className="text-[11px] uppercase tracking-wide text-neutral-400 font-medium mb-0.5">LTV</p>
           <p className="font-bold text-emerald-700 tabular-nums text-sm md:text-base whitespace-nowrap">
             {formatUZS(stats.ltv, isMobile)}
           </p>
@@ -397,7 +397,7 @@ export default function Clients() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+            className="h-9 w-9 rounded-lg text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100"
             onClick={() => openEdit(client)}
             aria-label="Редактировать"
           >
@@ -406,7 +406,7 @@ export default function Clients() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
+            className="h-9 w-9 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50"
             onClick={() => handleDelete(client.id)}
             aria-label="Удалить"
           >
@@ -422,15 +422,15 @@ export default function Clients() {
       {/* Панель действий */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
           <Input
             placeholder="Поиск по имени, телефону, email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-11 bg-white border-slate-200 rounded-xl shadow-sm focus-visible:ring-slate-300"
+            className="pl-10 h-11 bg-white border-neutral-200 rounded-[1.75rem] shadow-sm focus-visible:ring-neutral-300"
           />
         </div>
-        <Button onClick={openAdd} className="h-11 rounded-xl bg-slate-900 hover:bg-slate-800 shadow-sm shrink-0">
+        <Button onClick={openAdd} className="h-11 rounded-[1.75rem] bg-neutral-900 hover:bg-neutral-800 shadow-sm shrink-0">
           <Plus className="w-4 h-4 mr-2" />
           Добавить клиента
         </Button>
@@ -439,18 +439,18 @@ export default function Clients() {
       {/* Сводка */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Клиентов', value: summary.count.toString(), icon: Users, tone: 'text-slate-900' },
-          { label: 'Всего сделок', value: summary.totalDeals.toString(), icon: ShoppingBag, tone: 'text-slate-900' },
+          { label: 'Клиентов', value: summary.count.toString(), icon: Users, tone: 'text-neutral-900' },
+          { label: 'Всего сделок', value: summary.totalDeals.toString(), icon: ShoppingBag, tone: 'text-neutral-900' },
           { label: 'Успешных', value: summary.totalWon.toString(), icon: TrendingUp, tone: 'text-emerald-700' },
           { label: 'Суммарный LTV', value: formatUZS(summary.totalLtv, true), icon: Banknote, tone: 'text-emerald-700' },
         ].map((item) => (
-          <Card key={item.label} className="border-slate-200/80 shadow-sm rounded-2xl overflow-hidden">
+          <Card key={item.label} className="tasklab-card overflow-hidden">
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-                <item.icon className="w-5 h-5 text-slate-600" />
+              <div className="w-10 h-10 rounded-[1.75rem] bg-neutral-100 flex items-center justify-center shrink-0">
+                <item.icon className="w-5 h-5 text-neutral-600" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs text-slate-500 font-medium">{item.label}</p>
+                <p className="text-xs text-neutral-500 font-medium">{item.label}</p>
                 <p className={`text-lg font-bold truncate tabular-nums ${item.tone}`}>{item.value}</p>
               </div>
             </CardContent>
@@ -459,31 +459,31 @@ export default function Clients() {
       </div>
 
       {/* Список */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div className="hidden md:grid md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_120px_140px_88px] gap-4 px-5 py-3 bg-slate-50/80 border-b border-slate-100">
+      <div className="tasklab-card overflow-hidden">
+        <div className="hidden md:grid md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_120px_140px_88px] gap-4 px-5 py-3 bg-neutral-50/80 border-b border-neutral-100">
           <SortButton label="Клиент" active={sortField === 'name'} direction={sortDirection} onClick={() => handleSort('name')} />
           <SortButton label="Сделки" active={sortField === 'orders'} direction={sortDirection} onClick={() => handleSort('orders')} />
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Конверсия</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Конверсия</span>
           <SortButton label="LTV" active={sortField === 'ltv'} direction={sortDirection} onClick={() => handleSort('ltv')} />
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 text-right">Действия</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400 text-right">Действия</span>
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-500 gap-3">
-            <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+          <div className="flex flex-col items-center justify-center py-16 text-neutral-500 gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
             <span className="text-sm">Загрузка клиентов…</span>
           </div>
         ) : sortedClients.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-              <Users className="w-7 h-7 text-slate-400" />
+            <div className="w-14 h-14 rounded-[1.75rem] bg-neutral-100 flex items-center justify-center mb-4">
+              <Users className="w-7 h-7 text-neutral-400" />
             </div>
-            <p className="font-medium text-slate-900">Клиенты не найдены</p>
-            <p className="text-sm text-slate-500 mt-1 max-w-sm">
+            <p className="font-medium text-neutral-900">Клиенты не найдены</p>
+            <p className="text-sm text-neutral-500 mt-1 max-w-sm">
               {search ? 'Попробуйте другой запрос или очистите поиск' : 'Добавьте первого клиента, чтобы начать работу'}
             </p>
             {!search && (
-              <Button onClick={openAdd} className="mt-4 rounded-xl" variant="outline">
+              <Button onClick={openAdd} className="mt-4 rounded-[1.75rem]" variant="outline">
                 <Plus className="w-4 h-4 mr-2" />
                 Добавить клиента
               </Button>
@@ -494,10 +494,10 @@ export default function Clients() {
         )}
 
         {!loading && clientsTotal > 0 && (
-          <div className="px-4 pb-3 text-center border-t border-slate-50">
+          <div className="px-4 pb-3 text-center border-t border-neutral-50">
             <div ref={sentinelRef} className="h-3 w-full" aria-hidden />
             {hasMore && (
-              <p className="text-xs text-slate-400 pt-2">
+              <p className="text-xs text-neutral-400 pt-2">
                 Показано {visibleCount} из {clientsTotal}
               </p>
             )}
@@ -506,7 +506,7 @@ export default function Clients() {
       </div>
 
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="rounded-2xl">
+        <DialogContent className="tasklab-card rounded-[1.75rem]">
           <DialogHeader>
             <DialogTitle>{editingClient ? 'Редактировать клиента' : 'Новый клиент'}</DialogTitle>
             <DialogDescription>
@@ -541,7 +541,7 @@ export default function Clients() {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleSave} className="rounded-xl bg-slate-900 hover:bg-slate-800">
+            <Button onClick={handleSave} className="rounded-[1.75rem] bg-neutral-900 hover:bg-neutral-800">
               Сохранить
             </Button>
           </DialogFooter>
@@ -558,7 +558,7 @@ export default function Clients() {
               );
 
               return (
-                <div className="flex flex-col min-h-full bg-slate-50">
+                <div className="flex flex-col min-h-full bg-neutral-50">
                   <SheetHeader className="p-6 bg-white border-b text-left space-y-3">
                     <div className="flex items-center gap-4">
                       <ClientAvatar name={selectedClient.name} />
@@ -571,40 +571,40 @@ export default function Clients() {
 
                   <div className="p-6 space-y-6">
                     <div className="grid grid-cols-2 gap-3">
-                      <Card className="rounded-2xl border-emerald-100 bg-emerald-50/50">
+                      <Card className="tasklab-card rounded-[1.75rem] border-emerald-100 bg-emerald-50/50">
                         <CardContent className="p-4">
                           <p className="text-2xl font-bold text-emerald-700 tabular-nums">{formatUZS(stats.ltv)}</p>
                           <p className="text-xs text-emerald-800/70 mt-1">LTV (всего покупок)</p>
                         </CardContent>
                       </Card>
-                      <Card className="rounded-2xl">
+                      <Card className="tasklab-card rounded-[1.75rem]">
                         <CardContent className="p-4">
-                          <p className="text-2xl font-bold text-slate-900">{stats.wonDeals}</p>
-                          <p className="text-xs text-slate-500 mt-1">Успешных сделок из {stats.totalDeals}</p>
+                          <p className="text-2xl font-bold text-neutral-900">{stats.wonDeals}</p>
+                          <p className="text-xs text-neutral-500 mt-1">Успешных сделок из {stats.totalDeals}</p>
                         </CardContent>
                       </Card>
                     </div>
 
-                    <div className="bg-white rounded-2xl border p-4 space-y-2 text-sm">
-                      <h3 className="font-medium flex items-center gap-2 text-slate-900">
+                    <div className="tasklab-card p-4 space-y-2 text-sm">
+                      <h3 className="font-medium flex items-center gap-2 text-neutral-900">
                         <User className="w-4 h-4" /> Контакты
                       </h3>
                       <div className="flex justify-between py-1">
-                        <span className="text-slate-500">Телефон</span>
+                        <span className="text-neutral-500">Телефон</span>
                         <span className="font-medium">{selectedClient.phone || '—'}</span>
                       </div>
                       <div className="flex justify-between py-1">
-                        <span className="text-slate-500">Email</span>
+                        <span className="text-neutral-500">Email</span>
                         <span className="font-medium">{selectedClient.email || '—'}</span>
                       </div>
                     </div>
 
                     <div className="space-y-3">
-                      <h3 className="font-medium flex items-center gap-2 text-slate-900">
+                      <h3 className="font-medium flex items-center gap-2 text-neutral-900">
                         <ShoppingBag className="w-4 h-4" /> История заказов
                       </h3>
                       {clientDeals.length === 0 ? (
-                        <p className="text-sm text-slate-500 text-center py-6 bg-white rounded-2xl border">
+                        <p className="text-sm text-neutral-500 text-center py-6 tasklab-card">
                           Нет сделок с этим клиентом
                         </p>
                       ) : (
@@ -612,16 +612,16 @@ export default function Clients() {
                           {clientDeals.map((deal) => (
                             <div
                               key={deal.id}
-                              className="bg-white border rounded-xl p-3 flex justify-between items-center gap-3 hover:border-slate-300 transition-colors"
+                              className="tasklab-card p-3 flex justify-between items-center gap-3 hover:border-neutral-300 transition-colors"
                             >
                               <div className="min-w-0">
-                                <p className="font-medium text-sm text-slate-900 truncate">{deal.title}</p>
-                                <p className="text-xs text-slate-500">
+                                <p className="font-medium text-sm text-neutral-900 truncate">{deal.title}</p>
+                                <p className="text-xs text-neutral-500">
                                   {new Date(deal.created_at).toLocaleDateString('ru-RU')}
                                 </p>
                               </div>
                               <div className="text-right shrink-0">
-                                <p className="font-bold text-sm tabular-nums text-slate-900">
+                                <p className="font-bold text-sm tabular-nums text-neutral-900">
                                   {formatUZS(deal.amount)}
                                 </p>
                                 <Badge
@@ -631,7 +631,7 @@ export default function Clients() {
                                       ? 'text-emerald-700 border-emerald-200 bg-emerald-50'
                                       : deal.status === 'lost'
                                         ? 'text-red-600 border-red-200 bg-red-50'
-                                        : 'text-blue-600 border-blue-200 bg-blue-50'
+                                        : 'text-neutral-900 border-neutral-200 bg-[var(--tasklab-lime)]/15'
                                   }`}
                                 >
                                   {deal.status === 'won' ? 'Успех' : deal.status === 'lost' ? 'Проигрыш' : 'В работе'}

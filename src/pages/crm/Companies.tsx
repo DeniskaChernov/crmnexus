@@ -36,6 +36,7 @@ interface Lead {
 }
 
 export default function Companies() {
+  const { setFocus, clearFocus } = useCrmAiClient();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -171,14 +172,14 @@ export default function Companies() {
         );
       case 'cold':
         return (
-          <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+          <span className="inline-flex items-center rounded-full bg-[var(--tasklab-lime)]/25 px-2.5 py-0.5 text-xs font-medium text-neutral-800">
             <Snowflake className="mr-1 h-3 w-3" />
             Холодный
           </span>
         );
       case 'new':
         return (
-            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">
+            <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-800">
               Новый
             </span>
           );
@@ -190,7 +191,7 @@ export default function Companies() {
           );
       default:
         return (
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
+          <span className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-800">
             {status || 'Неизвестно'}
           </span>
         );
@@ -198,21 +199,14 @@ export default function Companies() {
   };
 
   return (
-    <div className="space-y-6 h-full flex flex-col animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">B2B</h2>
-          <p className="text-muted-foreground">Компании и организации</p>
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={exportLeads} className="flex-1 sm:flex-none">
-            <Download className="mr-2 h-4 w-4" />
-            {isMobile ? 'Экспорт' : 'Экспорт'}
-          </Button>
-          <CreateCompanyDialog onSuccess={fetchLeads} />
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2 justify-end">
+        <Button variant="outline" onClick={exportLeads} className="flex-1 sm:flex-none">
+          <Download className="mr-2 h-4 w-4" />
+          {isMobile ? 'Экспорт' : 'Экспорт'}
+        </Button>
+        <CreateCompanyDialog onSuccess={fetchLeads} />
       </div>
-
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -230,7 +224,7 @@ export default function Companies() {
       <div className="flex flex-col space-y-4">
         <div className="flex items-center space-x-2">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-neutral-400" />
             <Input
               placeholder="Поиск по названию, городу или телефону..."
               className="pl-8"
@@ -249,7 +243,7 @@ export default function Companies() {
             >
               Активные
             </TabsTrigger>
-            <TabsTrigger value="cold" className="flex-1 min-w-[4.5rem] data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
+            <TabsTrigger value="cold" className="flex-1 min-w-[4.5rem] data-[state=active]:bg-[var(--tasklab-lime)]/25 data-[state=active]:text-neutral-900">
               <Snowflake className="mr-0 sm:mr-1 h-4 w-4 shrink-0" />
               {!isMobile && 'Холодные'}
             </TabsTrigger>
@@ -268,14 +262,14 @@ export default function Companies() {
             <div className="mt-4 space-y-3">
               {loading ? (
                 <Card>
-                  <CardContent className="py-8 text-center text-muted-foreground">
+                  <CardContent className="py-8 text-center text-neutral-500">
                     Загрузка...
                   </CardContent>
                 </Card>
               ) : filteredLeads.length === 0 ? (
                 <Card>
                   <CardContent className="py-8">
-                    <div className="flex flex-col items-center justify-center text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center text-neutral-500">
                       <User className="h-8 w-8 mb-2 opacity-20" />
                       <p>Компании не найдены</p>
                     </div>
@@ -283,7 +277,7 @@ export default function Companies() {
                 </Card>
               ) : (
                 visibleLeads.map((lead) => (
-                  <Card key={lead.id} className="overflow-hidden">
+                  <Card key={lead.id} className="tasklab-card overflow-hidden">
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex-1">
@@ -295,7 +289,7 @@ export default function Companies() {
                             variant="ghost" 
                             size="sm" 
                             onClick={() => handleEditLead(lead)} 
-                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 h-8 w-8 p-0"
+                            className="text-neutral-900 hover:text-neutral-800 hover:bg-neutral-100 h-8 w-8 p-0"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -309,7 +303,7 @@ export default function Companies() {
                           </Button>
                         </div>
                       </div>
-                      <div className="space-y-1.5 text-sm text-muted-foreground">
+                      <div className="space-y-1.5 text-sm text-neutral-500">
                         {lead.phone && (
                           <div className="flex items-center gap-2">
                             <span className="font-medium">Телефон:</span>
@@ -336,7 +330,7 @@ export default function Companies() {
             </div>
           ) : (
             /* Desktop Table View */
-            <div className="mt-4 rounded-md border bg-white overflow-hidden">
+            <div className="mt-4 tasklab-card rounded-[1.75rem] overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -355,7 +349,7 @@ export default function Companies() {
                     </TableRow>
                   ) : filteredLeads.length === 0 && !error ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center h-32 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center h-32 text-neutral-500">
                         <div className="flex flex-col items-center justify-center">
                           <User className="h-8 w-8 mb-2 opacity-20" />
                           <p>Компании не найдены</p>
@@ -376,7 +370,7 @@ export default function Companies() {
                               variant="ghost" 
                               size="sm" 
                               onClick={() => handleEditLead(lead)} 
-                              className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                              className="text-neutral-900 hover:text-neutral-800 hover:bg-neutral-100"
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -403,7 +397,7 @@ export default function Companies() {
           <div className="text-center">
             <div ref={sentinelRef} className="h-3 w-full" aria-hidden />
             {hasMore && (
-              <p className="text-xs text-muted-foreground pt-1">
+              <p className="text-xs text-neutral-500 pt-1">
                 Загружено {visibleCount} из {leadsTotal}
               </p>
             )}

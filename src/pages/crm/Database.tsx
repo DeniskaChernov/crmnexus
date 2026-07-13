@@ -3,10 +3,11 @@ import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import Clients from './Clients';
 import Companies from './Companies';
 import Contacts from './Contacts';
-import { Users, Building2, UserCircle, Database as DatabaseIcon, Upload } from 'lucide-react';
+import { Users, Building2, UserCircle, Upload } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '../../components/ui/use-mobile';
+import { TaskLabPage } from '../../components/tasklab';
 
 export default function Database() {
   const navigate = useNavigate();
@@ -27,43 +28,37 @@ export default function Database() {
   }, [activeTab]);
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center shadow-sm">
-              <DatabaseIcon className="w-4 h-4 text-white" />
-            </div>
-            База данных
-          </h1>
-          <p className="text-slate-500 text-sm mt-1.5 ml-12">Клиенты, компании и контакты</p>
-        </div>
-        <Button variant="outline" onClick={() => navigate('/import')} className="rounded-xl shrink-0">
+    <TaskLabPage
+      tag="Клиенты"
+      title="Клиенты"
+      subtitle="Компании, контакты и карточки клиентов"
+      actions={
+        <Button variant="outline" onClick={() => navigate('/import')} className="rounded-[1.75rem] shrink-0">
           <Upload className="w-4 h-4 mr-2" />
           Импорт данных
         </Button>
-      </div>
-
+      }
+    >
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-5">
         <div className="flex items-center w-full overflow-x-auto pb-2 md:pb-0">
-          <TabsList className="bg-slate-100/50 p-1 rounded-xl border border-slate-200/60 inline-flex h-auto w-full md:w-auto gap-1">
+          <TabsList className="bg-neutral-100/50 p-1 rounded-[1.75rem] border border-neutral-200/60 inline-flex h-auto w-full md:w-auto gap-1">
             <TabsTrigger 
               value="clients" 
-              className="flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-black/5 text-slate-500 hover:text-slate-700"
+              className="flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-neutral-900 data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-black/5 text-neutral-500 hover:text-neutral-700"
             >
               <UserCircle className="w-4 h-4 mr-2" />
               <span className={isMobile ? "text-xs" : ""}>Клиенты</span>
             </TabsTrigger>
             <TabsTrigger 
               value="companies" 
-              className="flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-black/5 text-slate-500 hover:text-slate-700"
+              className="flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-neutral-900 data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-black/5 text-neutral-500 hover:text-neutral-700"
             >
               <Building2 className="w-4 h-4 mr-2" />
               <span className={isMobile ? "text-xs" : ""}>Компании</span>
             </TabsTrigger>
             <TabsTrigger 
               value="contacts" 
-              className="flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-black/5 text-slate-500 hover:text-slate-700"
+              className="flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all data-[state=active]:bg-white data-[state=active]:text-neutral-900 data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-black/5 text-neutral-500 hover:text-neutral-700"
             >
               <Users className="w-4 h-4 mr-2" />
               <span className={isMobile ? "text-xs" : ""}>Контакты</span>
@@ -78,6 +73,6 @@ export default function Database() {
           {activeTabContent}
         </div>
       </Tabs>
-    </div>
+    </TaskLabPage>
   );
 }

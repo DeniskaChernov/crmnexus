@@ -72,13 +72,12 @@ export const DraggableDealCard = ({
 
   const isOverdue = deal.expected_close_date && new Date(deal.expected_close_date) < new Date() && deal.status === 'open';
   const isHot = (deal.amount || 0) >= 10000000;
-  const statusColor = deal.status === 'won' ? 'border-l-green-500' : deal.status === 'lost' ? 'border-l-red-500' : 'border-l-blue-500';
 
   return (
     <div ref={drag} style={{ opacity: isDragging ? 0.5 : 1 }}>
-      <Card className={`group relative hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border-0 shadow-sm bg-white ${deal.status !== 'open' ? 'opacity-70' : ''} cursor-grab active:cursor-grabbing overflow-hidden select-none`}>
+      <Card className={`tasklab-card group relative hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ${deal.status !== 'open' ? 'opacity-70' : ''} cursor-grab active:cursor-grabbing overflow-hidden select-none`}>
         {/* Status Line Indicator (Soft) */}
-        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${deal.status === 'won' ? 'bg-green-400' : deal.status === 'lost' ? 'bg-red-400' : 'bg-blue-400'}`} />
+        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${deal.status === 'won' ? 'bg-green-400' : deal.status === 'lost' ? 'bg-red-400' : 'bg-neutral-900'}`} />
 
         {/* Status & Hot Badge */}
         <div className="absolute top-3 left-4 flex gap-1 z-10">
@@ -95,10 +94,10 @@ export const DraggableDealCard = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-7 w-7 bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white rounded-full">
-                <MoreHorizontal className="h-4 w-4 text-slate-500" />
+                <MoreHorizontal className="h-4 w-4 text-neutral-500" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="rounded-xl">
+            <DropdownMenuContent align="end" className="rounded-[1.75rem]">
               <DropdownMenuLabel>Действия</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => onEdit(deal)} className="rounded-lg cursor-pointer">
                 <Pencil className="mr-2 h-4 w-4" /> Редактировать
@@ -155,25 +154,25 @@ export const DraggableDealCard = ({
         {/* Card Content */}
         <CardHeader className="p-4 pb-2 pr-10 pt-8">
           <CardTitle 
-            className="text-sm font-bold leading-tight mb-1 cursor-pointer hover:text-blue-600 transition-colors" 
+            className="text-sm font-bold leading-tight mb-1 cursor-pointer hover:text-neutral-900 transition-colors" 
             onClick={() => onEdit(deal)}
           >
             {deal.title}
           </CardTitle>
-          <div className="text-xs text-slate-500 font-medium truncate flex items-center gap-1">
+          <div className="text-xs text-neutral-500 font-medium truncate flex items-center gap-1">
             {deal.companies?.name || 'Без клиента'}
           </div>
           {deal.description && (
-            <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">{deal.description}</p>
+            <p className="text-xs text-neutral-400 mt-1 line-clamp-2 leading-relaxed">{deal.description}</p>
           )}
         </CardHeader>
         <CardContent className="p-4 pt-2 space-y-3">
           {/* Amount and Date */}
           <div className="flex justify-between items-center">
-            <span className="text-sm font-bold text-slate-900 bg-slate-100 px-3 py-1 rounded-full">
+            <span className="text-sm font-bold text-neutral-900 bg-neutral-100 px-3 py-1 rounded-full">
               {new Intl.NumberFormat('uz-UZ', { style: 'currency', currency: 'UZS', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(deal.amount || 0)}
             </span>
-            <span className="text-[10px] text-slate-400 font-medium bg-white px-2 py-1 rounded-full border border-slate-100 shadow-sm">
+            <span className="text-[10px] text-neutral-400 font-medium bg-white px-2 py-1 rounded-full border border-neutral-100 shadow-sm">
               {new Date(deal.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
             </span>
           </div>
@@ -181,7 +180,7 @@ export const DraggableDealCard = ({
           {/* Additional Info */}
           <div className="space-y-1">
             {deal.expected_close_date && (
-              <div className={`flex items-center gap-1.5 text-xs ${isOverdue ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
+              <div className={`flex items-center gap-1.5 text-xs ${isOverdue ? 'text-red-500 font-medium' : 'text-neutral-400'}`}>
                 <Calendar className="h-3.5 w-3.5" />
                 <span>{new Date(deal.expected_close_date).toLocaleDateString('ru-RU')}</span>
               </div>

@@ -21,6 +21,7 @@ import { AlertCircle, RefreshCcw, Calendar as CalendarIcon, Phone, Mail, Users, 
 import { toast } from 'sonner@2.0.3';
 import { downloadCSV, formatDateForExport } from '../../utils/exportUtils';
 import { useCrmAiClient } from '../../context/CrmAiClientContext.tsx';
+import { TaskLabPage } from '../../components/tasklab';
 
 interface Task {
   id: string;
@@ -261,16 +262,16 @@ export default function Tasks() {
 
     return (
       <div className="flex-1 min-w-0 flex flex-col">
-        <Card className="shadow-sm border-slate-200">
+        <Card className="tasklab-card border-0 shadow-none">
           <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 md:p-2 bg-slate-50 rounded-lg text-slate-500">
+                <div className="p-1.5 md:p-2 bg-neutral-50 rounded-lg text-neutral-500">
                   {icon}
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm md:text-base text-slate-900">{title}</h3>
-                  <p className="text-[10px] md:text-xs text-slate-500">{columnTasks.length} задач</p>
+                  <h3 className="font-bold text-sm md:text-base text-neutral-900">{title}</h3>
+                  <p className="text-[10px] md:text-xs text-neutral-500">{columnTasks.length} задач</p>
                 </div>
               </div>
               {hasMore && (
@@ -300,8 +301,8 @@ export default function Tasks() {
           <CardContent className="pt-0 p-3 md:p-6 md:pt-0">
             <div className="space-y-2 md:space-y-3">
               {columnTasks.length === 0 ? (
-                <div className="text-center py-6 md:py-8 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
-                  <p className="text-xs md:text-sm text-slate-500">Нет задач в этой категории</p>
+                <div className="text-center py-6 md:py-8 bg-neutral-50/50 rounded-lg border border-dashed border-neutral-200">
+                  <p className="text-xs md:text-sm text-neutral-500">Нет задач в этой категории</p>
                 </div>
               ) : (
                 <>
@@ -336,7 +337,7 @@ export default function Tasks() {
                           [columnType]: prev[columnType] + TASK_BATCH_STEP,
                         }))
                       }
-                      className="w-full text-xs h-8 text-slate-500 hover:text-slate-900"
+                      className="w-full text-xs h-8 text-neutral-500 hover:text-neutral-900"
                     >
                       Загрузить ещё {Math.min(TASK_BATCH_STEP, columnTasks.length - displayLimit)}
                     </Button>
@@ -363,21 +364,20 @@ export default function Tasks() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Задачи</h2>
-          <p className="text-muted-foreground">Планирование и контроль</p>
-        </div>
-        <div className="flex gap-2">
+    <TaskLabPage
+      tag="Задачи"
+      title="Задачи"
+      subtitle="Планирование и контроль"
+      actions={
+        <>
           <Button variant="outline" onClick={exportTasks}>
             <Download className="mr-2 h-4 w-4" />
             Экспорт
           </Button>
           <CreateTaskDialog onSuccess={fetchTasks} />
-        </div>
-      </div>
-
+        </>
+      }
+    >
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -454,7 +454,7 @@ export default function Tasks() {
           </AlertDialogContent>
         </AlertDialog>
       )}
-    </div>
+    </TaskLabPage>
   );
 }
 
@@ -469,13 +469,13 @@ const TaskCard = React.memo(function TaskCard({ task, onToggleStatus, onEdit, on
   const getTypeIcon = () => {
     switch (task.type) {
       case 'call':
-        return <Phone className="h-4 w-4 text-blue-500" />;
+        return <Phone className="h-4 w-4 text-neutral-900" />;
       case 'meeting':
-        return <Users className="h-4 w-4 text-purple-500" />;
+        return <Users className="h-4 w-4 text-neutral-700" />;
       case 'email':
-        return <Mail className="h-4 w-4 text-green-500" />;
+        return <Mail className="h-4 w-4 text-neutral-700" />;
       default:
-        return <CheckCircle2 className="h-4 w-4 text-slate-500" />;
+        return <CheckCircle2 className="h-4 w-4 text-neutral-500" />;
     }
   };
 
@@ -486,7 +486,7 @@ const TaskCard = React.memo(function TaskCard({ task, onToggleStatus, onEdit, on
       case 'medium':
         return <span className="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-800">Средний</span>;
       case 'low':
-        return <span className="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">Низкий</span>;
+        return <span className="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-[var(--tasklab-lime)]/25 text-neutral-800">Низкий</span>;
     }
   };
 
@@ -502,7 +502,7 @@ const TaskCard = React.memo(function TaskCard({ task, onToggleStatus, onEdit, on
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done';
 
   return (
-    <Card className={`group transition-all duration-300 hover:shadow-md hover:-translate-y-[1px] ${task.status === 'done' ? 'opacity-60' : ''}`}>
+    <Card className={`tasklab-card group transition-all duration-300 hover:shadow-md hover:-translate-y-[1px] ${task.status === 'done' ? 'opacity-60' : ''}`}>
       <CardHeader className="p-2.5 md:p-4">
         <div className="flex items-start gap-2 md:gap-3">
           <div className="pt-0.5">
@@ -516,11 +516,11 @@ const TaskCard = React.memo(function TaskCard({ task, onToggleStatus, onEdit, on
           <div className="flex-1 space-y-1 md:space-y-2 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <CardTitle className={`text-xs md:text-sm font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : 'text-slate-900'}`}>
+                <CardTitle className={`text-xs md:text-sm font-medium ${task.status === 'done' ? 'line-through text-neutral-500' : 'text-neutral-900'}`}>
                   {task.title}
                 </CardTitle>
                 {task.description && (
-                  <p className="text-[11px] md:text-xs text-muted-foreground mt-0.5 md:mt-1 line-clamp-1 md:line-clamp-2">{task.description}</p>
+                  <p className="text-[11px] md:text-xs text-neutral-500 mt-0.5 md:mt-1 line-clamp-1 md:line-clamp-2">{task.description}</p>
                 )}
               </div>
               
@@ -529,7 +529,7 @@ const TaskCard = React.memo(function TaskCard({ task, onToggleStatus, onEdit, on
                   variant="ghost" 
                   size="sm" 
                   onClick={() => onEdit(task)}
-                  className="h-6 w-6 md:h-7 md:w-7 p-0 text-slate-400 hover:text-blue-600"
+                  className="h-6 w-6 md:h-7 md:w-7 p-0 text-neutral-400 hover:text-neutral-900"
                 >
                   <Pencil className="h-3 w-3 md:h-3.5 md:w-3.5" />
                 </Button>
@@ -537,26 +537,26 @@ const TaskCard = React.memo(function TaskCard({ task, onToggleStatus, onEdit, on
                   variant="ghost" 
                   size="sm" 
                   onClick={() => onDelete(task)}
-                  className="h-6 w-6 md:h-7 md:w-7 p-0 text-slate-400 hover:text-red-600"
+                  className="h-6 w-6 md:h-7 md:w-7 p-0 text-neutral-400 hover:text-red-600"
                 >
                   <Trash2 className="h-3 w-3 md:h-3.5 md:w-3.5" />
                 </Button>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 md:gap-2 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1 bg-slate-50 px-1.5 md:px-2 py-0.5 rounded border border-slate-100">
+            <div className="flex flex-wrap items-center gap-1.5 md:gap-2 text-xs text-neutral-500">
+              <div className="flex items-center gap-1 bg-neutral-50 px-1.5 md:px-2 py-0.5 rounded border border-neutral-100">
                 {getTypeIcon()}
                 <span className="text-[10px] md:text-xs">{getTypeLabel()}</span>
               </div>
               
-              <div className="hidden md:flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-100" title="Дата создания">
-                <Clock className="h-3 w-3 text-slate-400" />
+              <div className="hidden md:flex items-center gap-1 bg-neutral-50 px-2 py-0.5 rounded border border-neutral-100" title="Дата создания">
+                <Clock className="h-3 w-3 text-neutral-400" />
                 <span>{new Date(task.created_at).toLocaleDateString('ru-RU')}</span>
               </div>
               
               {task.due_date && (
-                <div className={`flex items-center gap-1 px-1.5 md:px-2 py-0.5 rounded border ${isOverdue ? 'bg-red-50 text-red-700 border-red-100' : 'bg-slate-50 border-slate-100'}`} title="Срок выполнения">
+                <div className={`flex items-center gap-1 px-1.5 md:px-2 py-0.5 rounded border ${isOverdue ? 'bg-red-50 text-red-700 border-red-100' : 'bg-neutral-50 border-neutral-100'}`} title="Срок выполнения">
                   <CalendarIcon className="h-3 w-3" />
                   <span className="text-[10px] md:text-xs">
                     {new Date(task.due_date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}
@@ -570,7 +570,7 @@ const TaskCard = React.memo(function TaskCard({ task, onToggleStatus, onEdit, on
               </div>
 
               {task.deals && (
-                <div className="flex items-center gap-1 bg-blue-50 px-1.5 md:px-2 py-0.5 rounded text-blue-700 border border-blue-100">
+                <div className="flex items-center gap-1 bg-[var(--tasklab-lime)]/15 px-1.5 md:px-2 py-0.5 rounded text-neutral-900 border border-neutral-200">
                   <Briefcase className="h-3 w-3" />
                   <span className="truncate max-w-[80px] md:max-w-[100px] text-[10px] md:text-xs">{task.deals.title}</span>
                 </div>

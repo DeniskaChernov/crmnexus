@@ -3,8 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { handleSiteWebhook } from "../siteWebhook.ts";
 import { getPool } from "../dbPool.ts";
+import { registerQrPublicRoutes } from "./qrRoutes.ts";
 
 export function registerPublicRoutes(app: Hono, env: (k: string) => string | undefined) {
+  registerQrPublicRoutes(app);
+
   app.get("/api/static-uploads/:name", async (c) => {
     try {
       const name = c.req.param("name");

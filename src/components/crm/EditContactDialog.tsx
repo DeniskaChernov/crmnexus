@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form@7.55.0';
 import { crm } from "@/lib/crmClient.ts";
 import { Button } from '../ui/button';
@@ -83,7 +83,7 @@ export function EditContactDialog({ open, onOpenChange, contact, onSuccess }: Ed
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="tasklab-card border-0 sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Pencil className="h-5 w-5" />
@@ -143,7 +143,7 @@ export function EditContactDialog({ open, onOpenChange, contact, onSuccess }: Ed
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Отмена
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="bg-neutral-900 hover:bg-neutral-800 text-white">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

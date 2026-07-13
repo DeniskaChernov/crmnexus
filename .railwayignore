@@ -1,0 +1,12 @@
+# Не загружать в Railway CLI (railway up) — ускоряет snapshot
+node_modules/
+build/
+dist/
+_import/
+.ref-btt-crm/
+.cursor/
+.git/
+data/uploads/
+*.log
+.env
+.env.*

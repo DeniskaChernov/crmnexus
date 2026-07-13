@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Card, CardContent } from '../../components/ui/card';
 import { Plus, Search, Phone, Info, Trash2, Pencil, RefreshCw, FileSpreadsheet, CheckCircle2, XCircle, Calendar, Download, Briefcase, Copy, CheckSquare, Square, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
@@ -37,6 +37,7 @@ import { CreateDealDialog } from '../../components/crm/CreateDealDialog';
 import { Checkbox } from '../../components/ui/checkbox';
 import { motion, AnimatePresence } from 'motion/react';
 import { useCrmAiClient } from '../../context/CrmAiClientContext.tsx';
+import { TaskLabPage } from '../../components/tasklab';
 
 interface Lead {
   id: string;
@@ -407,53 +408,45 @@ export default function Leads() {
   const allSelected = filteredLeads.length > 0 && selectedLeads.length === filteredLeads.length;
 
   return (
-    <div className="space-y-4 relative">
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="space-y-1">
-              <CardTitle className="text-xl font-bold flex items-center gap-2">
-                Лиды ({COUNTRIES.find(c => c.id === activeCountry)?.label})
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-blue-600" onClick={() => setIsHelpOpen(true)}>
-                    <Info className="h-4 w-4" />
-                </Button>
-              </CardTitle>
-              <div className="flex gap-3 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-slate-300" /> Всего: {stats.total}</span>
-                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500" /> Обработано: {stats.processed}</span>
-                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500" /> Новые: {stats.new}</span>
-              </div>
-            </div>
-            
-            <div className="flex gap-2 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Поиск по имени или телефону..."
-                  className="pl-9"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              <Button variant="secondary" onClick={() => setIsImportOpen(true)} className="bg-green-100 text-green-700 hover:bg-green-200">
-                <Download className="h-4 w-4 mr-2" /> Импорт
-              </Button>
-              <Button onClick={openAdd} className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-4 w-4 mr-2" /> Добавить
-              </Button>
-              <Button variant="outline" size="icon" onClick={fetchLeads} title="Обновить">
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
+    <TaskLabPage
+      className="relative"
+      tag="Лиды"
+      title={`Лиды (${COUNTRIES.find(c => c.id === activeCountry)?.label})`}
+      subtitle={`Всего: ${stats.total} · Обработано: ${stats.processed} · Новые: ${stats.new}`}
+      actions={
+        <>
+          <Button variant="ghost" size="icon" className="h-9 w-9 text-neutral-400 hover:text-neutral-900" onClick={() => setIsHelpOpen(true)}>
+            <Info className="h-4 w-4" />
+          </Button>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-400" />
+            <Input
+              placeholder="Поиск по имени или телефону..."
+              className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-        </CardHeader>
-        <CardContent>
+          <Button variant="secondary" onClick={() => setIsImportOpen(true)} className="bg-green-100 text-green-700 hover:bg-green-200">
+            <Download className="h-4 w-4 mr-2" /> Импорт
+          </Button>
+          <Button onClick={openAdd} className="bg-neutral-900 hover:bg-neutral-800">
+            <Plus className="h-4 w-4 mr-2" /> Добавить
+          </Button>
+          <Button variant="outline" size="icon" onClick={fetchLeads} title="Обновить">
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </>
+      }
+    >
+      <Card className="tasklab-card border-0 shadow-none">
+        <CardContent className="pt-6">
           <Tabs value={activeCountry} onValueChange={setActiveCountry} className="w-full">
-            <TabsList className="w-full justify-start overflow-x-auto h-auto p-1 mb-4 bg-slate-100">
+            <TabsList className="w-full justify-start overflow-x-auto h-auto p-1 mb-4 bg-neutral-100">
               {COUNTRIES.map(country => (
                 <TabsTrigger key={country.id} value={country.id} className="px-4 py-2">
                   {country.label}
-                  <Badge variant="secondary" className="ml-2 text-[10px] h-4 bg-slate-200 text-slate-600">
+                  <Badge variant="secondary" className="ml-2 text-[10px] h-4 bg-neutral-200 text-neutral-600">
                     {leads.filter(l => l.country === country.id).length}
                   </Badge>
                 </TabsTrigger>
@@ -482,11 +475,11 @@ export default function Leads() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-slate-500">Загрузка...</TableCell>
+                      <TableCell colSpan={7} className="text-center py-8 text-neutral-500">Загрузка...</TableCell>
                     </TableRow>
                   ) : filteredLeads.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                      <TableCell colSpan={7} className="text-center py-8 text-neutral-500">
                         В этой категории нет лидов. Добавьте первого или импортируйте из CSV!
                       </TableCell>
                     </TableRow>
@@ -494,14 +487,14 @@ export default function Leads() {
                     filteredLeads.map((lead) => {
                         const isSelected = selectedLeads.includes(lead.id);
                         return (
-                          <TableRow key={lead.id} className={isSelected ? 'bg-blue-50/50' : ''}>
+                          <TableRow key={lead.id} className={isSelected ? 'bg-[var(--tasklab-lime)]/10' : ''}>
                             <TableCell>
                                 <Checkbox 
                                     checked={isSelected} 
                                     onCheckedChange={(checked) => toggleSelectOne(lead.id, checked as boolean)}
                                 />
                             </TableCell>
-                            <TableCell className="text-xs text-slate-500 whitespace-nowrap">
+                            <TableCell className="text-xs text-neutral-500 whitespace-nowrap">
                                 <div className="flex items-center gap-2">
                                     <Calendar className="h-3 w-3" />
                                     {new Date(lead.createdAt).toLocaleDateString()}
@@ -513,18 +506,18 @@ export default function Leads() {
                                 <span className="text-sm font-mono">{lead.phone}</span>
                                 <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(lead.phone)} title="Копировать">
-                                        <Copy className="h-3 w-3 text-slate-400 hover:text-blue-600" />
+                                        <Copy className="h-3 w-3 text-neutral-400 hover:text-neutral-900" />
                                     </Button>
                                     <a href={`tel:${lead.phone}`}>
                                         <Button variant="ghost" size="icon" className="h-6 w-6" title="Позвонить">
-                                            <Phone className="h-3 w-3 text-slate-400 hover:text-green-600" />
+                                            <Phone className="h-3 w-3 text-neutral-400 hover:text-green-600" />
                                         </Button>
                                     </a>
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell className="max-w-md truncate" title={lead.info}>
-                              {lead.info || <span className="text-slate-400 italic">Нет информации</span>}
+                              {lead.info || <span className="text-neutral-400 italic">Нет информации</span>}
                             </TableCell>
                             <TableCell>
                               <Badge 
@@ -532,7 +525,7 @@ export default function Leads() {
                                 className={`cursor-pointer select-none transition-colors ${
                                   lead.status === 'processed' 
                                   ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                  : 'bg-[var(--tasklab-lime)]/25 text-neutral-900 hover:bg-neutral-200'
                                 }`}
                                 onClick={() => toggleStatus(lead)}
                               >
@@ -541,7 +534,7 @@ export default function Leads() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
-                                <Button variant="ghost" size="sm" onClick={() => handleConvertToDeal(lead)} title="Создать сделку" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                <Button variant="ghost" size="sm" onClick={() => handleConvertToDeal(lead)} title="Создать сделку" className="text-neutral-900 hover:text-neutral-900 hover:bg-neutral-100">
                                     <Briefcase className="h-4 w-4" />
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={() => openEdit(lead)}>
@@ -570,15 +563,15 @@ export default function Leads() {
                 initial={{ y: 100, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 100, opacity: 0 }}
-                className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-6"
+                className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-neutral-900 text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-6"
             >
                 <span className="text-sm font-medium whitespace-nowrap">Выбрано: {selectedLeads.length}</span>
-                <div className="h-4 w-px bg-slate-700" />
+                <div className="h-4 w-px bg-neutral-700" />
                 <div className="flex items-center gap-2">
                     <Button 
                         size="sm" 
                         variant="ghost" 
-                        className="text-white hover:bg-slate-800 hover:text-white"
+                        className="text-white hover:bg-neutral-800 hover:text-white"
                         onClick={() => handleBulkStatus('processed')}
                     >
                         <CheckCircle2 className="h-4 w-4 mr-2 text-green-400" />
@@ -587,10 +580,10 @@ export default function Leads() {
                     <Button 
                         size="sm" 
                         variant="ghost" 
-                        className="text-white hover:bg-slate-800 hover:text-white"
+                        className="text-white hover:bg-neutral-800 hover:text-white"
                         onClick={() => handleBulkStatus('new')}
                     >
-                        <RefreshCw className="h-4 w-4 mr-2 text-blue-400" />
+                        <RefreshCw className="h-4 w-4 mr-2 text-[var(--tasklab-lime)]" />
                         В новые
                     </Button>
                     <Button 
@@ -606,7 +599,7 @@ export default function Leads() {
                 <Button 
                     size="sm" 
                     variant="ghost" 
-                    className="ml-2 h-6 w-6 p-0 rounded-full hover:bg-slate-800"
+                    className="ml-2 h-6 w-6 p-0 rounded-full hover:bg-neutral-800"
                     onClick={() => setSelectedLeads([])}
                 >
                     <XCircle className="h-4 w-4" />
@@ -678,7 +671,7 @@ export default function Leads() {
                   variant={formData.status === 'new' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setFormData({...formData, status: 'new'})}
-                  className={formData.status === 'new' ? 'bg-blue-600' : ''}
+                  className={formData.status === 'new' ? 'bg-neutral-900' : ''}
                 >
                   Новый
                 </Button>
@@ -719,7 +712,7 @@ export default function Leads() {
                         accept=".csv"
                         onChange={e => setImportFile(e.target.files?.[0] || null)}
                     />
-                    <p className="text-xs text-slate-500">Загрузите файл с номерами для прозвона</p>
+                    <p className="text-xs text-neutral-500">Загрузите файл с номерами для прозвона</p>
                 </div>
             </div>
             <DialogFooter>
@@ -752,7 +745,7 @@ export default function Leads() {
         <DialogContent className="max-w-2xl">
             <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                    <Info className="h-5 w-5 text-blue-600" />
+                    <Info className="h-5 w-5 text-neutral-900" />
                     Как работает CRM BTT NEXUS
                 </DialogTitle>
                 <DialogDescription>
@@ -762,50 +755,50 @@ export default function Leads() {
             
             <div className="space-y-6 py-4">
                 <div className="grid grid-cols-2 gap-6">
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        <h3 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs">1</div>
+                    <div className="bg-neutral-50 p-4 rounded-[1.75rem] border border-neutral-100">
+                        <h3 className="font-semibold text-neutral-900 mb-2 flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-neutral-200 flex items-center justify-center text-xs">1</div>
                             Лиды (Песочница)
                         </h3>
-                        <p className="text-sm text-slate-600 leading-relaxed">
+                        <p className="text-sm text-neutral-600 leading-relaxed">
                             Это "грязная" база контактов. Сюда вы загружаете тысячи номеров (Excel/Google) для массового прозвона. 
                             Здесь находятся те, кто еще <b>не подтвердил</b> интерес.
                         </p>
                     </div>
                     
-                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                        <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-blue-200 flex items-center justify-center text-xs">2</div>
+                    <div className="bg-[var(--tasklab-lime)]/15 p-4 rounded-[1.75rem] border border-neutral-200">
+                        <h3 className="font-semibold text-neutral-900 mb-2 flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-[var(--tasklab-lime)]/35 flex items-center justify-center text-xs">2</div>
                             Клиенты (Золотой актив)
                         </h3>
-                        <p className="text-sm text-blue-800 leading-relaxed">
+                        <p className="text-sm text-neutral-800 leading-relaxed">
                             Это "чистая" база. Сюда попадают только проверенные контакты, с которыми началась работа (создана сделка).
                             Здесь хранится история покупок и LTV.
                         </p>
                     </div>
                 </div>
 
-                <div className="relative pl-8 border-l-2 border-slate-200 space-y-8">
+                <div className="relative pl-8 border-l-2 border-neutral-200 space-y-8">
                     <div className="relative">
-                        <div className="absolute -left-[39px] bg-slate-100 border-4 border-white shadow-sm w-6 h-6 rounded-full flex items-center justify-center">
-                            <Download className="w-3 h-3 text-slate-500" />
+                        <div className="absolute -left-[39px] bg-neutral-100 border-4 border-white shadow-sm w-6 h-6 rounded-full flex items-center justify-center">
+                            <Download className="w-3 h-3 text-neutral-500" />
                         </div>
-                        <h4 className="font-medium text-slate-900">1. Импорт</h4>
-                        <p className="text-sm text-slate-500">Загружаете "холодную" базу в раздел Лиды.</p>
+                        <h4 className="font-medium text-neutral-900">1. Импорт</h4>
+                        <p className="text-sm text-neutral-500">Загружаете "холодную" базу в раздел Лиды.</p>
                     </div>
                     <div className="relative">
-                        <div className="absolute -left-[39px] bg-slate-100 border-4 border-white shadow-sm w-6 h-6 rounded-full flex items-center justify-center">
-                            <Phone className="w-3 h-3 text-slate-500" />
+                        <div className="absolute -left-[39px] bg-neutral-100 border-4 border-white shadow-sm w-6 h-6 rounded-full flex items-center justify-center">
+                            <Phone className="w-3 h-3 text-neutral-500" />
                         </div>
-                        <h4 className="font-medium text-slate-900">2. Квалификация</h4>
-                        <p className="text-sm text-slate-500">Менеджер звонит по списку. Отсеивает нецелевых, отмечает результаты.</p>
+                        <h4 className="font-medium text-neutral-900">2. Квалификация</h4>
+                        <p className="text-sm text-neutral-500">Менеджер звонит по списку. Отсеивает нецелевых, отмечает результаты.</p>
                     </div>
                     <div className="relative">
                         <div className="absolute -left-[39px] bg-green-100 border-4 border-white shadow-sm w-6 h-6 rounded-full flex items-center justify-center">
                             <Briefcase className="w-3 h-3 text-green-600" />
                         </div>
-                        <h4 className="font-medium text-slate-900">3. Конвертация</h4>
-                        <p className="text-sm text-slate-500">
+                        <h4 className="font-medium text-neutral-900">3. Конвертация</h4>
+                        <p className="text-sm text-neutral-500">
                             Если клиент проявил интерес — нажимаете кнопку <b>"Портфель"</b>. 
                             <br/>
                             <span className="text-green-600 font-medium">Результат:</span> Лид удаляется из "грязной" базы и создается как Клиент + Сделка.
@@ -819,6 +812,6 @@ export default function Leads() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </TaskLabPage>
   );
 }

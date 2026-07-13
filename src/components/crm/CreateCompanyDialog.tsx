@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useForm } from 'react-hook-form@7.55.0';
 import { crm } from "@/lib/crmClient.ts";
 import { Button } from '../ui/button';
@@ -70,7 +70,7 @@ export function CreateCompanyDialog({ onSuccess }: CreateCompanyDialogProps) {
           <Plus className="mr-2 h-4 w-4" /> Добавить компанию
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="tasklab-card border-0 sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Новая компания</DialogTitle>
           <DialogDescription>
@@ -163,7 +163,7 @@ export function CreateCompanyDialog({ onSuccess }: CreateCompanyDialogProps) {
             />
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="bg-neutral-900 hover:bg-neutral-800 text-white">
               {loading ? 'Сохранение...' : 'Создать'}
             </Button>
           </DialogFooter>

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import { BttCrmModuleShell } from '../components/btt-ref/BttCrmModuleShell.tsx';
 import { crmUrl, authHeaders } from '../lib/crmApi.ts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -403,13 +404,13 @@ export default function Settings() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'owner':
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+        return 'bg-[var(--tasklab-lime)]/15 text-neutral-900 dark:bg-[var(--tasklab-lime)]/10 dark:text-neutral-100';
       case 'manager':
         return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
       case 'observer':
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+        return 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300';
       default:
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-neutral-100 text-neutral-700';
     }
   };
 
@@ -424,9 +425,9 @@ export default function Settings() {
 
   const getAvatarColor = (id: string) => {
     const colors = [
-      'bg-blue-500',
+      'bg-neutral-900',
       'bg-green-500',
-      'bg-purple-500',
+      'bg-[var(--tasklab-lime)]',
       'bg-orange-500',
       'bg-pink-500',
       'bg-teal-500',
@@ -574,14 +575,11 @@ export default function Settings() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Настройки</h2>
-        <p className="text-muted-foreground mt-2">
-          Управление системой и настройка параметров CRM
-        </p>
-      </div>
-
+    <BttCrmModuleShell
+      tag="Система"
+      title="Настройки"
+      subtitle="Управление системой и параметрами CRM"
+    >
       <Tabs defaultValue="company" className="space-y-6">
         <TabsList className="w-full flex justify-start md:grid md:grid-cols-7 overflow-x-auto h-auto no-scrollbar p-1">
           <TabsTrigger value="company" className="gap-2 min-w-[110px] flex-shrink-0">
@@ -616,7 +614,7 @@ export default function Settings() {
 
         {/* Компания */}
         <TabsContent value="company" className="space-y-4">
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
@@ -680,7 +678,7 @@ export default function Settings() {
               </div>
               <Separator />
               <div className="flex justify-end">
-                <Button onClick={handleSaveCompany} className="gap-2" disabled={savingCompany}>
+                <Button onClick={handleSaveCompany} className="gap-2 bg-neutral-900 hover:bg-neutral-800 text-white" disabled={savingCompany}>
                   {savingCompany ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -697,7 +695,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle>Региональные настройки</CardTitle>
               <CardDescription>
@@ -749,7 +747,7 @@ export default function Settings() {
               </div>
               <Separator />
               <div className="flex justify-end">
-                <Button onClick={handleSaveRegional} className="gap-2" disabled={savingRegional}>
+                <Button onClick={handleSaveRegional} className="gap-2 bg-neutral-900 hover:bg-neutral-800 text-white" disabled={savingRegional}>
                   {savingRegional ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   Сохранить
                 </Button>
@@ -760,7 +758,7 @@ export default function Settings() {
 
         {/* Пользователи */}
         <TabsContent value="users" className="space-y-4">
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
@@ -837,7 +835,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
@@ -855,7 +853,7 @@ export default function Settings() {
                     Полный доступ ко всем функциям системы
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <span className="text-xs px-2 py-1 bg-gray-100 rounded">Все права</span>
+                    <span className="text-xs px-2 py-1 bg-neutral-100 rounded">Все права</span>
                   </div>
                 </div>
                 
@@ -865,10 +863,10 @@ export default function Settings() {
                     Работа с лидами, сделками и задачами
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <span className="text-xs px-2 py-1 bg-gray-100 rounded">Лиды</span>
-                    <span className="text-xs px-2 py-1 bg-gray-100 rounded">Сделки</span>
-                    <span className="text-xs px-2 py-1 bg-gray-100 rounded">Задачи</span>
-                    <span className="text-xs px-2 py-1 bg-gray-100 rounded">Компании</span>
+                    <span className="text-xs px-2 py-1 bg-neutral-100 rounded">Лиды</span>
+                    <span className="text-xs px-2 py-1 bg-neutral-100 rounded">Сделки</span>
+                    <span className="text-xs px-2 py-1 bg-neutral-100 rounded">Задачи</span>
+                    <span className="text-xs px-2 py-1 bg-neutral-100 rounded">Компании</span>
                   </div>
                 </div>
                 
@@ -878,8 +876,8 @@ export default function Settings() {
                     Только посмотр данных без возможности редактирования
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <span className="text-xs px-2 py-1 bg-gray-100 rounded">Чтение</span>
-                    <span className="text-xs px-2 py-1 bg-gray-100 rounded">Отчёты</span>
+                    <span className="text-xs px-2 py-1 bg-neutral-100 rounded">Чтение</span>
+                    <span className="text-xs px-2 py-1 bg-neutral-100 rounded">Отчёты</span>
                   </div>
                 </div>
               </div>
@@ -889,7 +887,7 @@ export default function Settings() {
 
         {/* Воронки */}
         <TabsContent value="pipelines" className="space-y-4">
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Workflow className="h-5 w-5" />
@@ -915,13 +913,13 @@ export default function Settings() {
                   pipelines.map((pipeline) => (
                     <div 
                       key={pipeline.id} 
-                      className={`p-4 border rounded-lg ${pipeline.isDefault ? 'bg-blue-50 dark:bg-blue-950 border-blue-200' : 'bg-white dark:bg-gray-800'}`}
+                      className={`p-4 border rounded-lg ${pipeline.isDefault ? 'bg-[var(--tasklab-lime)]/10 dark:bg-[var(--tasklab-lime)]/5 border-[var(--tasklab-lime)]/30' : 'bg-white dark:bg-neutral-800'}`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
                         <div className="flex items-center gap-2">
                           <h4 className="font-medium">{pipeline.name}</h4>
                           {pipeline.isDefault && (
-                            <Badge variant="default" className="bg-blue-600 whitespace-nowrap">
+                            <Badge variant="default" className="bg-neutral-900 whitespace-nowrap">
                               <Star className="h-3 w-3 mr-1" />
                               Основная
                             </Badge>
@@ -958,7 +956,7 @@ export default function Settings() {
                         {pipeline.stages.map((stage) => (
                           <div 
                             key={stage.id} 
-                            className="min-w-[150px] p-3 bg-white dark:bg-gray-800 rounded border-l-4"
+                            className="min-w-[150px] p-3 bg-white dark:bg-neutral-800 rounded border-l-4"
                             style={{ borderLeftColor: stage.color }}
                           >
                             <p className="font-medium text-sm">{stage.name}</p>
@@ -978,7 +976,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle>Автоматизация</CardTitle>
               <CardDescription>
@@ -1017,7 +1015,7 @@ export default function Settings() {
                 />
               </div>
               <div className="flex justify-end pt-2">
-                <Button onClick={handleSaveAutomation} className="gap-2" disabled={savingAutomation}>
+                <Button onClick={handleSaveAutomation} className="gap-2 bg-neutral-900 hover:bg-neutral-800 text-white" disabled={savingAutomation}>
                   {savingAutomation ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   Сохранить настройки
                 </Button>
@@ -1028,7 +1026,7 @@ export default function Settings() {
 
         {/* Уведомления */}
         <TabsContent value="notifications" className="space-y-4">
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="h-5 w-5" />
@@ -1092,7 +1090,7 @@ export default function Settings() {
               </div>
               <Separator />
               <div className="flex justify-end">
-                <Button onClick={handleSaveNotifications} className="gap-2" disabled={savingNotifications}>
+                <Button onClick={handleSaveNotifications} className="gap-2 bg-neutral-900 hover:bg-neutral-800 text-white" disabled={savingNotifications}>
                   {savingNotifications ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   Сохранить настройки
                 </Button>
@@ -1103,7 +1101,7 @@ export default function Settings() {
 
         {/* Интеграции */}
         <TabsContent value="integrations" className="space-y-4">
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plug className="h-5 w-5" />
@@ -1118,8 +1116,8 @@ export default function Settings() {
                 {/* Email (Resend) */}
                 <div className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg transition-colors gap-4 ${integrationsStatus.resend ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : ''}`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
-                      <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <div className="w-10 h-10 rounded bg-[var(--tasklab-lime)]/20 dark:bg-[var(--tasklab-lime)]/10 flex items-center justify-center shrink-0">
+                      <Mail className="h-5 w-5 text-neutral-900 dark:text-neutral-100" />
                     </div>
                     <div>
                       <p className="font-medium">Email (Resend)</p>
@@ -1160,8 +1158,8 @@ export default function Settings() {
                 {/* Telegram Bot */}
                 <div className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg transition-colors gap-4 ${integrationsStatus.telegram ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : ''}`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-purple-100 dark:bg-purple-900 flex items-center justify-center shrink-0">
-                      <Smartphone className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    <div className="w-10 h-10 rounded bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shrink-0">
+                      <Smartphone className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
                     </div>
                     <div>
                       <p className="font-medium">Telegram Bot</p>
@@ -1187,7 +1185,7 @@ export default function Settings() {
                                 name: 'Telegram Bot',
                                 type: 'telegram',
                                 description: 'Обновление подключения Telegram бота',
-                                icon: <Smartphone className="h-5 w-5 text-purple-600" />,
+                                icon: <Smartphone className="h-5 w-5 text-neutral-700" />,
                                 fields: [
                                     { name: 'botToken', label: 'Bot Token', type: 'password', placeholder: 'Введите токен заново для обновления' },
                                 ],
@@ -1209,7 +1207,7 @@ export default function Settings() {
                         name: 'Telegram Bot',
                         type: 'telegram',
                         description: 'Подключение Telegram бота для уведомлений',
-                        icon: <Smartphone className="h-5 w-5 text-purple-600" />,
+                        icon: <Smartphone className="h-5 w-5 text-neutral-700" />,
                         fields: [
                             { name: 'botToken', label: 'Bot Token', type: 'password', placeholder: '123456:ABC-DEF...' },
                         ],
@@ -1268,7 +1266,7 @@ export default function Settings() {
                 {/* OpenAI */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded bg-neutral-900 flex items-center justify-center shrink-0">
                       <span className="text-white font-bold">AI</span>
                     </div>
                     <div>
@@ -1284,7 +1282,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle>API и Webhooks</CardTitle>
               <CardDescription>
@@ -1358,7 +1356,7 @@ export default function Settings() {
 
         {/* Диалог подтверждения удаления */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
+          <AlertDialogContent className="tasklab-card border-0 rounded-[1.75rem]">
             <AlertDialogHeader>
               <AlertDialogTitle>Удалить пользователя?</AlertDialogTitle>
               <AlertDialogDescription>
@@ -1403,7 +1401,7 @@ export default function Settings() {
 
         {/* Диалог подтверждения удаления воронки */}
         <AlertDialog open={deletePipelineDialogOpen} onOpenChange={setDeletePipelineDialogOpen}>
-          <AlertDialogContent>
+          <AlertDialogContent className="tasklab-card border-0 rounded-[1.75rem]">
             <AlertDialogHeader>
               <AlertDialogTitle>Удалить воронку?</AlertDialogTitle>
               <AlertDialogDescription>
@@ -1433,7 +1431,7 @@ export default function Settings() {
 
         {/* Система */}
         <TabsContent value="system" className="space-y-4">
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="h-5 w-5" />
@@ -1483,7 +1481,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle>Резервное копирование</CardTitle>
               <CardDescription>
@@ -1498,7 +1496,7 @@ export default function Settings() {
                 </div>
                 <Switch defaultChecked />
               </div>
-              <div className="p-3 border rounded-lg bg-gray-50 dark:bg-gray-900">
+              <div className="p-3 border rounded-lg bg-neutral-50 dark:bg-neutral-900">
                 <p className="text-sm font-medium mb-1">Последний бэкап</p>
                 <p className="text-xs text-muted-foreground">03 декабря 2024, 03:00</p>
               </div>
@@ -1509,7 +1507,7 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          <Card className="border-red-200 dark:border-red-900">
+          <Card className="tasklab-card border-0 border-red-200 dark:border-red-900">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-red-600">
                 <AlertCircle className="h-5 w-5" />
@@ -1540,7 +1538,7 @@ export default function Settings() {
 
         {/* Отладка */}
         <TabsContent value="debug" className="space-y-4">
-          <Card className="border-orange-200 bg-orange-50/30 dark:bg-orange-900/10 dark:border-orange-900">
+          <Card className="tasklab-card border-0 border-orange-200 bg-orange-50/30 dark:bg-orange-900/10 dark:border-orange-900">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-orange-600" />
@@ -1556,6 +1554,6 @@ export default function Settings() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </BttCrmModuleShell>
   );
 }

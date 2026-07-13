@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BttCrmModuleShell } from './btt-ref/BttCrmModuleShell.tsx';
 import { crmUrl, authHeaders } from '../lib/crmApi.ts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
@@ -354,23 +355,23 @@ export default function Employees() {
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-8 max-w-[1400px] mx-auto pb-24">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-4">
-            <div>
-                <h1 className="text-3xl font-bold text-slate-900">Сотрудники</h1>
-                <p className="text-slate-500 mt-1">Табель учета рабочего времени и расчет зарплаты</p>
-            </div>
-            <div className="flex gap-2">
-                <Button variant="outline" size="icon" onClick={() => setIsManageOpen(true)} title="Управление сотрудниками">
-                    <Users className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" onClick={() => setIsRatesOpen(true)} title="Настройки">
-                    <Settings className="h-4 w-4" />
-                </Button>
-            </div>
+    <BttCrmModuleShell
+      tag="Команда"
+      title="Команда"
+      subtitle="Табель учёта рабочего времени и расчёт зарплаты"
+      actions={
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={() => setIsManageOpen(true)} title="Управление сотрудниками">
+            <Users className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={() => setIsRatesOpen(true)} title="Настройки">
+            <Settings className="h-4 w-4" />
+          </Button>
         </div>
-        
+      }
+    >
+    <div className="space-y-8 pb-24">
+      <div className="flex flex-col md:flex-row justify-end items-start md:items-center gap-4">
         <div className="flex items-center gap-3 flex-wrap">
           <Button 
             onClick={() => {
@@ -393,13 +394,13 @@ export default function Employees() {
               setPayrollData(payrollCalculations);
               setIsPayrollOpen(true);
             }}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="tasklab-pill bg-neutral-900 hover:bg-neutral-800 text-white"
           >
             <Wallet className="h-4 w-4 mr-2" />
             Рассчитать Сотрудников
           </Button>
 
-          <div className="flex items-center gap-2 bg-white p-1 rounded-lg border shadow-sm">
+          <div className="flex items-center gap-2 tasklab-card px-1 py-1 border-0">
                <Button variant="ghost" onClick={() => setSelectedMonth(d => new Date(d.setMonth(d.getMonth() - 1)))}>
                    <CalendarIcon className="h-4 w-4" />
                </Button>
@@ -463,20 +464,20 @@ export default function Employees() {
                         setSelectedEmpId(emp.id);
                         setIsDetailsOpen(true);
                     }}
-                    className={`overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
+                    className={`tasklab-card border-0 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
                         isManager 
-                        ? 'border-blue-300 ring-1 ring-blue-100 bg-blue-50/20' 
+                        ? 'border-neutral-300 ring-1 ring-neutral-200 bg-[var(--tasklab-lime)]/10' 
                         : isOwner
                         ? 'border-amber-300 ring-2 ring-amber-100 bg-amber-50/20'
-                        : 'border-slate-200'
+                        : 'border-neutral-200'
                     }`}
                   >
-                      <CardHeader className={`${isManager ? 'bg-blue-50/50 border-blue-100' : isOwner ? 'bg-amber-50/50 border-amber-100' : 'bg-slate-50 border-slate-100'} pb-4 border-b`}>
+                      <CardHeader className={`${isManager ? 'bg-[var(--tasklab-lime)]/10 border-neutral-200' : isOwner ? 'bg-amber-50/50 border-amber-100' : 'bg-neutral-50 border-neutral-100'} pb-4 border-b`}>
                           <div className="flex justify-between items-start">
                               <div>
                                   <CardTitle className="flex items-center gap-2">
                                     {emp.name}
-                                    {isManager && <Badge className="bg-blue-600 hover:bg-blue-700 h-5 px-2 text-[10px]">Manager</Badge>}
+                                    {isManager && <Badge className="bg-neutral-900 hover:bg-neutral-800 h-5 px-2 text-[10px]">Manager</Badge>}
                                     {isOwner && <Badge className="bg-amber-600 hover:bg-amber-700 h-5 px-2 text-[10px]">👑 Владелец</Badge>}
                                   </CardTitle>
                                   <CardDescription className="mt-1 flex items-center gap-2">
@@ -491,7 +492,7 @@ export default function Employees() {
                                   </CardDescription>
                               </div>
                               <div className={`h-10 w-10 rounded-full border flex items-center justify-center font-bold text-lg ${
-                                  isManager ? 'bg-blue-100 text-blue-600 border-blue-200' : isOwner ? 'bg-amber-100 text-amber-600 border-amber-200' : 'bg-white text-slate-500'
+                                  isManager ? 'bg-[var(--tasklab-lime)]/20 text-neutral-900 border-neutral-200' : isOwner ? 'bg-amber-100 text-amber-600 border-amber-200' : 'bg-white text-neutral-500'
                               }`}>
                                   {emp.name.charAt(0)}
                               </div>
@@ -501,25 +502,25 @@ export default function Employees() {
                           {stats.role === 'owner' ? (
                               <div className="grid grid-cols-2 divide-x border-b">
                                   <div className="p-4 space-y-1">
-                                      <span className="text-xs text-slate-500 uppercase tracking-wider">Общая касса</span>
+                                      <span className="text-xs text-neutral-500 uppercase tracking-wider">Общая касса</span>
                                       <div className="flex items-baseline gap-1">
-                                          <span className="text-lg font-bold text-slate-700">
+                                          <span className="text-lg font-bold text-neutral-700">
                                             {new Intl.NumberFormat('uz-UZ', { notation: "compact" }).format(stats.totalCash)}
                                           </span>
                                       </div>
-                                      <div className="text-xs text-slate-500 mt-2">
+                                      <div className="text-xs text-neutral-500 mt-2">
                                           Все поступления
                                       </div>
                                   </div>
                                   <div className="p-4 space-y-1">
-                                      <span className="text-xs text-slate-500 uppercase tracking-wider">Расчет</span>
+                                      <span className="text-xs text-neutral-500 uppercase tracking-wider">Расчет</span>
                                       <div className="flex flex-col text-sm gap-1">
                                            <div className="flex justify-between items-center">
-                                              <span className="text-slate-500">Касса:</span>
+                                              <span className="text-neutral-500">Касса:</span>
                                               <span className="font-bold">{new Intl.NumberFormat('uz-UZ', { notation: "compact" }).format(stats.totalCash)}</span>
                                            </div>
                                            <div className="flex justify-between items-center">
-                                              <span className="text-slate-500">Бонус {(stats.bonusRate * 100).toFixed(0)}%:</span>
+                                              <span className="text-neutral-500">Бонус {(stats.bonusRate * 100).toFixed(0)}%:</span>
                                               <span className="font-bold text-emerald-600">{new Intl.NumberFormat('uz-UZ', { notation: "compact" }).format(stats.bonus)}</span>
                                            </div>
                                       </div>
@@ -528,14 +529,14 @@ export default function Employees() {
                           ) : stats.role === 'sales_manager' ? (
                               <div className="grid grid-cols-2 divide-x border-b">
                                   <div className="p-4 space-y-1">
-                                      <span className="text-xs text-slate-500 uppercase tracking-wider">Факт. платежи</span>
+                                      <span className="text-xs text-neutral-500 uppercase tracking-wider">Факт. платежи</span>
                                       <div className="flex items-baseline gap-1">
-                                          <span className="text-lg font-bold text-slate-700">
+                                          <span className="text-lg font-bold text-neutral-700">
                                             {new Intl.NumberFormat('uz-UZ', { notation: "compact" }).format(stats.totalSales)}
                                           </span>
                                       </div>
                                       <div className="space-y-1 mt-2">
-                                        <div className="flex justify-between text-[10px] text-slate-500">
+                                        <div className="flex justify-between text-[10px] text-neutral-500">
                                             <span>Прогресс</span>
                                             <span>{progressMsg}</span>
                                         </div>
@@ -543,14 +544,14 @@ export default function Employees() {
                                       </div>
                                   </div>
                                   <div className="p-4 space-y-1">
-                                      <span className="text-xs text-slate-500 uppercase tracking-wider">Расчет</span>
+                                      <span className="text-xs text-neutral-500 uppercase tracking-wider">Расчет</span>
                                       <div className="flex flex-col text-sm gap-1">
                                            <div className="flex justify-between items-center">
-                                              <span className="text-slate-500">Фикс:</span>
+                                              <span className="text-neutral-500">Фикс:</span>
                                               <span className="font-bold">{new Intl.NumberFormat('uz-UZ', { notation: "compact" }).format(stats.fixedSalary)}</span>
                                            </div>
                                            <div className="flex justify-between items-center">
-                                              <span className="text-slate-500">Бонус {(stats.commissionRate * 100).toFixed(0)}%:</span>
+                                              <span className="text-neutral-500">Бонус {(stats.commissionRate * 100).toFixed(0)}%:</span>
                                               <span className="font-bold text-emerald-600">+{new Intl.NumberFormat('uz-UZ', { notation: "compact" }).format(stats.commission)}</span>
                                            </div>
                                       </div>
@@ -559,17 +560,17 @@ export default function Employees() {
                           ) : (
                               <div className="grid grid-cols-2 divide-x border-b">
                                   <div className="p-4 space-y-1">
-                                      <span className="text-xs text-slate-500 uppercase tracking-wider">Часы</span>
+                                      <span className="text-xs text-neutral-500 uppercase tracking-wider">Часы</span>
                                       <div className="flex items-baseline gap-1">
-                                          <span className="text-2xl font-bold text-slate-700">{stats.totalHours}</span>
-                                          <span className="text-sm text-slate-400">ч</span>
+                                          <span className="text-2xl font-bold text-neutral-700">{stats.totalHours}</span>
+                                          <span className="text-sm text-neutral-400">ч</span>
                                       </div>
                                       <div className="text-xs text-emerald-600 font-medium">
                                           {stats.salaryHours.toLocaleString()} сум
                                       </div>
                                   </div>
                                   <div className="p-4 space-y-1">
-                                      <span className="text-xs text-slate-500 uppercase tracking-wider">Выработка</span>
+                                      <span className="text-xs text-neutral-500 uppercase tracking-wider">Выработка</span>
                                       <div className="flex flex-col">
                                           <div className="flex justify-between text-sm">
                                               <span>Намотка:</span>
@@ -580,37 +581,37 @@ export default function Employees() {
                                               <span className="font-bold">{stats.twistingKg.toLocaleString()} кг</span>
                                           </div>
                                       </div>
-                                      <div className="text-xs text-blue-600 font-medium mt-1">
+                                      <div className="text-xs text-neutral-900 font-medium mt-1">
                                           {stats.salaryPiecework.toLocaleString()} сум
                                       </div>
                                   </div>
                               </div>
                           )}
-                          <div className="p-4 bg-slate-50 space-y-2">
+                          <div className="p-4 bg-neutral-50 space-y-2">
                               {paidAmount > 0 ? (
                                 <>
                                   <div className="flex justify-between items-center">
-                                      <span className="font-medium text-slate-500">Начислено:</span>
-                                      <span className="font-bold text-slate-700">
+                                      <span className="font-medium text-neutral-500">Начислено:</span>
+                                      <span className="font-bold text-neutral-700">
                                           {stats.totalSalary.toLocaleString()} сум
                                       </span>
                                   </div>
                                   <div className="flex justify-between items-center text-sm">
-                                      <span className="text-slate-500">Выплачено:</span>
+                                      <span className="text-neutral-500">Выплачено:</span>
                                       <span className="font-medium text-emerald-600">
                                           -{paidAmount.toLocaleString()} сум
                                       </span>
                                   </div>
-                                  <div className="flex justify-between items-center border-t border-slate-200 pt-2 mt-2">
-                                      <span className="font-bold text-slate-700">К выплате:</span>
-                                      <span className={`text-xl font-bold ${remaining <= 0 ? 'text-slate-400' : 'text-emerald-600'}`}>
+                                  <div className="flex justify-between items-center border-t border-neutral-200 pt-2 mt-2">
+                                      <span className="font-bold text-neutral-700">К выплате:</span>
+                                      <span className={`text-xl font-bold ${remaining <= 0 ? 'text-neutral-400' : 'text-emerald-600'}`}>
                                           {remaining > 0 ? remaining.toLocaleString() : "0"} сум
                                       </span>
                                   </div>
                                 </>
                               ) : (
                                 <div className="flex justify-between items-center">
-                                    <span className="font-medium text-slate-600">Итого к выплате:</span>
+                                    <span className="font-medium text-neutral-600">Итого к выплате:</span>
                                     <span className="text-xl font-bold text-emerald-600">
                                         {stats.totalSalary.toLocaleString()} сум
                                     </span>
@@ -622,16 +623,16 @@ export default function Employees() {
               );
           })}
           
-          <Card className="flex flex-col justify-center items-center p-6 border-dashed border-2 border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-colors cursor-pointer group" onClick={() => setIsTimesheetOpen(true)}>
+          <Card className="tasklab-card-dashed flex flex-col justify-center items-center p-6 hover:bg-neutral-50 transition-colors cursor-pointer group" onClick={() => setIsTimesheetOpen(true)}>
               <div className="h-12 w-12 rounded-full bg-white border flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <Plus className="h-6 w-6 text-slate-400" />
+                  <Plus className="h-6 w-6 text-neutral-400" />
               </div>
-              <h3 className="font-medium text-slate-900">Добавить часы</h3>
-              <p className="text-sm text-slate-500 text-center mt-1">Внести запись в табель рабочего времени</p>
+              <h3 className="font-medium text-neutral-900">Добавить часы</h3>
+              <p className="text-sm text-neutral-500 text-center mt-1">Внести запись в табель рабочего времени</p>
           </Card>
       </div>
 
-      <Card>
+      <Card className="tasklab-card border-0">
           <CardHeader>
               <CardTitle>История табеля</CardTitle>
           </CardHeader>
@@ -670,7 +671,7 @@ export default function Employees() {
                           })}
                         {timesheets.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center py-8 text-slate-500">Нет записей за этот месяц</TableCell>
+                                <TableCell colSpan={6} className="text-center py-8 text-neutral-500">Нет записей за этот месяц</TableCell>
                             </TableRow>
                         )}
                   </TableBody>
@@ -786,7 +787,7 @@ export default function Employees() {
                                   <div>
                                       <DialogTitle className="text-2xl flex items-center gap-3">
                                           {emp.name}
-                                          {isManager && <Badge className="bg-blue-600">Manager</Badge>}
+                                          {isManager && <Badge className="bg-neutral-900">Manager</Badge>}
                                           {isOwner && <Badge className="bg-amber-600">👑 Владелец</Badge>}
                                       </DialogTitle>
                                       <DialogDescription className="mt-2">
@@ -808,32 +809,32 @@ export default function Employees() {
                                           <span className="text-sm font-medium text-amber-900">Расчет от общей кассы</span>
                                           <span className="text-sm font-bold text-amber-700">80% от кассы (касса - 20%)</span>
                                       </div>
-                                      <div className="text-xs text-slate-500 mt-2">
+                                      <div className="text-xs text-neutral-500 mt-2">
                                           Ваша зарплата рассчитывается как 80% от общей кассы (все поступления)
                                       </div>
                                   </div>
 
                                   <div className="grid grid-cols-3 gap-4">
-                                      <div className="bg-slate-50 p-4 rounded-lg border">
-                                          <div className="text-sm text-slate-500">Общая касса</div>
+                                      <div className="bg-neutral-50 p-4 rounded-lg border">
+                                          <div className="text-sm text-neutral-500">Общая касса</div>
                                           <div className="text-2xl font-bold">{new Intl.NumberFormat('uz-UZ').format(stats.totalCash)} сум</div>
-                                          <div className="text-xs text-slate-400 mt-1">Все поступления</div>
+                                          <div className="text-xs text-neutral-400 mt-1">Все поступления</div>
                                       </div>
-                                      <div className="bg-slate-50 p-4 rounded-lg border">
-                                          <div className="text-sm text-slate-500">Процент</div>
+                                      <div className="bg-neutral-50 p-4 rounded-lg border">
+                                          <div className="text-sm text-neutral-500">Процент</div>
                                           <div className="text-2xl font-bold text-amber-600">{(stats.bonusRate * 100).toFixed(0)}%</div>
-                                          <div className="text-xs text-slate-400 mt-1">Ставка владельца</div>
+                                          <div className="text-xs text-neutral-400 mt-1">Ставка владельца</div>
                                       </div>
-                                      <div className="bg-slate-50 p-4 rounded-lg border">
-                                          <div className="text-sm text-slate-500">Итого к выплате</div>
+                                      <div className="bg-neutral-50 p-4 rounded-lg border">
+                                          <div className="text-sm text-neutral-500">Итого к выплате</div>
                                           <div className="text-2xl font-bold text-emerald-600">{new Intl.NumberFormat('uz-UZ').format(stats.totalSalary)} сум</div>
-                                          <div className="text-xs text-slate-400 mt-1">Ваш бонус</div>
+                                          <div className="text-xs text-neutral-400 mt-1">Ваш бонус</div>
                                       </div>
                                   </div>
 
-                                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                  <div className="bg-[var(--tasklab-lime)]/10 p-4 rounded-lg border border-neutral-200">
                                       <h4 className="font-semibold text-sm mb-2">ℹ️ Формула расчета</h4>
-                                      <div className="text-sm text-slate-700 space-y-1">
+                                      <div className="text-sm text-neutral-700 space-y-1">
                                           <p>• Общая касса: {new Intl.NumberFormat('uz-UZ').format(stats.totalCash)} сум</p>
                                           <p>• Процент владельца: {(stats.bonusRate * 100).toFixed(0)}%</p>
                                           <p className="font-bold text-emerald-700">• Итого: {new Intl.NumberFormat('uz-UZ').format(stats.totalCash)} × {(stats.bonusRate * 100).toFixed(0)}% = {new Intl.NumberFormat('uz-UZ').format(stats.bonus)} сум</p>
@@ -843,13 +844,13 @@ export default function Employees() {
                           ) : isManager ? (
                               <div className="space-y-6 py-4">
                                   {/* Progress Bar Section */}
-                                  <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100">
+                                  <div className="bg-[var(--tasklab-lime)]/10 p-4 rounded-lg border border-neutral-200">
                                       <div className="flex justify-between items-center mb-2">
-                                          <span className="text-sm font-medium text-blue-900">Прогресс продаж</span>
-                                          <span className="text-sm font-bold text-blue-700">{progressMsg}</span>
+                                          <span className="text-sm font-medium text-neutral-900">Прогресс продаж</span>
+                                          <span className="text-sm font-bold text-neutral-800">{progressMsg}</span>
                                       </div>
-                                      <Progress value={progress} className="h-3 bg-blue-100" />
-                                      <div className="flex justify-between mt-1 text-xs text-slate-400">
+                                      <Progress value={progress} className="h-3 bg-[var(--tasklab-lime)]/20" />
+                                      <div className="flex justify-between mt-1 text-xs text-neutral-400">
                                           <span>0</span>
                                           <span>20 млн</span>
                                           <span>40 млн+</span>
@@ -857,28 +858,28 @@ export default function Employees() {
                                   </div>
 
                                   <div className="grid grid-cols-3 gap-4">
-                                      <div className="bg-slate-50 p-4 rounded-lg border">
-                                          <div className="text-sm text-slate-500">Фактические платежи</div>
+                                      <div className="bg-neutral-50 p-4 rounded-lg border">
+                                          <div className="text-sm text-neutral-500">Фактические платежи</div>
                                           <div className="text-2xl font-bold">{new Intl.NumberFormat('uz-UZ').format(stats.totalSales)} сум</div>
-                                          <div className="text-xs text-slate-400 mt-1">{stats.dealsCount} сделок</div>
+                                          <div className="text-xs text-neutral-400 mt-1">{stats.dealsCount} сделок</div>
                                       </div>
-                                      <div className="bg-slate-50 p-4 rounded-lg border">
-                                          <div className="text-sm text-slate-500">Бонус</div>
+                                      <div className="bg-neutral-50 p-4 rounded-lg border">
+                                          <div className="text-sm text-neutral-500">Бонус</div>
                                           <div className="text-2xl font-bold text-emerald-600">+{new Intl.NumberFormat('uz-UZ').format(stats.commission)} сум</div>
-                                          <div className="text-xs text-slate-400 mt-1">{(stats.commissionRate * 100).toFixed(0)}% от платежей</div>
+                                          <div className="text-xs text-neutral-400 mt-1">{(stats.commissionRate * 100).toFixed(0)}% от платежей</div>
                                       </div>
-                                      <div className="bg-slate-50 p-4 rounded-lg border">
-                                          <div className="text-sm text-slate-500">Итого к выплате</div>
-                                          <div className="text-2xl font-bold text-blue-600">{new Intl.NumberFormat('uz-UZ').format(stats.totalSalary)} сум</div>
-                                          <div className="text-xs text-slate-400 mt-1">Оклад + Бонус</div>
+                                      <div className="bg-neutral-50 p-4 rounded-lg border">
+                                          <div className="text-sm text-neutral-500">Итого к выплате</div>
+                                          <div className="text-2xl font-bold text-neutral-900">{new Intl.NumberFormat('uz-UZ').format(stats.totalSalary)} сум</div>
+                                          <div className="text-xs text-neutral-400 mt-1">Оклад + Бонус</div>
                                       </div>
                                   </div>
 
                                   {/* Info Message about calculation logic */}
-                                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                  <div className="bg-[var(--tasklab-lime)]/10 p-4 rounded-lg border border-neutral-200">
                                       <div className="flex items-start gap-2">
-                                          <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                                          <div className="text-sm text-blue-800">
+                                          <Info className="h-4 w-4 text-neutral-900 mt-0.5 flex-shrink-0" />
+                                          <div className="text-sm text-neutral-800">
                                               <p className="font-semibold mb-1">💡 Расчет бонуса</p>
                                               <p className="text-xs leading-relaxed">
                                                   Бонус менеджера рассчитывается от <strong>фактически полученных платежей</strong> (payments), а не от ожидаемой суммы сделок. Учитываются только платежи по закрытым сделкам (won) в текущем месяце.
@@ -903,13 +904,13 @@ export default function Employees() {
                                                       <TableRow key={deal.id}>
                                                           <TableCell>{format(parseISO(deal.created_at), 'dd.MM.yyyy HH:mm')}</TableCell>
                                                           <TableCell className="font-medium">{new Intl.NumberFormat('uz-UZ').format(deal.amount)} сум</TableCell>
-                                                          <TableCell className="text-right text-slate-500">
+                                                          <TableCell className="text-right text-neutral-500">
                                                               ~{new Intl.NumberFormat('uz-UZ').format(deal.amount * stats.commissionRate)}
                                                           </TableCell>
                                                       </TableRow>
                                                   )) : (
                                                       <TableRow>
-                                                          <TableCell colSpan={3} className="text-center py-8 text-slate-500">
+                                                          <TableCell colSpan={3} className="text-center py-8 text-neutral-500">
                                                               Нет успешных сделок за этот месяц
                                                           </TableCell>
                                                       </TableRow>
@@ -928,19 +929,19 @@ export default function Employees() {
                                   
                                   <TabsContent value="production" className="space-y-4 pt-4">
                                       <div className="grid grid-cols-2 gap-4">
-                                          <div className="bg-slate-50 p-4 rounded-lg border">
-                                              <div className="text-sm text-slate-500">Всего выработка</div>
-                                              <div className="text-2xl font-bold text-blue-600">{stats.salaryPiecework.toLocaleString()} сум</div>
+                                          <div className="bg-neutral-50 p-4 rounded-lg border">
+                                              <div className="text-sm text-neutral-500">Всего выработка</div>
+                                              <div className="text-2xl font-bold text-neutral-900">{stats.salaryPiecework.toLocaleString()} сум</div>
                                           </div>
-                                          <div className="bg-slate-50 p-4 rounded-lg border">
-                                              <div className="text-sm text-slate-500">Объем</div>
+                                          <div className="bg-neutral-50 p-4 rounded-lg border">
+                                              <div className="text-sm text-neutral-500">Объем</div>
                                               <div className="flex gap-4 mt-1">
                                                   <div>
-                                                      <span className="text-xs text-slate-400 block">Намотка</span>
+                                                      <span className="text-xs text-neutral-400 block">Намотка</span>
                                                       <span className="font-bold">{stats.windingKg.toLocaleString()} кг</span>
                                                   </div>
                                                   <div>
-                                                      <span className="text-xs text-slate-400 block">Перекрутка</span>
+                                                      <span className="text-xs text-neutral-400 block">Перекрутка</span>
                                                       <span className="font-bold">{stats.twistingKg.toLocaleString()} кг</span>
                                                   </div>
                                               </div>
@@ -969,7 +970,7 @@ export default function Employees() {
                                                           <TableRow key={log.id}>
                                                               <TableCell>{format(parseISO(log.date), 'dd.MM.yyyy')}</TableCell>
                                                               <TableCell>
-                                                                  <Badge variant="secondary" className={isWinding ? 'bg-indigo-100 text-indigo-700' : 'bg-orange-100 text-orange-700'}>
+                                                                  <Badge variant="secondary" className={isWinding ? 'bg-neutral-100 text-neutral-900' : 'bg-orange-100 text-orange-700'}>
                                                                       {isWinding ? 'Намотка' : 'Перекрутка'}
                                                                   </Badge>
                                                               </TableCell>
@@ -980,7 +981,7 @@ export default function Employees() {
                                                       );
                                                   }) : (
                                                       <TableRow>
-                                                          <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                                                          <TableCell colSpan={5} className="text-center py-8 text-neutral-500">
                                                               Нет записей производства за этот месяц
                                                           </TableCell>
                                                       </TableRow>
@@ -991,14 +992,14 @@ export default function Employees() {
                                   </TabsContent>
 
                                   <TabsContent value="timesheet" className="space-y-4 pt-4">
-                                      <div className="bg-slate-50 p-4 rounded-lg border">
+                                      <div className="bg-neutral-50 p-4 rounded-lg border">
                                           <div className="flex justify-between items-center">
                                               <div>
-                                                  <div className="text-sm text-slate-500">Оплата по часам</div>
-                                                  <div className="text-2xl font-bold text-blue-600">{stats.salaryHours.toLocaleString()} сум</div>
+                                                  <div className="text-sm text-neutral-500">Оплата по часам</div>
+                                                  <div className="text-2xl font-bold text-neutral-900">{stats.salaryHours.toLocaleString()} сум</div>
                                               </div>
                                               <div className="text-right">
-                                                  <div className="text-sm text-slate-500">Всего часов</div>
+                                                  <div className="text-sm text-neutral-500">Всего часов</div>
                                                   <div className="text-2xl font-bold">{stats.totalHours} ч</div>
                                               </div>
                                           </div>
@@ -1024,7 +1025,7 @@ export default function Employees() {
                                                       </TableRow>
                                                   )) : (
                                                       <TableRow>
-                                                          <TableCell colSpan={4} className="text-center py-8 text-slate-500">
+                                                          <TableCell colSpan={4} className="text-center py-8 text-neutral-500">
                                                               Нет записей в табеле за этот месяц
                                                           </TableCell>
                                                       </TableRow>
@@ -1070,7 +1071,7 @@ export default function Employees() {
                </div>
 
                {selectedEmpId && (
-                   <div className="border rounded-lg p-4 space-y-4 bg-slate-50 animate-in fade-in zoom-in-95 duration-200">
+                   <div className="border rounded-lg p-4 space-y-4 bg-neutral-50 animate-in fade-in zoom-in-95 duration-200">
                        <div className="grid grid-cols-4 items-center gap-4">
                           <Label className="text-right">Имя</Label>
                           <Input 
@@ -1121,7 +1122,7 @@ export default function Employees() {
                                       onChange={(e) => setPersonalSettings({...personalSettings, fixedSalary: e.target.value})}
                                   />
                                </div>
-                               <div className="bg-blue-50 p-3 rounded-lg text-xs text-blue-700 space-y-1">
+                               <div className="bg-[var(--tasklab-lime)]/10 p-3 rounded-lg text-xs text-neutral-800 space-y-1">
                                    <p className="font-bold">Схема расчета бонусов:</p>
                                    <p>• Продажи &lt; 20 млн: 5%</p>
                                    <p>• 20 млн - 40 млн: 10%</p>
@@ -1141,7 +1142,7 @@ export default function Employees() {
                                </div>
                                
                                <div className="border-t pt-4 mt-4">
-                                   <h4 className="font-medium mb-3 text-sm text-slate-700">Персональные тарифы</h4>
+                                   <h4 className="font-medium mb-3 text-sm text-neutral-700">Персональные тарифы</h4>
                                    <div className="grid gap-4">
                                        <div className="grid grid-cols-4 items-center gap-4">
                                           <Label className="text-right">Намотка</Label>
@@ -1164,7 +1165,7 @@ export default function Employees() {
                                           />
                                        </div>
                                    </div>
-                                   <p className="text-xs text-slate-400 mt-2 text-right">
+                                   <p className="text-xs text-neutral-400 mt-2 text-right">
                                        * Оставьте пустым, чтобы использовать базовый тариф
                                    </p>
                                </div>
@@ -1178,7 +1179,7 @@ export default function Employees() {
                )}
                
                {!selectedEmpId && (
-                   <div className="text-center py-12 text-slate-500 border-2 border-dashed rounded-lg bg-slate-50/50">
+                   <div className="text-center py-12 text-neutral-500 border-2 border-dashed rounded-lg bg-neutral-50/50">
                        <Users className="h-10 w-10 mx-auto mb-3 opacity-20" />
                        <p>Выберите сотрудника из списка выше,<br/>чтобы настроить его условия</p>
                    </div>
@@ -1238,7 +1239,7 @@ export default function Employees() {
                   return (
                     <TableRow key={item.employeeId} className={remaining < 0 ? 'bg-red-50' : remaining === 0 ? 'bg-emerald-50' : ''}>
                       <TableCell className="font-medium">{item.employeeName}</TableCell>
-                      <TableCell className="text-right font-bold text-blue-600">
+                      <TableCell className="text-right font-bold text-neutral-900">
                         {item.calculatedSalary.toLocaleString()} сум
                       </TableCell>
                       <TableCell>
@@ -1271,22 +1272,22 @@ export default function Employees() {
             </Table>
             
             {payrollData.length > 0 && (
-              <div className="mt-6 p-4 bg-slate-100 rounded-lg border">
+              <div className="mt-6 p-4 bg-neutral-100 rounded-lg border">
                 <div className="grid grid-cols-3 gap-4">
                   <div className="text-center">
-                    <div className="text-sm text-slate-500">Всего к выплате</div>
-                    <div className="text-2xl font-bold text-blue-600">
+                    <div className="text-sm text-neutral-500">Всего к выплате</div>
+                    <div className="text-2xl font-bold text-neutral-900">
                       {payrollData.reduce((sum, item) => sum + item.calculatedSalary, 0).toLocaleString()} сум
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-sm text-slate-500">Выдано</div>
+                    <div className="text-sm text-neutral-500">Выдано</div>
                     <div className="text-2xl font-bold text-emerald-600">
                       {payrollData.reduce((sum, item) => sum + (parseFloat(item.paidAmount as any) || 0), 0).toLocaleString()} сум
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-sm text-slate-500">Остаток</div>
+                    <div className="text-sm text-neutral-500">Остаток</div>
                     <div className="text-2xl font-bold text-orange-600">
                       {payrollData.reduce((sum, item) => {
                         const paid = parseFloat(item.paidAmount as any) || 0;
@@ -1304,7 +1305,7 @@ export default function Employees() {
               Отмена
             </Button>
             <Button 
-              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700"
+              className="tasklab-pill w-full sm:w-auto bg-neutral-900 hover:bg-neutral-800"
               onClick={async () => {
                 try {
                   // Save payroll data to backend
@@ -1342,5 +1343,6 @@ export default function Employees() {
         </DialogContent>
       </Dialog>
     </div>
+    </BttCrmModuleShell>
   );
 }

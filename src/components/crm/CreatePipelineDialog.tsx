@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { crmUrl, authHeaders } from '../../lib/crmApi.ts';
 import {
   Dialog,
@@ -83,7 +83,7 @@ export function CreatePipelineDialog({ open, onOpenChange, onSuccess }: CreatePi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="tasklab-card border-0 sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Создать новую воронку</DialogTitle>
@@ -134,8 +134,8 @@ export function CreatePipelineDialog({ open, onOpenChange, onSuccess }: CreatePi
               />
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-800">
+            <div className="bg-[var(--tasklab-lime)]/10 border border-[var(--tasklab-lime)]/30 rounded-lg p-3">
+              <p className="text-sm text-neutral-800">
                 💡 <strong>Совет:</strong> После создания воронки вы сможете настроить её этапы на странице "Воронки"
               </p>
             </div>
@@ -150,7 +150,7 @@ export function CreatePipelineDialog({ open, onOpenChange, onSuccess }: CreatePi
             >
               Отмена
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="bg-neutral-900 hover:bg-neutral-800 text-white">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

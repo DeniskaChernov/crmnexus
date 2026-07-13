@@ -147,21 +147,14 @@ export default function Contacts() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">B2C</h2>
-          <p className="text-muted-foreground">Частные лица</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={exportContacts}>
-            <Download className="mr-2 h-4 w-4" />
-            Экспорт
-          </Button>
-          <CreateContactDialog onSuccess={fetchContacts} />
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2 justify-end">
+        <Button variant="outline" onClick={exportContacts}>
+          <Download className="mr-2 h-4 w-4" />
+          Экспорт
+        </Button>
+        <CreateContactDialog onSuccess={fetchContacts} />
       </div>
-
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -178,7 +171,7 @@ export default function Contacts() {
 
       <div className="flex items-center space-x-2">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-neutral-400" />
           <Input
             placeholder="Поиск по имени, email, телефону или компании..."
             className="pl-8"
@@ -188,26 +181,26 @@ export default function Contacts() {
         </div>
       </div>
 
-      <div className="rounded-md border bg-white">
+      <div className="tasklab-card rounded-[1.75rem] overflow-hidden">
         {isMobile ? (
            <div className="space-y-4 p-4">
              {loading ? (
-                <div className="text-center py-8 text-slate-500">Загрузка...</div>
+                <div className="text-center py-8 text-neutral-500">Загрузка...</div>
              ) : filteredContacts.length === 0 && !error ? (
-                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                <div className="flex flex-col items-center justify-center py-8 text-neutral-500">
                   <User className="h-8 w-8 mb-2 opacity-20" />
                   <p>Нет контактов</p>
                 </div>
              ) : (
                 visibleContacts.map(contact => (
-                  <Card key={contact.id} onClick={() => handleViewDetails(contact)} className="shadow-none border border-slate-200">
+                  <Card key={contact.id} onClick={() => handleViewDetails(contact)} className="tasklab-card shadow-none border border-neutral-200">
                      <CardContent className="p-4 space-y-3">
                         <div className="flex justify-between items-start">
                            <div>
-                              <div className="font-medium text-slate-900">{contact.first_name} {contact.last_name}</div>
-                              <div className="text-xs text-muted-foreground">{contact.position}</div>
+                              <div className="font-medium text-neutral-900">{contact.first_name} {contact.last_name}</div>
+                              <div className="text-xs text-neutral-500">{contact.position}</div>
                               {contact.companies?.name && (
-                                <div className="text-xs text-blue-600 mt-1 bg-blue-50 inline-block px-1.5 py-0.5 rounded">
+                                <div className="text-xs text-neutral-900 mt-1 bg-[var(--tasklab-lime)]/15 inline-block px-1.5 py-0.5 rounded">
                                    {contact.companies.name}
                                 </div>
                               )}
@@ -216,36 +209,36 @@ export default function Contacts() {
                         
                         <div className="space-y-1">
                             {contact.phone && (
-                               <div className="flex items-center gap-2 text-sm text-slate-600">
-                                  <Phone className="w-3.5 h-3.5 text-slate-400" />
+                               <div className="flex items-center gap-2 text-sm text-neutral-600">
+                                  <Phone className="w-3.5 h-3.5 text-neutral-400" />
                                   <span>{contact.phone}</span>
                                </div>
                             )}
                             {contact.email && (
-                               <div className="flex items-center gap-2 text-sm text-slate-600">
-                                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                               <div className="flex items-center gap-2 text-sm text-neutral-600">
+                                  <Mail className="w-3.5 h-3.5 text-neutral-400" />
                                   <span className="truncate max-w-[200px]">{contact.email}</span>
                                </div>
                             )}
                         </div>
 
-                        <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
+                        <div className="flex justify-end gap-2 border-t border-neutral-100 pt-3">
                             {contact.email && (
                               <SendEmailDialog
                                 recipientEmail={contact.email}
                                 recipientName={`${contact.first_name} ${contact.last_name}`}
                                 trigger={
                                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-                                    <Mail className="h-4 w-4 text-slate-400" />
+                                    <Mail className="h-4 w-4 text-neutral-400" />
                                   </Button>
                                 }
                               />
                             )}
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handleEditContact(contact); }}>
-                                <Pencil className="h-4 w-4 text-slate-400" />
+                                <Pencil className="h-4 w-4 text-neutral-400" />
                             </Button>
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handleDeleteClick(contact); }}>
-                                <Trash2 className="h-4 w-4 text-slate-400" />
+                                <Trash2 className="h-4 w-4 text-neutral-400" />
                             </Button>
                         </div>
                      </CardContent>
@@ -271,7 +264,7 @@ export default function Contacts() {
               </TableRow>
             ) : filteredContacts.length === 0 && !error ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center h-32 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center h-32 text-neutral-500">
                   <div className="flex flex-col items-center justify-center">
                     <User className="h-8 w-8 mb-2 opacity-20" />
                     <p>Нет контактов</p>
@@ -280,10 +273,10 @@ export default function Contacts() {
               </TableRow>
             ) : (
               visibleContacts.map((contact) => (
-                <TableRow key={contact.id} className="cursor-pointer hover:bg-slate-50" onClick={() => handleViewDetails(contact)}>
+                <TableRow key={contact.id} className="cursor-pointer hover:bg-neutral-50" onClick={() => handleViewDetails(contact)}>
                   <TableCell className="font-medium">
-                    <span className="hover:underline text-slate-900">{contact.first_name} {contact.last_name}</span>
-                    <div className="text-xs text-muted-foreground">{contact.position}</div>
+                    <span className="hover:underline text-neutral-900">{contact.first_name} {contact.last_name}</span>
+                    <div className="text-xs text-neutral-500">{contact.position}</div>
                   </TableCell>
                   <TableCell>{contact.companies?.name || '-'}</TableCell>
                   <TableCell>{contact.phone || '-'}</TableCell>
@@ -325,7 +318,7 @@ export default function Contacts() {
           <div className="text-center px-4 pb-2">
             <div ref={sentinelRef} className="h-3 w-full" aria-hidden />
             {hasMore && (
-              <p className="text-xs text-muted-foreground pt-1">
+              <p className="text-xs text-neutral-500 pt-1">
                 Загружено {visibleCount} из {contactsTotal}
               </p>
             )}

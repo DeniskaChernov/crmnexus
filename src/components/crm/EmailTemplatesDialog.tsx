@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { crmUrl, authHeaders } from '../../lib/crmApi.ts';
 import {
   Dialog,
@@ -277,16 +277,16 @@ export function EmailTemplatesDialog({ open, onOpenChange, onSelectTemplate }: E
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'sales': return 'bg-blue-100 text-blue-800';
+      case 'sales': return 'bg-neutral-100 text-neutral-900';
       case 'followup': return 'bg-green-100 text-green-800';
-      case 'proposal': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'proposal': return 'bg-[var(--tasklab-lime)]/20 text-neutral-900';
+      default: return 'bg-neutral-100 text-neutral-800';
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="tasklab-card border-0 max-w-4xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
@@ -300,7 +300,7 @@ export function EmailTemplatesDialog({ open, onOpenChange, onSelectTemplate }: E
         {!showForm ? (
           <>
             <div className="px-6 py-3 border-b">
-              <Button onClick={() => setShowForm(true)} size="sm">
+              <Button onClick={() => setShowForm(true)} size="sm" className="bg-neutral-900 hover:bg-neutral-800 text-white">
                 <Plus className="h-4 w-4 mr-2" />
                 Создать шаблон
               </Button>
@@ -355,7 +355,7 @@ export function EmailTemplatesDialog({ open, onOpenChange, onSelectTemplate }: E
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="text-sm text-muted-foreground whitespace-pre-wrap bg-slate-50 p-3 rounded-lg border max-h-32 overflow-y-auto">
+                        <div className="text-sm text-muted-foreground whitespace-pre-wrap bg-neutral-50 p-3 rounded-lg border max-h-32 overflow-y-auto">
                           {template.body}
                         </div>
                         <div className="mt-3 flex gap-2">
@@ -436,7 +436,7 @@ export function EmailTemplatesDialog({ open, onOpenChange, onSelectTemplate }: E
               >
                 Отмена
               </Button>
-              <Button onClick={handleSaveTemplate}>
+              <Button onClick={handleSaveTemplate} className="bg-neutral-900 hover:bg-neutral-800 text-white">
                 {editingTemplate ? 'Сохранить изменения' : 'Создать шаблон'}
               </Button>
             </DialogFooter>

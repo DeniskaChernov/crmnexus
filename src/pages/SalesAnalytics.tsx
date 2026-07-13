@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
+import { BttCrmModuleShell } from '../components/btt-ref/BttCrmModuleShell.tsx';
 import { crmUrl, authHeaders } from '../lib/crmApi.ts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
@@ -269,7 +270,7 @@ export default function SalesAnalytics() {
     B: '#f59e0b', // orange
     C: '#ef4444', // red
     champions: '#8b5cf6',
-    loyal: '#3b82f6',
+    loyal: '#171717',
     newCustomers: '#10b981',
     atRisk: '#f59e0b',
     lost: '#ef4444',
@@ -280,25 +281,20 @@ export default function SalesAnalytics() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Загрузка аналитики...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neutral-900 mx-auto mb-4"></div>
+          <p className="text-neutral-600">Загрузка аналитики...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <BarChart3 className="h-8 w-8 text-blue-600" />
-            Аналитика и Отчеты
-          </h1>
-          <p className="text-slate-600 mt-1">Глубокий анализ клиентов, воронки и прогноз</p>
-        </div>
-        <div className="flex gap-2">
+    <BttCrmModuleShell
+      tag="Графики"
+      title="Графики"
+      subtitle="Глубокий анализ клиентов, воронки и прогноз"
+      actions={
+        <div className="flex gap-2 flex-wrap">
           <Button 
             variant={showFilters ? "default" : "outline"} 
             onClick={() => setShowFilters(!showFilters)}
@@ -314,7 +310,7 @@ export default function SalesAnalytics() {
                 План
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="tasklab-card border-0">
               <DialogHeader>
                 <DialogTitle>План продаж на месяц</DialogTitle>
                 <DialogDescription>
@@ -332,7 +328,7 @@ export default function SalesAnalytics() {
                     onChange={(e) => setPlanInput(e.target.value)}
                   />
                 </div>
-                <Button onClick={savePlan} className="w-full">
+                <Button onClick={savePlan} className="w-full bg-neutral-900 hover:bg-neutral-800 text-white">
                   Сохранить план
                 </Button>
               </div>
@@ -348,7 +344,8 @@ export default function SalesAnalytics() {
             Экспорт
           </Button>
         </div>
-      </div>
+      }
+    >
 
       {/* Date Range Filter */}
       {showFilters && (
@@ -362,60 +359,60 @@ export default function SalesAnalytics() {
 
       {/* Key Metrics Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
+        <Card className="tasklab-card border-0">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Выполнение плана</CardTitle>
+            <CardTitle className="text-sm font-medium text-neutral-600">Выполнение плана</CardTitle>
           </CardHeader>
           <CardContent>
-             <div className="text-2xl font-bold text-slate-900">
+             <div className="text-2xl font-bold text-neutral-900">
               {monthlyPlan > 0 ? Math.round((abcData?.totalRevenue / monthlyPlan) * 100) : 0}%
             </div>
-            <div className="w-full bg-slate-100 h-2 rounded-full mt-2 overflow-hidden">
+            <div className="w-full bg-neutral-100 h-2 rounded-full mt-2 overflow-hidden">
                 <div 
-                   className="h-full bg-slate-900 rounded-full" 
+                   className="h-full bg-neutral-900 rounded-full" 
                    style={{ width: `${Math.min(monthlyPlan > 0 ? (abcData?.totalRevenue / monthlyPlan) * 100 : 0, 100)}%` }}
                 ></div>
             </div>
-            <p className="text-xs text-slate-500 mt-2">
+            <p className="text-xs text-neutral-500 mt-2">
                Цель: {formatCurrency(monthlyPlan)}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="tasklab-card border-0">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Общая выручка (выигранные)</CardTitle>
+            <CardTitle className="text-sm font-medium text-neutral-600">Общая выручка (выигранные)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900">
-              {formatCurrency(abcData?.totalRevenue || 0)} <span className="text-sm text-slate-500">сум</span>
+            <div className="text-2xl font-bold text-neutral-900">
+              {formatCurrency(abcData?.totalRevenue || 0)} <span className="text-sm text-neutral-500">сум</span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">Всего клиентов: {abcData?.totalCompanies || 0}</p>
+            <p className="text-xs text-neutral-500 mt-1">Всего клиентов: {abcData?.totalCompanies || 0}</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="tasklab-card border-0">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Конверсия воронки</CardTitle>
+            <CardTitle className="text-sm font-medium text-neutral-600">Конверсия воронки</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
               {funnelData?.winRate?.toFixed(1) || 0}%
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-neutral-500 mt-1">
               {funnelData?.wonDeals || 0} выиграно / {funnelData?.lostDeals || 0} потеряно
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="tasklab-card border-0">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Прогноз на след. месяц</CardTitle>
+            <CardTitle className="text-sm font-medium text-neutral-600">Прогноз на след. месяц</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-neutral-900">
               {advancedForecastData?.forecast?.[0] ? formatCurrency(advancedForecastData.forecast[0].predictedRevenue) : '—'} 
-              <span className="text-sm text-slate-500"> сум</span>
+              <span className="text-sm text-neutral-500"> сум</span>
             </div>
             <div className="flex items-center gap-1 mt-1">
               {(advancedForecastData?.trend?.direction === 'рост') ? (
@@ -423,22 +420,22 @@ export default function SalesAnalytics() {
               ) : (
                 <TrendingDown className="h-3 w-3 text-red-600" />
               )}
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-neutral-500">
                 {Math.abs(advancedForecastData?.trend?.percent || 0).toFixed(1)}% {advancedForecastData?.trend?.direction || 'тренд'}
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="tasklab-card border-0">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Потери за период</CardTitle>
+            <CardTitle className="text-sm font-medium text-neutral-600">Потери за период</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(lostDealsData?.totalLostValue || 0)} <span className="text-sm text-slate-500">сум</span>
+              {formatCurrency(lostDealsData?.totalLostValue || 0)} <span className="text-sm text-neutral-500">сум</span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">Сделок потеряно: {lostDealsData?.totalLost || 0}</p>
+            <p className="text-xs text-neutral-500 mt-1">Сделок потеряно: {lostDealsData?.totalLost || 0}</p>
           </CardContent>
         </Card>
       </div>
@@ -446,7 +443,7 @@ export default function SalesAnalytics() {
       {/* Tabs for different analyses */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <div className="overflow-x-auto pb-2">
-          <TabsList className="inline-flex gap-1 bg-slate-100 p-1 rounded-lg">
+          <TabsList className="inline-flex gap-1 bg-neutral-100 p-1 rounded-lg">
             <TabsTrigger value="overview" className="whitespace-nowrap">Обзор</TabsTrigger>
             <TabsTrigger value="finance" className="whitespace-nowrap">Финансы</TabsTrigger>
             <TabsTrigger value="abc" className="whitespace-nowrap">ABC-анализ</TabsTrigger>
@@ -464,7 +461,7 @@ export default function SalesAnalytics() {
         <TabsContent value="overview" className="space-y-4">
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="border-yellow-200 bg-yellow-50">
+            <Card className="tasklab-card border-0 border-yellow-200 bg-yellow-50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs text-yellow-900">Sales Velocity</CardTitle>
               </CardHeader>
@@ -475,18 +472,18 @@ export default function SalesAnalytics() {
               </CardContent>
             </Card>
 
-            <Card className="border-indigo-200 bg-indigo-50">
+            <Card className="tasklab-card border-0 border-[var(--tasklab-lime)]/30 bg-[var(--tasklab-lime)]/10">
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs text-indigo-900">Avg Retention</CardTitle>
+                <CardTitle className="text-xs text-neutral-900">Avg Retention</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-lg font-bold text-indigo-900">
+                <p className="text-lg font-bold text-neutral-900">
                   {(cohortData?.avgRetentionRate || 0).toFixed(1)}%
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border-orange-200 bg-orange-50">
+            <Card className="tasklab-card border-0 border-orange-200 bg-orange-50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs text-orange-900">Avg Sales Cycle</CardTitle>
               </CardHeader>
@@ -497,7 +494,7 @@ export default function SalesAnalytics() {
               </CardContent>
             </Card>
 
-            <Card className="border-green-200 bg-green-50">
+            <Card className="tasklab-card border-0 border-green-200 bg-green-50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs text-green-900">Total Customers</CardTitle>
               </CardHeader>
@@ -511,7 +508,7 @@ export default function SalesAnalytics() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* ABC Distribution Pie */}
-            <Card>
+            <Card className="tasklab-card border-0">
               <CardHeader>
                 <CardTitle>Распределение клиентов по ABC</CardTitle>
                 <CardDescription>Кто приносит основную выручку</CardDescription>
@@ -543,7 +540,7 @@ export default function SalesAnalytics() {
             </Card>
 
             {/* RFM Segments */}
-            <Card>
+            <Card className="tasklab-card border-0">
               <CardHeader>
                 <CardTitle>RFM Сегментация клиентов</CardTitle>
                 <CardDescription>По активности и ценности</CardDescription>
@@ -562,7 +559,7 @@ export default function SalesAnalytics() {
                     <XAxis dataKey="segment" angle={-45} textAnchor="end" height={100} />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#3b82f6" />
+                    <Bar dataKey="count" fill="#171717" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -571,21 +568,21 @@ export default function SalesAnalytics() {
 
           {/* AI Insights */}
           {advancedForecastData?.aiInsights && (
-            <Card className="border-purple-200 bg-purple-50">
+            <Card className="tasklab-card-lime border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Brain className="h-5 w-5 text-purple-600" />
+                  <Brain className="h-5 w-5 text-neutral-900" />
                   AI-анализ трендов (GPT-4o-mini)
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-700 whitespace-pre-line">{advancedForecastData.aiInsights}</p>
+                <p className="text-neutral-700 whitespace-pre-line">{advancedForecastData.aiInsights}</p>
               </CardContent>
             </Card>
           )}
 
           {/* Top Lost Reasons */}
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -595,14 +592,14 @@ export default function SalesAnalytics() {
             <CardContent>
               <div className="space-y-2">
                 {lostDealsData?.reasonAnalysis?.slice(0, 5).map((reason: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                  <div key={idx} className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg">
                     <div className="flex-1">
-                      <p className="font-medium text-slate-900">{reason.reason}</p>
-                      <p className="text-sm text-slate-600">{reason.count} сделок</p>
+                      <p className="font-medium text-neutral-900">{reason.reason}</p>
+                      <p className="text-sm text-neutral-600">{reason.count} сделок</p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-red-600">{formatCurrency(reason.totalValue)} сум</p>
-                      <p className="text-xs text-slate-500">{reason.percentage.toFixed(1)}%</p>
+                      <p className="text-xs text-neutral-500">{reason.percentage.toFixed(1)}%</p>
                     </div>
                   </div>
                 ))}
@@ -613,7 +610,7 @@ export default function SalesAnalytics() {
 
         {/* Finance Tab */}
         <TabsContent value="finance" className="space-y-4">
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle>Финансовый разрыв (Cash Gap)</CardTitle>
               <CardDescription>
@@ -631,16 +628,16 @@ export default function SalesAnalytics() {
                     labelStyle={{ color: '#64748b' }}
                   />
                   <Legend />
-                  <Bar dataKey="contracted" name="Контракты" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="contracted" name="Контракты" fill="#171717" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="collected" name="Поступления" fill="#10b981" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
               
               <div className="mt-6 space-y-4">
-                  <h4 className="font-semibold text-sm text-slate-900">Детализация по месяцам</h4>
+                  <h4 className="font-semibold text-sm text-neutral-900">Детализация по месяцам</h4>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                        <thead className="bg-slate-50">
+                        <thead className="bg-neutral-50">
                             <tr>
                                 <th className="p-3 text-left">Месяц</th>
                                 <th className="p-3 text-right">Контракты</th>
@@ -650,12 +647,12 @@ export default function SalesAnalytics() {
                         </thead>
                         <tbody>
                             {financeData.map((item, idx) => (
-                                <tr key={idx} className="border-b hover:bg-slate-50">
+                                <tr key={idx} className="border-b hover:bg-neutral-50">
                                     <td className="p-3 font-medium">{item.month}</td>
-                                    <td className="p-3 text-right font-medium text-blue-600">{formatCurrency(item.contracted)}</td>
+                                    <td className="p-3 text-right font-medium text-neutral-900">{formatCurrency(item.contracted)}</td>
                                     <td className="p-3 text-right font-medium text-green-600">{formatCurrency(item.collected)}</td>
                                     <td className="p-3 text-right">
-                                        <span className={`font-bold ${item.gap > 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                                        <span className={`font-bold ${item.gap > 0 ? 'text-red-500' : 'text-neutral-400'}`}>
                                             {formatCurrency(item.gap)}
                                         </span>
                                     </td>
@@ -671,7 +668,7 @@ export default function SalesAnalytics() {
 
         {/* ABC Analysis Tab */}
         <TabsContent value="abc" className="space-y-4">
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle>ABC-анализ клиентов</CardTitle>
               <CardDescription>
@@ -681,7 +678,7 @@ export default function SalesAnalytics() {
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
+                  <thead className="bg-neutral-50">
                     <tr>
                       <th className="p-3 text-left">#</th>
                       <th className="p-3 text-left">Клиент</th>
@@ -694,8 +691,8 @@ export default function SalesAnalytics() {
                   </thead>
                   <tbody>
                     {abcData?.analysis?.map((company: any, idx: number) => (
-                      <tr key={company.id} className="border-b hover:bg-slate-50">
-                        <td className="p-3 text-slate-600">{company.rank}</td>
+                      <tr key={company.id} className="border-b hover:bg-neutral-50">
+                        <td className="p-3 text-neutral-600">{company.rank}</td>
                         <td className="p-3 font-medium">{company.name}</td>
                         <td className="p-3 text-right font-semibold">{formatCurrency(company.revenue)}</td>
                         <td className="p-3 text-center">{company.percentage.toFixed(1)}%</td>
@@ -722,7 +719,7 @@ export default function SalesAnalytics() {
 
         {/* RFM Segmentation Tab */}
         <TabsContent value="rfm" className="space-y-4">
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle>RFM-сегментация</CardTitle>
               <CardDescription>
@@ -732,7 +729,7 @@ export default function SalesAnalytics() {
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
+                  <thead className="bg-neutral-50">
                     <tr>
                       <th className="p-3 text-left">Клиент</th>
                       <th className="p-3 text-center">RFM Score</th>
@@ -744,11 +741,11 @@ export default function SalesAnalytics() {
                   </thead>
                   <tbody>
                     {rfmData?.analysis?.map((company: any) => (
-                      <tr key={company.id} className="border-b hover:bg-slate-50">
+                      <tr key={company.id} className="border-b hover:bg-neutral-50">
                         <td className="p-3 font-medium">{company.name}</td>
                         <td className="p-3 text-center">
-                          <span className="font-mono font-bold text-blue-600">{company.rfmScore}</span>
-                          <div className="text-xs text-slate-500">
+                          <span className="font-mono font-bold text-neutral-900">{company.rfmScore}</span>
+                          <div className="text-xs text-neutral-500">
                             R:{company.R} F:{company.F} M:{company.M}
                           </div>
                         </td>
@@ -769,11 +766,11 @@ export default function SalesAnalytics() {
           </Card>
 
           {/* Segment Recommendations */}
-          <Card className="border-blue-200 bg-blue-50">
+          <Card className="tasklab-card border-0 bg-[var(--tasklab-lime)]/10 border border-[var(--tasklab-lime)]/30">
             <CardHeader>
-              <CardTitle className="text-blue-900">Рекомендации по сегментам</CardTitle>
+              <CardTitle className="text-neutral-900">Рекомендации по сегментам</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-blue-900">
+            <CardContent className="space-y-3 text-sm text-neutral-800">
               <div>
                 <p className="font-semibold">🏆 Champions (444):</p>
                 <p>Лучшие клиенты! Поддерживайте связь, предлагайте VIP-программы.</p>
@@ -800,7 +797,7 @@ export default function SalesAnalytics() {
 
         {/* Funnel Conversion Tab */}
         <TabsContent value="funnel" className="space-y-4">
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle>Воронка продаж и конверсия</CardTitle>
               <CardDescription>Где теряем клиентов</CardDescription>
@@ -819,20 +816,20 @@ export default function SalesAnalytics() {
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="count" fill="#3b82f6" name="Количество сделок" />
+                  <Bar dataKey="count" fill="#171717" name="Количество сделок" />
                 </BarChart>
               </ResponsiveContainer>
 
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {funnelData?.funnel?.map((stage: any, idx: number) => (
-                  <Card key={idx}>
+                  <Card className="tasklab-card border-0" key={idx}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm capitalize">{stage.stage}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-1">
                         <p className="text-2xl font-bold">{stage.count} сделок</p>
-                        <p className="text-sm text-slate-600">
+                        <p className="text-sm text-neutral-600">
                           Средний чек: {formatCurrency(stage.avgDealSize)} сум
                         </p>
                         <div className="flex items-center gap-2 mt-2">
@@ -859,9 +856,9 @@ export default function SalesAnalytics() {
           {/* Trend Info Card */}
           {advancedForecastData?.trend && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
+              <Card className="tasklab-card border-0">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-600">Текущий тренд</CardTitle>
+                  <CardTitle className="text-sm font-medium text-neutral-600">Текущий тренд</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
@@ -880,27 +877,27 @@ export default function SalesAnalytics() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="tasklab-card border-0">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-600">Средняя выручка (3 мес)</CardTitle>
+                  <CardTitle className="text-sm font-medium text-neutral-600">Средняя выручка (3 мес)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {formatCurrency(advancedForecastData.trend.recentAvg)} <span className="text-sm text-slate-500">сум</span>
+                  <p className="text-2xl font-bold text-neutral-900">
+                    {formatCurrency(advancedForecastData.trend.recentAvg)} <span className="text-sm text-neutral-500">сум</span>
                   </p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="tasklab-card border-0">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-600">Прогноз на след. месяц</CardTitle>
+                  <CardTitle className="text-sm font-medium text-neutral-600">Прогноз на след. месяц</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-2xl font-bold text-neutral-900">
                     {advancedForecastData?.forecast?.[0] ? formatCurrency(advancedForecastData.forecast[0].predictedRevenue) : '—'} 
-                    <span className="text-sm text-slate-500"> сум</span>
+                    <span className="text-sm text-neutral-500"> сум</span>
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-neutral-500 mt-1">
                     Уверенность: {advancedForecastData?.forecast?.[0] ? (advancedForecastData.forecast[0].confidence * 100).toFixed(0) : 0}%
                   </p>
                 </CardContent>
@@ -910,20 +907,20 @@ export default function SalesAnalytics() {
 
           {/* AI Insights */}
           {advancedForecastData?.aiInsights && (
-            <Card className="border-purple-200 bg-purple-50">
+            <Card className="tasklab-card-lime border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Brain className="h-5 w-5 text-purple-600" />
+                  <Brain className="h-5 w-5 text-neutral-900" />
                   AI-анализ тренда (GPT-4o-mini)
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-700 whitespace-pre-line">{advancedForecastData.aiInsights}</p>
+                <p className="text-neutral-700 whitespace-pre-line">{advancedForecastData.aiInsights}</p>
               </CardContent>
             </Card>
           )}
 
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-green-600" />
@@ -957,10 +954,10 @@ export default function SalesAnalytics() {
                   <Line 
                     type="monotone" 
                     dataKey="revenue" 
-                    stroke="#3b82f6" 
+                    stroke="#171717" 
                     strokeWidth={3}
                     name="Выручка (факт + прогноз)"
-                    dot={{ fill: '#3b82f6', r: 4 }}
+                    dot={{ fill: '#171717', r: 4 }}
                   />
                   <Line 
                     type="monotone" 
@@ -985,19 +982,19 @@ export default function SalesAnalytics() {
 
               <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                 {advancedForecastData?.forecast?.map((month: any, idx: number) => (
-                  <Card key={idx} className="border-blue-200">
+                  <Card className="tasklab-card border-0" key={idx}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm">{month.month}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-xl font-bold text-blue-600">
-                        {formatCurrency(month.predictedRevenue)} <span className="text-sm text-slate-500">сум</span>
+                      <p className="text-xl font-bold text-neutral-900">
+                        {formatCurrency(month.predictedRevenue)} <span className="text-sm text-neutral-500">сум</span>
                       </p>
-                      <p className="text-xs text-slate-600 mt-1">
+                      <p className="text-xs text-neutral-600 mt-1">
                         Уверенность: {(month.confidence * 100).toFixed(0)}%
                       </p>
-                      <div className="mt-2 pt-2 border-t border-slate-200">
-                        <p className="text-xs text-slate-500">
+                      <div className="mt-2 pt-2 border-t border-neutral-200">
+                        <p className="text-xs text-neutral-500">
                           Диапазон: {formatCurrency(month.confidenceInterval.lower)} - {formatCurrency(month.confidenceInterval.upper)}
                         </p>
                       </div>
@@ -1007,9 +1004,9 @@ export default function SalesAnalytics() {
               </div>
 
               {/* Method Details */}
-              <div className="mt-6 p-4 bg-slate-50 rounded-lg">
-                <h4 className="font-semibold text-sm text-slate-900 mb-2">Методы прогнозирования:</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-600">
+              <div className="mt-6 p-4 bg-neutral-50 rounded-lg">
+                <h4 className="font-semibold text-sm text-neutral-900 mb-2">Методы прогнозирования:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-neutral-600">
                   <div>
                     <span className="font-semibold">Линейная регрессия:</span>
                     <p>Использует тренд исторических данных для экстраполяции будущих значений</p>
@@ -1030,10 +1027,10 @@ export default function SalesAnalytics() {
 
         {/* Cohort Analysis Tab */}
         <TabsContent value="cohorts" className="space-y-4">
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Layers className="h-5 w-5 text-indigo-600" />
+                <Layers className="h-5 w-5 text-neutral-900" />
                 Когортный анализ клиентов
               </CardTitle>
               <CardDescription>
@@ -1042,28 +1039,28 @@ export default function SalesAnalytics() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <Card className="border-indigo-200 bg-indigo-50">
+                <Card className="tasklab-card border-0 border-[var(--tasklab-lime)]/30 bg-[var(--tasklab-lime)]/10">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-indigo-900">Всего когорт</CardTitle>
+                    <CardTitle className="text-sm text-neutral-900">Всего когорт</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold text-indigo-900">{cohortData?.totalCohorts || 0}</p>
+                    <p className="text-2xl font-bold text-neutral-900">{cohortData?.totalCohorts || 0}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-indigo-200 bg-indigo-50">
+                <Card className="tasklab-card border-0 border-[var(--tasklab-lime)]/30 bg-[var(--tasklab-lime)]/10">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-indigo-900">Всего клиентов</CardTitle>
+                    <CardTitle className="text-sm text-neutral-900">Всего клиентов</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold text-indigo-900">{cohortData?.totalCustomers || 0}</p>
+                    <p className="text-2xl font-bold text-neutral-900">{cohortData?.totalCustomers || 0}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-indigo-200 bg-indigo-50">
+                <Card className="tasklab-card border-0 border-[var(--tasklab-lime)]/30 bg-[var(--tasklab-lime)]/10">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-indigo-900">Средний Retention</CardTitle>
+                    <CardTitle className="text-sm text-neutral-900">Средний Retention</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold text-indigo-900">
+                    <p className="text-2xl font-bold text-neutral-900">
                       {(cohortData?.avgRetentionRate || 0).toFixed(1)}%
                     </p>
                   </CardContent>
@@ -1072,7 +1069,7 @@ export default function SalesAnalytics() {
 
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
+                  <thead className="bg-neutral-50">
                     <tr>
                       <th className="p-3 text-left">Когорта (месяц)</th>
                       <th className="p-3 text-center">Клиентов</th>
@@ -1086,7 +1083,7 @@ export default function SalesAnalytics() {
                   </thead>
                   <tbody>
                     {cohortData?.cohorts?.map((cohort: any) => (
-                      <tr key={cohort.cohortMonth} className="border-b hover:bg-slate-50">
+                      <tr key={cohort.cohortMonth} className="border-b hover:bg-neutral-50">
                         <td className="p-3 font-medium">{cohort.cohortMonth}</td>
                         <td className="p-3 text-center">{cohort.customerCount}</td>
                         <td className="p-3 text-center text-green-600">{cohort.repeatCustomers}</td>
@@ -1098,19 +1095,19 @@ export default function SalesAnalytics() {
                         <td className="p-3 text-right font-semibold">{formatCurrency(cohort.revenue)}</td>
                         <td className="p-3 text-center">{cohort.dealCount}</td>
                         <td className="p-3 text-right">{formatCurrency(cohort.avgDealSize)}</td>
-                        <td className="p-3 text-right font-bold text-indigo-600">{formatCurrency(cohort.ltv)}</td>
+                        <td className="p-3 text-right font-bold text-neutral-900">{formatCurrency(cohort.ltv)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
 
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h4 className="font-semibold text-sm text-blue-900 mb-2 flex items-center gap-2">
+              <div className="mt-6 p-4 bg-[var(--tasklab-lime)]/10 border border-[var(--tasklab-lime)]/30 rounded-[1.75rem]">
+                <h4 className="font-semibold text-sm text-neutral-900 mb-2 flex items-center gap-2">
                   <Info className="h-4 w-4" />
                   Что такое когортный анализ?
                 </h4>
-                <p className="text-sm text-blue-800">
+                <p className="text-sm text-neutral-700">
                   Когорта - группа клиентов, совершивших первую покупку в одном месяце. 
                   <strong> Retention Rate</strong> показывает % клиентов, вернувшихся за повторной покупкой.
                   <strong> LTV (Lifetime Value)</strong> - средняя выручка на одного клиента когорты.
@@ -1123,7 +1120,7 @@ export default function SalesAnalytics() {
 
         {/* Sales Velocity Tab */}
         <TabsContent value="velocity" className="space-y-4">
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Zap className="h-5 w-5 text-yellow-600" />
@@ -1135,7 +1132,7 @@ export default function SalesAnalytics() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <Card className="border-yellow-200 bg-yellow-50">
+                <Card className="tasklab-card border-0 border-yellow-200 bg-yellow-50">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-yellow-900">Средний цикл сделки</CardTitle>
                   </CardHeader>
@@ -1149,7 +1146,7 @@ export default function SalesAnalytics() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-green-200 bg-green-50">
+                <Card className="tasklab-card border-0 border-green-200 bg-green-50">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-green-900">Цикл выигранных</CardTitle>
                   </CardHeader>
@@ -1160,25 +1157,25 @@ export default function SalesAnalytics() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-blue-200 bg-blue-50">
+                <Card className="tasklab-card border-0 bg-[var(--tasklab-lime)]/10 border border-[var(--tasklab-lime)]/30">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-blue-900">Win Rate</CardTitle>
+                    <CardTitle className="text-sm text-neutral-900">Win Rate</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold text-blue-900">
+                    <p className="text-2xl font-bold text-neutral-900">
                       {(velocityData?.winRate || 0).toFixed(1)}%
                     </p>
                   </CardContent>
                 </Card>
 
-                <Card className="border-purple-200 bg-purple-50">
+                <Card className="tasklab-card-dark border-0">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-purple-900">Velocity Score</CardTitle>
+                    <CardTitle className="text-sm text-neutral-200">Velocity Score</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center gap-2">
-                      <Zap className="h-5 w-5 text-purple-600" />
-                      <p className="text-2xl font-bold text-purple-900">
+                      <Zap className="h-5 w-5 text-[var(--tasklab-lime)]" />
+                      <p className="text-2xl font-bold text-white">
                         {formatCurrency(velocityData?.velocity || 0)}
                       </p>
                     </div>
@@ -1187,7 +1184,7 @@ export default function SalesAnalytics() {
               </div>
 
               {/* Cycle Distribution */}
-              <Card className="mb-6">
+              <Card className="tasklab-card border-0 mb-6">
                 <CardHeader>
                   <CardTitle className="text-sm">Распределение по длительности цикла</CardTitle>
                 </CardHeader>
@@ -1233,7 +1230,7 @@ export default function SalesAnalytics() {
 
         {/* Activity Heatmap Tab */}
         <TabsContent value="heatmap" className="space-y-4">
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-orange-600" />
@@ -1245,7 +1242,7 @@ export default function SalesAnalytics() {
             </CardHeader>
             <CardContent>
               {heatmapData?.bestTime && (
-                <Card className="mb-6 border-orange-200 bg-orange-50">
+                <Card className="tasklab-card border-0 mb-6 border-orange-200 bg-orange-50">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-orange-900">🔥 Лучшее время для контакта</CardTitle>
                   </CardHeader>
@@ -1264,9 +1261,9 @@ export default function SalesAnalytics() {
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr>
-                      <th className="p-2 text-left border bg-slate-50">День недели</th>
+                      <th className="p-2 text-left border bg-neutral-50">День недели</th>
                       {Array.from({ length: 24 }, (_, i) => i).map(hour => (
-                        <th key={hour} className="p-2 text-center border bg-slate-50 min-w-[40px]">
+                        <th key={hour} className="p-2 text-center border bg-neutral-50 min-w-[40px]">
                           {hour}:00
                         </th>
                       ))}
@@ -1275,14 +1272,14 @@ export default function SalesAnalytics() {
                   <tbody>
                     {heatmapData?.heatmap?.map((dayData: any) => (
                       <tr key={dayData.dayIndex}>
-                        <td className="p-2 font-medium border bg-slate-50">{dayData.day}</td>
+                        <td className="p-2 font-medium border bg-neutral-50">{dayData.day}</td>
                         {dayData.hours.map((hourData: any) => {
                           const maxCount = Math.max(...heatmapData.heatmap.flatMap((d: any) => 
                             d.hours.map((h: any) => h.count)
                           ));
                           const intensity = maxCount > 0 ? hourData.count / maxCount : 0;
                           const bgColor = intensity === 0 
-                            ? 'bg-slate-50' 
+                            ? 'bg-neutral-50' 
                             : `rgba(251, 146, 60, ${0.2 + intensity * 0.8})`; // orange gradient
 
                           return (
@@ -1303,18 +1300,18 @@ export default function SalesAnalytics() {
               </div>
 
               <div className="mt-6 flex items-center gap-4">
-                <span className="text-sm text-slate-600">Интенсивность:</span>
+                <span className="text-sm text-neutral-600">Интенсивность:</span>
                 <div className="flex items-center gap-2">
-                  <div className="w-12 h-4 bg-slate-50 border border-slate-200 rounded"></div>
-                  <span className="text-xs text-slate-500">Нет</span>
+                  <div className="w-12 h-4 bg-neutral-50 border border-neutral-200 rounded"></div>
+                  <span className="text-xs text-neutral-500">Нет</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-12 h-4 rounded" style={{ backgroundColor: 'rgba(251, 146, 60, 0.4)' }}></div>
-                  <span className="text-xs text-slate-500">Средняя</span>
+                  <span className="text-xs text-neutral-500">Средняя</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-12 h-4 rounded" style={{ backgroundColor: 'rgba(251, 146, 60, 1)' }}></div>
-                  <span className="text-xs text-slate-500">Высокая</span>
+                  <span className="text-xs text-neutral-500">Высокая</span>
                 </div>
               </div>
             </CardContent>
@@ -1323,7 +1320,7 @@ export default function SalesAnalytics() {
 
         {/* Managers Performance Tab */}
         <TabsContent value="managers" className="space-y-4">
-          <Card>
+          <Card className="tasklab-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-yellow-600" />
@@ -1334,7 +1331,7 @@ export default function SalesAnalytics() {
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
+                  <thead className="bg-neutral-50">
                     <tr>
                       <th className="p-3 text-left">Менеджер</th>
                       <th className="p-3 text-center">Всего сделок</th>
@@ -1347,10 +1344,10 @@ export default function SalesAnalytics() {
                   </thead>
                   <tbody>
                     {managerData?.performance?.map((manager: any, idx: number) => (
-                      <tr key={manager.id} className="border-b hover:bg-slate-50">
+                      <tr key={manager.id} className="border-b hover:bg-neutral-50">
                         <td className="p-3">
                           <div className="flex items-center gap-2">
-                            {idx < 3 && <Trophy className={`h-4 w-4 ${idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-slate-400' : 'text-amber-600'}`} />}
+                            {idx < 3 && <Trophy className={`h-4 w-4 ${idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-neutral-400' : 'text-amber-600'}`} />}
                             <span className="font-medium">{manager.name}</span>
                           </div>
                         </td>
@@ -1375,6 +1372,6 @@ export default function SalesAnalytics() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </BttCrmModuleShell>
   );
 }

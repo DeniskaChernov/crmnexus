@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { crmUrl, authHeaders } from '../../lib/crmApi.ts';
 import {
   Dialog,
@@ -85,7 +85,7 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="tasklab-card border-0 sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
@@ -153,11 +153,11 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
               </Select>
             </div>
 
-            <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-              <p className="text-sm text-blue-900 dark:text-blue-100">
+            <div className="p-3 bg-[var(--tasklab-lime)]/10 dark:bg-[var(--tasklab-lime)]/5 rounded-lg">
+              <p className="text-sm text-neutral-900 dark:text-neutral-100">
                 <strong>Права роли "{role === 'owner' ? 'Владелец' : role === 'manager' ? 'Менеджер' : 'Наблюдатель'}":</strong>
               </p>
-              <ul className="text-sm text-blue-800 dark:text-blue-200 mt-2 space-y-1 ml-4 list-disc">
+              <ul className="text-sm text-neutral-700 dark:text-neutral-300 mt-2 space-y-1 ml-4 list-disc">
                 {role === 'owner' && (
                   <>
                     <li>Полный доступ ко всем функциям</li>
@@ -192,7 +192,7 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
             >
               Отмена
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="bg-neutral-900 hover:bg-neutral-800 text-white">
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

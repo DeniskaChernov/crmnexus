@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { crmUrl, authHeaders } from '../../lib/crmApi.ts';
 import { useForm } from 'react-hook-form@7.55.0';
 import { crm } from "@/lib/crmClient.ts";
@@ -281,7 +281,7 @@ export function EditDealDialog({ deal, open, onOpenChange, onSuccess }: EditDeal
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="tasklab-card border-0 sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Редактировать сделку</DialogTitle>
           <DialogDescription>
@@ -344,8 +344,8 @@ export function EditDealDialog({ deal, open, onOpenChange, onSuccess }: EditDeal
                             setSearchQuery('');
                           }}
                           className={cn(
-                            "w-full flex items-start gap-2 p-2 rounded-md hover:bg-slate-100 text-left transition-colors",
-                            selectedCompany?.id === company.id && "bg-slate-100"
+                            "w-full flex items-start gap-2 p-2 rounded-md hover:bg-neutral-100 text-left transition-colors",
+                            selectedCompany?.id === company.id && "bg-neutral-100"
                           )}
                         >
                           <Check
@@ -478,7 +478,7 @@ export function EditDealDialog({ deal, open, onOpenChange, onSuccess }: EditDeal
             <Button 
                 type="button" 
                 variant="outline" 
-                className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50 mr-auto"
+                className="gap-2 text-neutral-900 border-[var(--tasklab-lime)]/30 hover:bg-[var(--tasklab-lime)]/10 mr-auto"
                 onClick={handleCreateShipment}
                 disabled={creatingShipment || dealItems.length === 0}
             >
@@ -490,7 +490,7 @@ export function EditDealDialog({ deal, open, onOpenChange, onSuccess }: EditDeal
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Отмена
                 </Button>
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={loading} className="bg-neutral-900 hover:bg-neutral-800 text-white">
                   {loading ? 'Сохранение...' : 'Сохранить'}
                 </Button>
             </div>
@@ -505,15 +505,15 @@ export function EditDealDialog({ deal, open, onOpenChange, onSuccess }: EditDeal
                     История изменений пуста
                 </div>
             ) : (
-                <div className="space-y-6 pl-2 relative border-l border-slate-200 ml-4 my-4">
+                <div className="space-y-6 pl-2 relative border-l border-neutral-200 ml-4 my-4">
                     {timeline.map((evt, i) => (
                         <div key={i} className="relative pl-6 pb-2">
-                           <div className="absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full bg-slate-300 border-2 border-white" />
+                           <div className="absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full bg-neutral-300 border-2 border-white" />
                            <div className="flex flex-col gap-1">
-                               <span className="text-sm font-medium text-slate-900">
+                               <span className="text-sm font-medium text-neutral-900">
                                  {evt.message}
                                </span>
-                               <div className="flex items-center gap-2 text-xs text-slate-500">
+                               <div className="flex items-center gap-2 text-xs text-neutral-500">
                                   <User className="h-3 w-3" /> {evt.userName}
                                   <span>•</span>
                                   <Clock className="h-3 w-3" /> {new Date(evt.createdAt).toLocaleString()}

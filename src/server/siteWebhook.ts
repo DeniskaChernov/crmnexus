@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { getPool } from "./dbPool.ts";
 import * as kv from "./kv_store.ts";
+import { processSiteEvent } from "./qr/siteServices.ts";
 
 function hexDigest(secret: string, raw: string) {
   return createHmac("sha256", secret).update(raw, "utf8").digest("hex");
@@ -84,6 +85,42 @@ export async function handleSiteWebhook(opts: {
     const id = `site-order:${Date.now()}`;
     await kv.set(id, { ...payload, receivedAt: new Date().toISOString() });
     return { ok: true, status: 200, body: { received: true, key: id } };
+  }
+
+  const SITE_EVENTS = new Set([
+    "qr_scanned",
+    "registration_started",
+    "registration_completed",
+    "catalog_opened",
+    "product_viewed",
+    "color_viewed",
+    "added_to_cart",
+    "checkout_started",
+    "order_request_created",
+    "review_started",
+    "review_submitted",
+    "dealer_contact_clicked",
+    "whatsapp_clicked",
+    "telegram_clicked",
+    "phone_clicked",
+  ]);
+
+  if (event && SITE_EVENTS.has(event)) {
+    const eventId =
+      idempotencyKey ||
+      (typeof payload["event_id"] === "string" ? payload["event_id"] : undefined);
+    if (eventId) {
+      const dup = await pool.query(`SELECT 1 FROM site_events WHERE event_id = $1`, [eventId]);
+      if (dup.rows.length > 0) {
+        return { ok: true, status: 200, body: { duplicate: true } };
+      }
+    }
+    const result = await processSiteEvent(event, payload, {
+      event_id: eventId,
+      ip: typeof payload["ip_address"] === "string" ? payload["ip_address"] : undefined,
+      user_agent: typeof payload["user_agent"] === "string" ? payload["user_agent"] : undefined,
+    });
+    return { ok: true, status: 200, body: { received: true, ...result } };
   }
 
   return { ok: true, status: 200, body: { received: true, ignored: true, event } };

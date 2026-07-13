@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '../ui/dialog';
 import { Input } from '../ui/input';
@@ -96,10 +96,10 @@ export function MarketingCalendar({ events, onAddEvent, onDeleteEvent }: Marketi
 
   const getTypeStyles = (type: string) => {
     switch (type) {
-      case 'campaign': return 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100';
+      case 'campaign': return 'bg-[var(--tasklab-lime)]/15 text-neutral-900 border-[var(--tasklab-lime)]/30 hover:bg-[var(--tasklab-lime)]/25';
       case 'holiday': return 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100';
       case 'technical': return 'bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100';
-      default: return 'bg-slate-50 text-slate-700 border-slate-100 hover:bg-slate-100';
+      default: return 'bg-neutral-50 text-neutral-700 border-neutral-100 hover:bg-neutral-100';
     }
   };
 
@@ -113,26 +113,26 @@ export function MarketingCalendar({ events, onAddEvent, onDeleteEvent }: Marketi
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div className="flex flex-col h-full tasklab-card overflow-hidden">
       {/* Header */}
-      <div className="p-4 md:p-6 flex flex-col md:flex-row items-center justify-between border-b border-slate-100 gap-4">
+      <div className="p-4 md:p-6 flex flex-col md:flex-row items-center justify-between border-b border-neutral-100 gap-4">
         <div className="flex items-center gap-4">
-           <h2 className="text-2xl font-bold text-slate-900 capitalize min-w-[200px]">{monthName}</h2>
-           <div className="flex items-center bg-slate-50 rounded-full p-1 border border-slate-200">
+           <h2 className="text-2xl font-bold text-neutral-900 capitalize min-w-[200px]">{monthName}</h2>
+           <div className="flex items-center bg-neutral-50 rounded-full p-1 border border-neutral-200">
               <Button variant="ghost" size="icon" onClick={prevMonth} className="rounded-full h-8 w-8 hover:bg-white hover:shadow-sm transition-all"><ChevronLeft className="h-4 w-4" /></Button>
-              <div className="w-px h-4 bg-slate-200 mx-1"></div>
+              <div className="w-px h-4 bg-neutral-200 mx-1"></div>
               <Button variant="ghost" size="icon" onClick={nextMonth} className="rounded-full h-8 w-8 hover:bg-white hover:shadow-sm transition-all"><ChevronRight className="h-4 w-4" /></Button>
            </div>
-           <Button variant="outline" size="sm" onClick={goToToday} className="rounded-full text-xs font-medium border-slate-200 hover:bg-slate-50">Сегодня</Button>
+           <Button variant="outline" size="sm" onClick={goToToday} className="rounded-full text-xs font-medium border-neutral-200 hover:bg-neutral-50">Сегодня</Button>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
              <DialogTrigger asChild>
-               <Button className="rounded-full bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/10 px-6">
+               <Button className="rounded-full bg-neutral-900 text-white hover:bg-neutral-800 shadow-lg shadow-neutral-900/10 px-6">
                    <Plus className="h-4 w-4 mr-2" /> Добавить событие
                </Button>
              </DialogTrigger>
-             <DialogContent className="sm:max-w-[425px] rounded-2xl">
+             <DialogContent className="tasklab-card border-0 sm:max-w-[425px] rounded-[1.75rem]">
                <DialogHeader>
                  <DialogTitle>Новое событие</DialogTitle>
                  <DialogDescription>Запланируйте маркетинговую активность</DialogDescription>
@@ -169,24 +169,24 @@ export function MarketingCalendar({ events, onAddEvent, onDeleteEvent }: Marketi
                  </div>
                </div>
                <DialogFooter>
-                 <Button onClick={handleAdd} className="w-full rounded-xl bg-blue-600 hover:bg-blue-700">Создать событие</Button>
+                 <Button onClick={handleAdd} className="w-full rounded-full bg-neutral-900 hover:bg-neutral-800 text-white">Создать событие</Button>
                </DialogFooter>
              </DialogContent>
            </Dialog>
       </div>
 
       {/* Weekday Header */}
-      <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-100">
+      <div className="grid grid-cols-7 bg-neutral-50 border-b border-neutral-100">
           {['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'].map((day, i) => (
-              <div key={day} className="py-3 text-center border-r border-slate-100 last:border-0">
-                  <span className="hidden md:block text-[11px] font-bold text-slate-400 uppercase tracking-widest">{day}</span>
-                  <span className="md:hidden text-[11px] font-bold text-slate-400 uppercase tracking-widest">{['Пн','Вт','Ср','Чт','Пт','Сб','Вс'][i]}</span>
+              <div key={day} className="py-3 text-center border-r border-neutral-100 last:border-0">
+                  <span className="hidden md:block text-[11px] font-bold text-neutral-400 uppercase tracking-widest">{day}</span>
+                  <span className="md:hidden text-[11px] font-bold text-neutral-400 uppercase tracking-widest">{['Пн','Вт','Ср','Чт','Пт','Сб','Вс'][i]}</span>
               </div>
           ))}
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-7 grid-rows-6 flex-1 min-h-0 bg-slate-100 gap-px border-b border-slate-100">
+      <div className="grid grid-cols-7 grid-rows-6 flex-1 min-h-0 bg-neutral-100 gap-px border-b border-neutral-100">
          {calendarDays.map((cell, index) => {
              const isToday = new Date().toDateString() === cell.date.toDateString();
              const dayEvents = getEventsForDay(cell.date);
@@ -195,9 +195,9 @@ export function MarketingCalendar({ events, onAddEvent, onDeleteEvent }: Marketi
                  <div 
                     key={index} 
                     className={cn(
-                        "bg-white p-2 md:p-3 relative group transition-all hover:bg-slate-50/50 flex flex-col gap-2 min-h-[100px]",
-                        !cell.isCurrentMonth && "bg-slate-50/30 text-slate-400",
-                        isToday && "bg-blue-50/20"
+                        "bg-white p-2 md:p-3 relative group transition-all hover:bg-neutral-50/50 flex flex-col gap-2 min-h-[100px]",
+                        !cell.isCurrentMonth && "bg-neutral-50/30 text-neutral-400",
+                        isToday && "bg-[var(--tasklab-lime)]/10"
                     )}
                     onClick={() => {
                         setNewEvent({
@@ -212,9 +212,9 @@ export function MarketingCalendar({ events, onAddEvent, onDeleteEvent }: Marketi
                         <span className={cn(
                             "text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full transition-colors",
                             isToday 
-                              ? "bg-blue-600 text-white shadow-md shadow-blue-200" 
-                              : "text-slate-700 group-hover:bg-slate-200/50",
-                            !cell.isCurrentMonth && "text-slate-400"
+                              ? "bg-neutral-900 text-white shadow-md shadow-neutral-900/20" 
+                              : "text-neutral-700 group-hover:bg-neutral-200/50",
+                            !cell.isCurrentMonth && "text-neutral-400"
                         )}>
                             {cell.date.getDate()}
                         </span>
@@ -224,7 +224,7 @@ export function MarketingCalendar({ events, onAddEvent, onDeleteEvent }: Marketi
                             size="icon" 
                             className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity -mt-1 -mr-1"
                         >
-                            <Plus className="h-3 w-3 text-slate-400" />
+                            <Plus className="h-3 w-3 text-neutral-400" />
                         </Button>
                     </div>
 

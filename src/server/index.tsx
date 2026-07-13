@@ -15,6 +15,7 @@ import { registerAuthRoutes } from "./routes/authRoutes.ts";
 import { registerAuthMiddleware } from "./middleware/authMiddleware.ts";
 import { registerCrmRunRoute } from "./routes/crmRunRoute.ts";
 import { registerPublicRoutes } from "./routes/publicRoutes.ts";
+import { registerQrRoutes } from "./routes/qrRoutes.ts";
 
 const env = (k: string) => process.env[k];
 
@@ -81,6 +82,7 @@ registerPublicRoutes(app, env);
 
 registerAuthRoutes(app);
 registerAuthMiddleware(app);
+registerQrRoutes(app);
 registerCrmRunRoute(app);
 
 // Company settings endpoints

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { crmUrl, authHeaders } from '../lib/crmApi.ts';
 import { Bell, Calendar, Clock, AlertCircle, CheckCircle2, X, RefreshCcw, Check, BellRing, BellOff } from 'lucide-react';
 import { Button } from './ui/button';
@@ -227,8 +227,8 @@ export default function Notifications() {
       case 'error': return 'bg-red-100 text-red-800 border-red-200';
       case 'warning': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'success': return 'bg-green-100 text-green-800 border-green-200';
-      case 'info': return 'bg-blue-100 text-blue-800 border-blue-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'info': return 'bg-[var(--tasklab-lime)]/15 text-neutral-900 border-[var(--tasklab-lime)]/30';
+      default: return 'bg-neutral-100 text-neutral-800 border-neutral-200';
     }
   };
 
@@ -237,7 +237,7 @@ export default function Notifications() {
       case 'error': return <AlertCircle className="h-4 w-4 text-red-600" />;
       case 'warning': return <AlertCircle className="h-4 w-4 text-yellow-600" />;
       case 'success': return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-      case 'info': return <Bell className="h-4 w-4 text-blue-600" />;
+      case 'info': return <Bell className="h-4 w-4 text-neutral-900" />;
       default: return <Bell className="h-4 w-4" />;
     }
   };
@@ -295,8 +295,8 @@ export default function Notifications() {
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative hover:bg-blue-50">
-          <Bell className="h-5 w-5 text-slate-600" strokeWidth={2} />
+        <Button variant="ghost" size="icon" className="relative hover:bg-[var(--tasklab-lime)]/10">
+          <Bell className="h-5 w-5 text-neutral-600" strokeWidth={2} />
           {unreadCount > 0 && (
             <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-gradient-to-br from-red-500 to-pink-500 border-0 text-[10px] shadow-lg animate-pulse">
               {unreadCount}
@@ -307,9 +307,9 @@ export default function Notifications() {
       <SheetContent className="w-full sm:max-w-[540px] bg-white/90 backdrop-blur-xl border-l border-white/40 shadow-glass p-6">
         <SheetHeader className="border-b border-white/40 pb-6 mb-6">
           <div className="flex items-center justify-between mb-2">
-            <SheetTitle className="flex items-center gap-3 text-slate-700 text-xl">
+            <SheetTitle className="flex items-center gap-3 text-neutral-700 text-xl">
               <div className="h-10 w-10 rounded-xl bg-white/60 shadow-sm border border-white/60 flex items-center justify-center backdrop-blur-md">
-                <Bell className="h-5 w-5 text-slate-600" strokeWidth={2.5} />
+                <Bell className="h-5 w-5 text-neutral-600" strokeWidth={2.5} />
               </div>
               Уведомления
             </SheetTitle>
@@ -319,7 +319,7 @@ export default function Notifications() {
                 size="sm" 
                 onClick={markAllAsRead}
                 disabled={isMarkingAll}
-                className="h-8 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-white/50 rounded-lg transition-all"
+                className="h-8 text-xs font-medium text-neutral-500 hover:text-neutral-700 hover:bg-white/50 rounded-lg transition-all"
               >
                 {isMarkingAll ? (
                   <RefreshCcw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
@@ -330,7 +330,7 @@ export default function Notifications() {
               </Button>
             )}
           </div>
-          <SheetDescription className="text-slate-400 font-medium ml-1">
+          <SheetDescription className="text-neutral-400 font-medium ml-1">
             {unreadCount > 0 ? `${unreadCount} непрочитанных событий` : 'Все сообщения прочитаны'}
           </SheetDescription>
         </SheetHeader>
@@ -338,14 +338,14 @@ export default function Notifications() {
         <ScrollArea className="h-[calc(100vh-120px)] mt-6">
           <div className="space-y-3">
             {/* Push Notifications Toggle */}
-            <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
+            <Card className="tasklab-card border-0 bg-gradient-to-r from-[var(--tasklab-lime)]/10 to-[var(--tasklab-lime)]/5 border-[var(--tasklab-lime)]/30">
               <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {pushEnabled ? (
-                      <BellRing className="h-4 w-4 text-indigo-600" />
+                      <BellRing className="h-4 w-4 text-neutral-900" />
                     ) : (
-                      <BellOff className="h-4 w-4 text-gray-500" />
+                      <BellOff className="h-4 w-4 text-neutral-500" />
                     )}
                     <div>
                       <p className="text-sm font-medium">
@@ -360,7 +360,7 @@ export default function Notifications() {
                     variant={pushEnabled ? "default" : "outline"}
                     size="sm"
                     onClick={togglePushNotifications}
-                    className={pushEnabled ? "bg-indigo-600 hover:bg-indigo-700" : ""}
+                    className={pushEnabled ? "bg-neutral-900 hover:bg-neutral-800" : ""}
                   >
                     {pushEnabled ? 'Выключить' : 'Включить'}
                   </Button>
@@ -373,7 +373,7 @@ export default function Notifications() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : notifications.length === 0 ? (
-              <Card className="border-dashed">
+              <Card className="tasklab-card border-0 border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <CheckCircle2 className="h-12 w-12 text-green-500 mb-3" />
                   <p className="text-lg font-medium">Всё под контролем!</p>
@@ -384,9 +384,9 @@ export default function Notifications() {
               </Card>
             ) : (
               notifications.map((notif) => (
-                <Card 
-                  key={notif.id} 
-                  className={`${getTypeColor(notif.type)} border-2 transition-all ${
+                <Card
+                  key={notif.id}
+                  className={`tasklab-card border-0 ${getTypeColor(notif.type)} border-2 transition-all ${
                     notif.actionUrl ? 'cursor-pointer hover:shadow-md' : ''
                   } ${notif.isRead ? 'opacity-60' : ''}`}
                   onClick={() => handleNotificationClick(notif)}
@@ -401,7 +401,7 @@ export default function Notifications() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-medium">{notif.title}</p>
                             {!notif.isRead && (
-                              <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                              <div className="w-2 h-2 rounded-full bg-neutral-900"></div>
                             )}
                             {getPriorityBadge(notif.priority)}
                           </div>

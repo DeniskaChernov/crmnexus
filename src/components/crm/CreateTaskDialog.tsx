@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form@7.55.0';
 import { crm } from "@/lib/crmClient.ts";
 import { Button } from '../ui/button';
@@ -140,7 +140,7 @@ export function CreateTaskDialog({ onSuccess, prefilledDealId, prefilledContactI
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="tasklab-card border-0 sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Новая задача</DialogTitle>
           <DialogDescription>
@@ -238,8 +238,8 @@ export function CreateTaskDialog({ onSuccess, prefilledDealId, prefilledContactI
           </div>
 
           {category === 'client' && (
-            <div className="border-t pt-4 space-y-4 bg-slate-50/50 -mx-6 px-6 pb-4 mt-4">
-              <p className="text-sm font-medium text-slate-700">Привязка к клиенту:</p>
+            <div className="border-t pt-4 space-y-4 bg-neutral-50/50 -mx-6 px-6 pb-4 mt-4">
+              <p className="text-sm font-medium text-neutral-700">Привязка к клиенту:</p>
               
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="deal_id" className="text-right">Сделка</Label>
@@ -290,7 +290,7 @@ export function CreateTaskDialog({ onSuccess, prefilledDealId, prefilledContactI
           )}
 
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="bg-neutral-900 hover:bg-neutral-800 text-white">
               {loading ? 'Сохранение...' : 'Создать'}
             </Button>
           </DialogFooter>

@@ -27,9 +27,16 @@ interface WarehouseFiltersProps {
 const MOVEMENT_TYPES = [
   { value: 'production', label: 'Производство', color: 'bg-green-100 text-green-700' },
   { value: 'shipment', label: 'Отгрузка', color: 'bg-red-100 text-red-700' },
-  { value: 'transfer', label: 'Перемещение', color: 'bg-blue-100 text-blue-700' },
+  { value: 'transfer', label: 'Перемещение', color: 'bg-[var(--tasklab-lime)]/20 text-neutral-900' },
   { value: 'correction', label: 'Корректировка', color: 'bg-orange-100 text-orange-700' }
 ];
+
+const filterPillClass = (active: boolean, size: 'sm' | 'md' = 'md') =>
+  `tasklab-pill ${size === 'sm' ? 'h-7' : 'h-8'} text-xs ${
+    active
+      ? 'bg-neutral-900 text-white border-neutral-900 hover:bg-neutral-800'
+      : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
+  }`;
 
 export const WarehouseFiltersComponent = ({
   filters,
@@ -70,13 +77,13 @@ export const WarehouseFiltersComponent = ({
   };
 
   return (
-    <Card className="p-4 bg-gradient-to-br from-slate-50 to-white border-slate-200">
+    <Card className="tasklab-card p-4 border-0 bg-gradient-to-br from-neutral-50 to-white">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Filter className="h-5 w-5 text-slate-600" />
-          <h3 className="font-bold text-slate-800">Фильтры</h3>
+          <Filter className="h-5 w-5 text-neutral-600" />
+          <h3 className="font-bold text-neutral-800">Фильтры</h3>
           {hasActiveFilters && (
-            <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+            <Badge variant="secondary" className="bg-[var(--tasklab-lime)]/20 text-neutral-900">
               Активно
             </Badge>
           )}
@@ -107,7 +114,7 @@ export const WarehouseFiltersComponent = ({
       {/* Быстрый поиск - всегда видимый */}
       <div className="mb-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
           <Input
             type="text"
             placeholder="Поиск по артикулу, заметке, сотруднику..."
@@ -123,7 +130,7 @@ export const WarehouseFiltersComponent = ({
           {/* Даты */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+              <Label className="text-xs font-semibold text-neutral-600 flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
                 Дата от
               </Label>
@@ -135,7 +142,7 @@ export const WarehouseFiltersComponent = ({
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+              <Label className="text-xs font-semibold text-neutral-600 flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
                 Дата до
               </Label>
@@ -162,7 +169,7 @@ export const WarehouseFiltersComponent = ({
                   dateTo: today.toISOString().split('T')[0]
                 });
               }}
-              className="h-7 text-xs"
+              className={filterPillClass(false, 'sm')}
             >
               Текущий месяц
             </Button>
@@ -179,7 +186,7 @@ export const WarehouseFiltersComponent = ({
                   dateTo: lastMonthEnd.toISOString().split('T')[0]
                 });
               }}
-              className="h-7 text-xs"
+              className={filterPillClass(false, 'sm')}
             >
               Прошлый месяц
             </Button>
@@ -195,7 +202,7 @@ export const WarehouseFiltersComponent = ({
                   dateTo: today.toISOString().split('T')[0]
                 });
               }}
-              className="h-7 text-xs"
+              className={filterPillClass(false, 'sm')}
             >
               Последние 3 месяца
             </Button>
@@ -211,7 +218,7 @@ export const WarehouseFiltersComponent = ({
                   dateTo: today.toISOString().split('T')[0]
                 });
               }}
-              className="h-7 text-xs"
+              className={filterPillClass(false, 'sm')}
             >
               Последние 6 месяцев
             </Button>
@@ -219,15 +226,15 @@ export const WarehouseFiltersComponent = ({
 
           {/* Склады */}
           <div className="space-y-2">
-            <Label className="text-xs font-semibold text-slate-600">Склады</Label>
+            <Label className="text-xs font-semibold text-neutral-600">Склады</Label>
             <div className="flex flex-wrap gap-2">
               {availableWarehouses.map(warehouse => (
                 <Button
                   key={warehouse}
-                  variant={filters.warehouses.includes(warehouse) ? "default" : "outline"}
+                  variant="outline"
                   size="sm"
                   onClick={() => toggleWarehouse(warehouse)}
-                  className="h-8 text-xs"
+                  className={filterPillClass(filters.warehouses.includes(warehouse))}
                 >
                   {warehouse}
                 </Button>
@@ -237,15 +244,15 @@ export const WarehouseFiltersComponent = ({
 
           {/* Типы движений */}
           <div className="space-y-2">
-            <Label className="text-xs font-semibold text-slate-600">Типы движений</Label>
+            <Label className="text-xs font-semibold text-neutral-600">Типы движений</Label>
             <div className="flex flex-wrap gap-2">
               {MOVEMENT_TYPES.map(type => (
                 <Button
                   key={type.value}
-                  variant={filters.movementTypes.includes(type.value) ? "default" : "outline"}
+                  variant="outline"
                   size="sm"
                   onClick={() => toggleMovementType(type.value)}
-                  className="h-8 text-xs"
+                  className={filterPillClass(filters.movementTypes.includes(type.value))}
                 >
                   {type.label}
                 </Button>
@@ -256,16 +263,20 @@ export const WarehouseFiltersComponent = ({
           {/* Артикулы - с поиском для большого количества */}
           {availableArticles.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-xs font-semibold text-slate-600">
+              <Label className="text-xs font-semibold text-neutral-600">
                 Артикулы ({filters.articles.length > 0 ? `${filters.articles.length} выбрано` : 'все'})
               </Label>
-              <div className="max-h-32 overflow-y-auto border border-slate-200 rounded-lg p-2 bg-white">
+              <div className="max-h-32 overflow-y-auto border border-neutral-200 rounded-lg p-2 bg-white">
                 <div className="flex flex-wrap gap-1.5">
                   {availableArticles.slice(0, 20).map(article => (
                     <Badge
                       key={article}
-                      variant={filters.articles.includes(article) ? "default" : "outline"}
-                      className="cursor-pointer hover:scale-105 transition-transform text-xs py-1 px-2"
+                      variant="outline"
+                      className={`tasklab-pill cursor-pointer hover:scale-105 transition-transform text-xs py-1 px-2 ${
+                        filters.articles.includes(article)
+                          ? 'bg-neutral-900 text-white border-neutral-900'
+                          : 'border-neutral-200 bg-white text-neutral-700'
+                      }`}
                       onClick={() => toggleArticle(article)}
                     >
                       {article}
@@ -283,8 +294,8 @@ export const WarehouseFiltersComponent = ({
 
           {/* Активные фильтры - сводка */}
           {hasActiveFilters && (
-            <div className="pt-3 border-t border-slate-200">
-              <div className="text-xs text-slate-600 font-semibold mb-2">Активные фильтры:</div>
+            <div className="pt-3 border-t border-neutral-200">
+              <div className="text-xs text-neutral-600 font-semibold mb-2">Активные фильтры:</div>
               <div className="flex flex-wrap gap-2">
                 {filters.dateFrom && (
                   <Badge variant="secondary" className="text-xs">
@@ -297,7 +308,7 @@ export const WarehouseFiltersComponent = ({
                   </Badge>
                 )}
                 {filters.warehouses.map(w => (
-                  <Badge key={w} variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                  <Badge key={w} variant="secondary" className="text-xs bg-[var(--tasklab-lime)]/20 text-neutral-900">
                     {w}
                   </Badge>
                 ))}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { crm } from "@/lib/crmClient.ts";
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -73,33 +73,33 @@ export function TodayTasksWidget() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'call': return <Phone className="h-3.5 w-3.5 text-blue-500" />;
-      case 'meeting': return <Users className="h-3.5 w-3.5 text-purple-500" />;
+      case 'call': return <Phone className="h-3.5 w-3.5 text-neutral-700" />;
+      case 'meeting': return <Users className="h-3.5 w-3.5 text-neutral-900" />;
       case 'email': return <Mail className="h-3.5 w-3.5 text-green-500" />;
-      default: return <CheckCircle2 className="h-3.5 w-3.5 text-slate-500" />;
+      default: return <CheckCircle2 className="h-3.5 w-3.5 text-neutral-500" />;
     }
   };
 
   if (loading) {
     return (
-      <Card className="nexus-card h-[300px] flex items-center justify-center">
-         <div className="text-slate-400 text-sm">Загрузка задач…</div>
+      <Card className="tasklab-card h-[300px] flex items-center justify-center">
+         <div className="text-neutral-400 text-sm">Загрузка задач…</div>
       </Card>
     );
   }
 
   return (
-    <Card className="nexus-card">
+    <Card className="tasklab-card">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <CardTitle className="text-sm font-bold text-neutral-900 flex items-center gap-2">
              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 ring-1 ring-amber-100/80">
                <Calendar className="h-4 w-4 text-amber-700" />
              </span>
              Сегодня
           </CardTitle>
           {tasks.length > 0 && (
-             <span className="text-xs font-bold text-slate-500">{tasks.length}</span>
+             <span className="text-xs font-bold text-neutral-500">{tasks.length}</span>
           )}
         </div>
       </CardHeader>
@@ -109,7 +109,7 @@ export function TodayTasksWidget() {
             <div className="h-12 w-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
                <CheckCircle2 className="h-6 w-6 text-green-500" />
             </div>
-            <p className="text-slate-500 text-sm font-medium">Все задачи выполнены</p>
+            <p className="text-neutral-500 text-sm font-medium">Все задачи выполнены</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -118,16 +118,16 @@ export function TodayTasksWidget() {
                  <Checkbox 
                     checked={false} 
                     onCheckedChange={() => toggleTaskStatus(task.id)}
-                    className="h-5 w-5 rounded-full border-2 border-slate-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600 transition-all"
+                    className="h-5 w-5 rounded-full border-2 border-neutral-200 data-[state=checked]:bg-neutral-900 data-[state=checked]:border-neutral-900 transition-all"
                  />
-                 <div className="flex-1 min-w-0 p-3 bg-slate-50 rounded-2xl group-hover:bg-indigo-50/50 ring-1 ring-transparent group-hover:ring-indigo-100 transition-all">
+                 <div className="flex-1 min-w-0 p-3 bg-neutral-50 rounded-2xl group-hover:bg-[var(--tasklab-lime)]/10 ring-1 ring-transparent group-hover:ring-[var(--tasklab-lime)]/20 transition-all">
                     <div className="flex items-center gap-2 mb-1">
                        {getTypeIcon(task.type)}
-                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{task.priority}</span>
+                       <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">{task.priority}</span>
                     </div>
-                    <p className="text-sm font-semibold text-slate-900 truncate">{task.title}</p>
+                    <p className="text-sm font-semibold text-neutral-900 truncate">{task.title}</p>
                     {(task.deals || task.contacts) && (
-                       <p className="text-xs text-slate-500 mt-1 truncate">
+                       <p className="text-xs text-neutral-500 mt-1 truncate">
                           {task.deals?.title || `${task.contacts?.first_name} ${task.contacts?.last_name}`}
                        </p>
                     )}
@@ -136,7 +136,7 @@ export function TodayTasksWidget() {
             ))}
             
             <Link to="/tasks" className="block pt-2">
-               <Button variant="ghost" className="w-full text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50/60">
+               <Button variant="ghost" className="w-full text-xs text-neutral-900 hover:text-neutral-900 hover:bg-[var(--tasklab-lime)]/10">
                   Все задачи <ArrowRight className="h-3 w-3 ml-2" />
                </Button>
             </Link>

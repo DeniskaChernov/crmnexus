@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import { BttCrmModuleShell } from '../components/btt-ref/BttCrmModuleShell.tsx';
 import { useDropzone } from 'react-dropzone';
 import Papa from 'papaparse';
 import { crm } from "@/lib/crmClient.ts";
@@ -593,37 +594,37 @@ export default function ImportWizard() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in-fade pb-20">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Умный импорт</h1>
-          <p className="text-slate-500 text-sm mt-1">Загрузите исторические данные для построения аналитики</p>
-        </div>
+    <BttCrmModuleShell
+      tag="Данные"
+      title="Умный импорт"
+      subtitle="Загрузите исторические данные для построения аналитики"
+      actions={
         <Button variant="outline" onClick={() => navigate('/database')}>
           Назад к базе
         </Button>
-      </div>
-
+      }
+      contentClassName="max-w-5xl mx-auto"
+    >
       {/* Steps Indicator - Hidden or Simplified since user wants 0-click */}
-      <div className="flex items-center justify-center gap-4 text-sm font-medium text-slate-500 opacity-50">
+      <div className="flex items-center justify-center gap-4 text-sm font-medium text-neutral-500 opacity-50">
         {step < 3 && <p>Автоматический режим</p>}
       </div>
 
       {step === 1 && (
-        <Card className="border-dashed border-2 shadow-none bg-slate-50/50">
+        <Card className="tasklab-card border-0 border-dashed border-2 shadow-none bg-neutral-50/50">
           <CardContent className="p-12">
-            <div {...getRootProps()} className="flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-100/50 transition-colors rounded-xl p-8">
+            <div {...getRootProps()} className="flex flex-col items-center justify-center text-center cursor-pointer hover:bg-neutral-100/50 transition-colors rounded-xl p-8">
               <input {...getInputProps()} />
-              <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center mb-6">
-                 {isDragActive ? <Upload className="w-8 h-8 text-blue-500" /> : <FileSpreadsheet className="w-8 h-8 text-slate-400" />}
+              <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-neutral-200 flex items-center justify-center mb-6">
+                 {isDragActive ? <Upload className="w-8 h-8 text-neutral-900" /> : <FileSpreadsheet className="w-8 h-8 text-neutral-400" />}
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+              <h3 className="text-lg font-semibold text-neutral-900 mb-2">
                 {isDragActive ? 'Перетащите файл сюда' : 'Нажмите или перетащите CSV файл'}
               </h3>
-              <p className="text-slate-500 text-sm max-w-sm">
+              <p className="text-neutral-500 text-sm max-w-sm">
                 Просто перетащите файл. Система сама найдет клиентов, даты и суммы, и добавит всё в базу.
               </p>
-              <Button className="mt-6" variant="secondary">Выбрать файл</Button>
+              <Button className="mt-6 bg-neutral-900 hover:bg-neutral-800 text-white" variant="secondary">Выбрать файл</Button>
             </div>
           </CardContent>
         </Card>
@@ -632,19 +633,19 @@ export default function ImportWizard() {
       {/* Step 2 is now SKIPPED in UI rendering, though state logic exists */}
 
       {step === 3 && (
-        <Card className="text-center py-16">
+        <Card className="tasklab-card border-0 text-center py-16">
           <CardContent className="space-y-6 max-w-md mx-auto">
              {!isProcessing ? (
                <>
                  <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
                     <CheckCircle2 className="w-8 h-8" />
                  </div>
-                 <h2 className="text-2xl font-bold text-slate-900">Готово!</h2>
-                 <p className="text-slate-500">Данные успешно добавлены в историю продаж.</p>
+                 <h2 className="text-2xl font-bold text-neutral-900">Готово!</h2>
+                 <p className="text-neutral-500">Данные успешно добавлены в историю продаж.</p>
                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="bg-slate-50 p-3 rounded-lg">
-                       <div className="text-2xl font-bold text-slate-900">{importStats.total}</div>
-                       <div className="text-xs text-slate-500">Всего</div>
+                    <div className="bg-neutral-50 p-3 rounded-lg">
+                       <div className="text-2xl font-bold text-neutral-900">{importStats.total}</div>
+                       <div className="text-xs text-neutral-500">Всего</div>
                     </div>
                     <div className="bg-emerald-50 p-3 rounded-lg">
                        <div className="text-2xl font-bold text-emerald-600">{importStats.success}</div>
@@ -655,22 +656,22 @@ export default function ImportWizard() {
                        <div className="text-xs text-rose-600">Ошибки</div>
                     </div>
                  </div>
-                 <Button className="w-full mt-4" onClick={() => navigate('/database')}>Перейти к базе данных</Button>
+                 <Button className="w-full mt-4 bg-neutral-900 hover:bg-neutral-800 text-white" onClick={() => navigate('/database')}>Перейти к базе данных</Button>
                </>
              ) : (
                <>
-                 <div className="w-16 h-16 bg-slate-100 text-slate-900 rounded-full flex items-center justify-center mx-auto mb-4 animate-spin">
+                 <div className="w-16 h-16 bg-neutral-100 text-neutral-900 rounded-full flex items-center justify-center mx-auto mb-4 animate-spin">
                     <Loader2 className="w-8 h-8" />
                  </div>
-                 <h2 className="text-xl font-bold text-slate-900">Обработка данных...</h2>
-                 <p className="text-slate-500">Умный алгоритм раскладывает всё по полочкам</p>
+                 <h2 className="text-xl font-bold text-neutral-900">Обработка данных...</h2>
+                 <p className="text-neutral-500">Умный алгоритм раскладывает всё по полочкам</p>
                  <Progress value={progress} className="h-2" />
-                 <p className="text-xs text-slate-400">{progress}% завершено</p>
+                 <p className="text-xs text-neutral-400">{progress}% завершено</p>
                </>
              )}
           </CardContent>
         </Card>
       )}
-    </div>
+    </BttCrmModuleShell>
   );
 }
