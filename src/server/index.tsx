@@ -17,6 +17,7 @@ import { registerCrmRunRoute } from "./routes/crmRunRoute.ts";
 import { registerPublicRoutes } from "./routes/publicRoutes.ts";
 import { registerQrRoutes } from "./routes/qrRoutes.ts";
 import { registerDealerRoutes } from "./routes/dealerRoutes.ts";
+import { requireCrmStaff } from "./middleware/requestAuth.ts";
 
 const env = (k: string) => process.env[k];
 
@@ -143,11 +144,24 @@ app.post("/api/users", async (c) => {
       return c.json({ error: "Missing required fields" }, 400);
     }
 
+    if (role === "dealer" && !company_id) {
+      return c.json({ error: "Для роли дилера укажите компанию" }, 400);
+    }
+
     if (!env("DATABASE_URL")) {
         return c.json({ error: "DATABASE_URL is not configured" }, 500);
     }
 
     const db = createClient();
+
+    if (role === "dealer" && company_id) {
+      const { getPool } = await import("./dbPool.ts");
+      const pool = getPool();
+      await pool.query(
+        `UPDATE companies SET customer_type = 'dealer', dealer_portal_enabled = true WHERE id = $1`,
+        [company_id],
+      );
+    }
 
     // 1. Create CRM user (auth admin)
     const { data, error } = await db.auth.admin.createUser({
@@ -188,12 +202,18 @@ app.put("/api/users/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
-    const { name, email, role } = body;
+    const { name, email, role, company_id } = body;
     
     const existingUser = await kv.get(`user:${id}`);
     if (!existingUser) {
       return c.json({ error: "User not found" }, 404);
     }
+
+    if (role === "dealer" && !company_id && !existingUser.company_id) {
+      return c.json({ error: "Для роли дилера укажите компанию" }, 400);
+    }
+
+    const finalCompanyId = role === "dealer" ? (company_id || existingUser.company_id) : null;
 
     // Update KV
     const updatedUser = {
@@ -201,20 +221,37 @@ app.put("/api/users/:id", async (c) => {
       name: name || existingUser.name,
       email: email || existingUser.email,
       role: role || existingUser.role,
+      company_id: finalCompanyId,
       updatedAt: new Date().toISOString()
     };
     await kv.set(`user:${id}`, updatedUser);
 
     // Update auth user metadata (optional)
     if (env("DATABASE_URL")) {
-        // Validate UUID format to prevent crash
+        const { adminUpdateUserById } = await import("./authAdmin.ts");
+        await adminUpdateUserById(id, {
+          email,
+          user_metadata: {
+            name: updatedUser.name,
+            role: updatedUser.role,
+            company_id: updatedUser.company_id ?? null,
+          },
+        });
+        if (updatedUser.role === "dealer" && updatedUser.company_id) {
+          const { getPool } = await import("./dbPool.ts");
+          await getPool().query(
+            `UPDATE companies SET customer_type = 'dealer', dealer_portal_enabled = true WHERE id = $1`,
+            [updatedUser.company_id],
+          );
+        }
+        // Legacy shim (optional)
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (uuidRegex.test(id)) {
             try {
                 const db = createClient();
                 await db.auth.admin.updateUserById(id, {
                     email: email,
-                    user_metadata: { name, role }
+                    user_metadata: { name: updatedUser.name, role: updatedUser.role, company_id: updatedUser.company_id }
                 });
             } catch (authError) {
                 console.warn("Failed to update auth user:", authError);
@@ -1977,12 +2014,13 @@ app.delete("/api/clients/:id", async (c) => {
 
 // Get all notifications
 app.get("/api/notifications", async (c) => {
+  const guard = await requireCrmStaff(c);
+  if (!guard.ok) return guard.response;
   try {
     const notifications = await kv.getByPrefix("notification:");
-    // Sort by created date (newest first)
-    const sorted = (notifications || []).sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    const sorted = (notifications || [])
+      .filter((n) => n.audience !== "dealer")
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return c.json(sorted);
   } catch (error: any) {
     console.error("Error fetching notifications:", error);
@@ -1992,6 +2030,8 @@ app.get("/api/notifications", async (c) => {
 
 // Create notification
 app.post("/api/notifications", async (c) => {
+  const guard = await requireCrmStaff(c);
+  if (!guard.ok) return guard.response;
   try {
     const body = await c.req.json();
     const { type, title, message, priority, entityType, entityId, actionUrl } = body;
@@ -2020,6 +2060,8 @@ app.post("/api/notifications", async (c) => {
 
 // Mark notification as read
 app.put("/api/notifications/:id/read", async (c) => {
+  const guard = await requireCrmStaff(c);
+  if (!guard.ok) return guard.response;
   try {
     const id = c.req.param("id");
     const notification = await kv.get(id);
@@ -2040,11 +2082,13 @@ app.put("/api/notifications/:id/read", async (c) => {
 
 // Mark all notifications as read
 app.put("/api/notifications/read-all", async (c) => {
+  const guard = await requireCrmStaff(c);
+  if (!guard.ok) return guard.response;
   try {
     const notifications = await kv.getByPrefix("notification:");
     
     for (const notif of notifications) {
-      if (!notif.isRead) {
+      if (!notif.isRead && notif.audience !== "dealer") {
         await kv.set(notif.id, { ...notif, isRead: true });
       }
     }
@@ -2058,6 +2102,8 @@ app.put("/api/notifications/read-all", async (c) => {
 
 // Delete notification
 app.delete("/api/notifications/:id", async (c) => {
+  const guard = await requireCrmStaff(c);
+  if (!guard.ok) return guard.response;
   try {
     const id = c.req.param("id");
     await kv.del(id);
@@ -2070,6 +2116,8 @@ app.delete("/api/notifications/:id", async (c) => {
 
 // Generate automatic notifications (called by cron or manually)
 app.post("/api/notifications/generate", async (c) => {
+  const guard = await requireCrmStaff(c);
+  if (!guard.ok) return guard.response;
   try {
     if (!env("DATABASE_URL")) {
       return c.json({ error: "DATABASE_URL is not configured" }, 500);

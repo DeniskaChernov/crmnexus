@@ -1,5 +1,5 @@
-﻿import React, { useState } from 'react';
-import { crmUrl, authHeaders } from '../../lib/crmApi.ts';
+﻿import React, { useEffect, useState } from "react";
+import { crmUrl, authHeaders, crmFetch } from "../../lib/crmApi.ts";
 import {
   Dialog,
   DialogContent,
@@ -7,19 +7,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
+} from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select';
-import { UserPlus, Loader2 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+} from "../ui/select";
+import { UserPlus, Loader2 } from "lucide-react";
+import { toast } from "sonner@2.0.3";
+
 interface AddUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -28,60 +29,79 @@ interface AddUserDialogProps {
 
 export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState('manager');
-  const [password, setPassword] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("manager");
+  const [password, setPassword] = useState("");
+  const [companyId, setCompanyId] = useState("");
+  const [dealers, setDealers] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    crmFetch("/qr/dealers")
+      .then(async (res) => {
+        if (res.ok) setDealers(await res.json());
+      })
+      .catch(() => setDealers([]));
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name || !email || !password) {
-      toast.error('Заполните все обязательные поля');
+      toast.error("Заполните все обязательные поля");
+      return;
+    }
+
+    if (role === "dealer" && !companyId) {
+      toast.error("Выберите компанию-дилера");
       return;
     }
 
     setLoading(true);
-    
-    try {
-      // Создаем нового пользователя
-      const newUser = {
-        name,
-        email,
-        role,
-        password,
-      };
 
-      const response = await fetch(
-        `${crmUrl('/users')}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders(false),
-          },
-          body: JSON.stringify(newUser),
-        }
-      );
+    try {
+      const newUser: Record<string, string> = { name, email, role, password };
+      if (role === "dealer") newUser.company_id = companyId;
+
+      const response = await fetch(`${crmUrl("/users")}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(false),
+        },
+        body: JSON.stringify(newUser),
+      });
 
       if (!response.ok) {
-        throw new Error('Ошибка при добавлении пользователя');
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || "Ошибка при добавлении пользователя");
       }
 
       toast.success(`Пользователь ${name} успешно добавлен`);
-      setName('');
-      setEmail('');
-      setPassword('');
-      setRole('manager');
+      setName("");
+      setEmail("");
+      setPassword("");
+      setRole("manager");
+      setCompanyId("");
       onUserAdded();
       onOpenChange(false);
-    } catch (error) {
-      console.error('Error adding user:', error);
-      toast.error('Не удалось добавить пользователя');
+    } catch (error: unknown) {
+      console.error("Error adding user:", error);
+      toast.error(error instanceof Error ? error.message : "Не удалось добавить пользователя");
     } finally {
       setLoading(false);
     }
   };
+
+  const roleLabel =
+    role === "owner"
+      ? "Владелец"
+      : role === "manager"
+        ? "Менеджер"
+        : role === "observer"
+          ? "Наблюдатель"
+          : "Дилер";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -91,9 +111,7 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
             <UserPlus className="h-5 w-5" />
             Добавить пользователя
           </DialogTitle>
-          <DialogDescription>
-            Создайте нового пользователя и назначьте ему роль
-          </DialogDescription>
+          <DialogDescription>Создайте нового пользователя и назначьте ему роль</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
@@ -149,34 +167,63 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
                   <SelectItem value="owner">👑 Владелец</SelectItem>
                   <SelectItem value="manager">⭐ Менеджер</SelectItem>
                   <SelectItem value="observer">👁️ Наблюдатель</SelectItem>
+                  <SelectItem value="dealer">🏪 Дилер (портал)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
+            {role === "dealer" && (
+              <div className="space-y-2">
+                <Label>Компания-дилер</Label>
+                <Select value={companyId} onValueChange={setCompanyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите дилера" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dealers.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-neutral-500">
+                  Портал дилера будет включён для выбранной компании.
+                </p>
+              </div>
+            )}
+
             <div className="p-3 bg-[var(--tasklab-lime)]/10 dark:bg-[var(--tasklab-lime)]/5 rounded-lg">
               <p className="text-sm text-neutral-900 dark:text-neutral-100">
-                <strong>Права роли "{role === 'owner' ? 'Владелец' : role === 'manager' ? 'Менеджер' : 'Наблюдатель'}":</strong>
+                <strong>Права роли «{roleLabel}»:</strong>
               </p>
               <ul className="text-sm text-neutral-700 dark:text-neutral-300 mt-2 space-y-1 ml-4 list-disc">
-                {role === 'owner' && (
+                {role === "owner" && (
                   <>
                     <li>Полный доступ ко всем функциям</li>
                     <li>Управление пользователями и настройками</li>
                     <li>Доступ к финансовым данным</li>
                   </>
                 )}
-                {role === 'manager' && (
+                {role === "manager" && (
                   <>
                     <li>Работа с лидами, сделками и задачами</li>
                     <li>Просмотр отчётов</li>
                     <li>Редактирование компаний и контактов</li>
                   </>
                 )}
-                {role === 'observer' && (
+                {role === "observer" && (
                   <>
                     <li>Просмотр данных без редактирования</li>
                     <li>Доступ к отчётам и аналитике</li>
                     <li>Нет доступа к настройкам</li>
+                  </>
+                )}
+                {role === "dealer" && (
+                  <>
+                    <li>Доступ только к порталу дилера</li>
+                    <li>Клиенты, заявки и отзывы с QR на его мотках</li>
+                    <li>Нет доступа к основной CRM</li>
                   </>
                 )}
               </ul>
@@ -184,12 +231,7 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Отмена
             </Button>
             <Button type="submit" disabled={loading} className="bg-neutral-900 hover:bg-neutral-800 text-white">

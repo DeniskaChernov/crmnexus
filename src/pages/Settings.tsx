@@ -51,6 +51,7 @@ interface User {
   name: string;
   email: string;
   role: string;
+  company_id?: string | null;
   createdAt: string;
 }
 
@@ -396,6 +397,8 @@ export default function Settings() {
         return '⭐ Менеджер';
       case 'observer':
         return '👁️ Наблюдатель';
+      case 'dealer':
+        return '🏪 Дилер';
       default:
         return role;
     }
@@ -409,6 +412,8 @@ export default function Settings() {
         return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
       case 'observer':
         return 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300';
+      case 'dealer':
+        return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200';
       default:
         return 'bg-neutral-100 text-neutral-700';
     }

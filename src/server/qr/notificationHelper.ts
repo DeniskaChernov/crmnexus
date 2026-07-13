@@ -8,7 +8,7 @@ export type SiteNotificationKind =
   | "dealer_country_mismatch"
   | "dealer_assigned";
 
-export async function pushSiteNotification(opts: {
+type NotificationPayload = {
   kind: SiteNotificationKind;
   title: string;
   message: string;
@@ -17,10 +17,16 @@ export async function pushSiteNotification(opts: {
   entityId?: string | null;
   actionUrl?: string | null;
   dealerId?: string | null;
-}) {
-  const id = `notification:${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+};
+
+function buildNotification(
+  id: string,
+  opts: NotificationPayload,
+  audience: "admin" | "dealer",
+  actionUrl: string | null,
+) {
   const priority = opts.priority || "medium";
-  const notification = {
+  return {
     id,
     type: priority === "high" ? "warning" : "info",
     title: opts.title,
@@ -28,13 +34,43 @@ export async function pushSiteNotification(opts: {
     priority,
     entityType: opts.entityType || null,
     entityId: opts.entityId || null,
-    actionUrl: opts.actionUrl || null,
-    audience: "admin" as const,
+    actionUrl,
+    audience,
     dealerId: opts.dealerId || null,
     siteKind: opts.kind,
     isRead: false,
     createdAt: new Date().toISOString(),
   };
-  await kv.set(id, notification);
-  return notification;
+}
+
+export async function pushSiteNotification(opts: NotificationPayload) {
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const adminId = `notification:${suffix}`;
+  const adminNotif = buildNotification(adminId, opts, "admin", opts.actionUrl || null);
+  await kv.set(adminId, adminNotif);
+
+  if (opts.dealerId) {
+    const dealerAction =
+      opts.kind === "site_request"
+        ? "/dealer/requests"
+        : opts.kind === "site_review"
+          ? "/dealer/reviews"
+          : opts.entityId
+            ? `/dealer/customers/${opts.entityId}`
+            : "/dealer";
+    const dealerId = `notification:dealer:${opts.dealerId}:${suffix}`;
+    const dealerNotif = buildNotification(dealerId, opts, "dealer", dealerAction);
+    await kv.set(dealerId, dealerNotif);
+    return { admin: adminNotif, dealer: dealerNotif };
+  }
+
+  return { admin: adminNotif };
+}
+
+export async function listDealerNotifications(dealerCompanyId: string, limit = 50) {
+  const all = await kv.getByPrefix("notification:");
+  return (all || [])
+    .filter((n) => n && n.audience === "dealer" && n.dealerId === dealerCompanyId)
+    .sort((a, b) => new Date(String(b.createdAt)).getTime() - new Date(String(a.createdAt)).getTime())
+    .slice(0, limit);
 }

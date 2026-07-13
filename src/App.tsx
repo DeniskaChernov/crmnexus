@@ -54,6 +54,7 @@ const DealerLayout = lazy(() => import("./components/dealer/DealerLayout.tsx").t
 const DealerDashboard = lazy(() => import("./pages/dealer/DealerDashboard.tsx"));
 const DealerCustomers = lazy(() => import("./pages/dealer/DealerCustomers.tsx"));
 const DealerRequests = lazy(() => import("./pages/dealer/DealerRequests.tsx"));
+const DealerReviews = lazy(() => import("./pages/dealer/DealerReviews.tsx"));
 const DealerCoils = lazy(() => import("./pages/dealer/DealerCoils.tsx"));
 const DealerShipments = lazy(() => import("./pages/dealer/DealerShipments.tsx"));
 const SiteCustomerDetail = lazy(() => import("./pages/qr/SiteCustomerDetail.tsx"));
@@ -103,6 +104,7 @@ export default function App() {
               <Route path="customers" element={<DealerCustomers />} />
               <Route path="customers/:id" element={<SiteCustomerDetail />} />
               <Route path="requests" element={<DealerRequests />} />
+              <Route path="reviews" element={<DealerReviews />} />
               <Route path="coils" element={<DealerCoils />} />
               <Route path="shipments" element={<DealerShipments />} />
             </Route>

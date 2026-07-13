@@ -100,6 +100,19 @@ export function registerAuthRoutes(app: Hono) {
         console.warn("[auth/login] failed", { email, passLen: pass.length });
         return c.json({ error: "Неверный email или пароль" }, 401);
       }
+      if (user.role === "dealer") {
+        if (!user.company_id) {
+          return c.json({ error: "Учётная запись дилера не привязана к компании" }, 403);
+        }
+        const pool = (await import("../dbPool.ts")).getPool();
+        const { rows: companyRows } = await pool.query<{ dealer_portal_enabled: boolean }>(
+          `SELECT dealer_portal_enabled FROM companies WHERE id = $1`,
+          [user.company_id],
+        );
+        if (!companyRows[0]?.dealer_portal_enabled) {
+          return c.json({ error: "Портал дилера отключён для этой компании" }, 403);
+        }
+      }
       const token = await signUserToken(user);
       return c.json({
         token,

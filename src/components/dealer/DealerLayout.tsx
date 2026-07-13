@@ -1,13 +1,15 @@
 import React from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, MessageSquare, Package, LogOut, Truck } from "lucide-react";
+import { LayoutDashboard, Users, MessageSquare, Package, LogOut, Truck, Star } from "lucide-react";
 import { Button } from "../ui/button";
 import { crm } from "../../lib/crmClient.ts";
+import { DealerNotifications } from "./DealerNotifications.tsx";
 
 const nav = [
   { to: "/dealer", label: "Показатели", icon: LayoutDashboard, end: true },
   { to: "/dealer/customers", label: "Клиенты", icon: Users },
   { to: "/dealer/requests", label: "Заявки", icon: MessageSquare },
+  { to: "/dealer/reviews", label: "Отзывы", icon: Star },
   { to: "/dealer/coils", label: "Мотки / QR", icon: Package },
   { to: "/dealer/shipments", label: "Отгрузки", icon: Truck },
 ];
@@ -29,9 +31,12 @@ export function DealerLayout() {
             <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">BTT Nexus</div>
             <div className="font-bold text-lg">Портал дилера</div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => void logout()}>
-            <LogOut className="h-4 w-4 mr-1" /> Выйти
-          </Button>
+          <div className="flex items-center gap-2">
+            <DealerNotifications />
+            <Button variant="outline" size="sm" onClick={() => void logout()}>
+              <LogOut className="h-4 w-4 mr-1" /> Выйти
+            </Button>
+          </div>
         </div>
       </header>
 

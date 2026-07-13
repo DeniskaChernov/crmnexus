@@ -14,7 +14,7 @@ import {
 } from "../qr/coilsService.ts";
 import { createSiteReview, insertSiteEvent } from "../qr/siteServices.ts";
 import { convertSiteCustomerToContact } from "../qr/siteCustomerConvert.ts";
-import { getRequestAuth, isAdminRole, isDealer } from "../middleware/requestAuth.ts";
+import { getRequestAuth, isAdminRole, isDealer, requireCrmStaff } from "../middleware/requestAuth.ts";
 
 function dealerForbidden(c: { json: (body: unknown, status?: number) => Response }, auth: Awaited<ReturnType<typeof getRequestAuth>>) {
   if (auth && isDealer(auth)) return c.json({ error: "Forbidden" }, 403);
@@ -22,10 +22,8 @@ function dealerForbidden(c: { json: (body: unknown, status?: number) => Response
 }
 
 async function assertAdminQrAccess(c: Parameters<typeof getRequestAuth>[0]) {
-  const auth = await getRequestAuth(c);
-  if (!auth) return c.json({ error: "Unauthorized" }, 401);
-  const denied = dealerForbidden(c, auth);
-  if (denied) return denied;
+  const guard = await requireCrmStaff(c);
+  if (!guard.ok) return guard.response;
   return null;
 }
 
@@ -158,6 +156,7 @@ export function registerQrRoutes(app: Hono) {
   app.get("/api/coils", async (c) => {
     try {
       const auth = await getRequestAuth(c);
+      if (!auth) return c.json({ error: "Unauthorized" }, 401);
       const denied = dealerForbidden(c, auth);
       if (denied) return denied;
       const shipment_id = c.req.query("shipment_id") || undefined;
@@ -213,6 +212,8 @@ export function registerQrRoutes(app: Hono) {
 
   app.post("/api/coils/:id/print", async (c) => {
     try {
+      const denied = await assertAdminQrAccess(c);
+      if (denied) return denied;
       const coil = await markCoilPrinted(c.req.param("id"));
       if (!coil) return c.json({ error: "Not found" }, 404);
       return c.json({ success: true, coil: { ...coil, url: publicQrUrl(coil.qr_token), urls: publicQrUrls(coil.qr_token) } });
@@ -223,6 +224,8 @@ export function registerQrRoutes(app: Hono) {
 
   app.post("/api/coils/:id/deactivate", async (c) => {
     try {
+      const denied = await assertAdminQrAccess(c);
+      if (denied) return denied;
       const coil = await deactivateCoil(c.req.param("id"));
       if (!coil) return c.json({ error: "Not found" }, 404);
       return c.json({ success: true, coil });
@@ -276,6 +279,8 @@ export function registerQrRoutes(app: Hono) {
 
   app.put("/api/site-reviews/:id", async (c) => {
     try {
+      const denied = await assertAdminQrAccess(c);
+      if (denied) return denied;
       const body = await c.req.json();
       const status = body.moderation_status || body.status;
       if (!status) return c.json({ error: "moderation_status required" }, 400);

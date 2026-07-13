@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { crmUrl, authHeaders } from '../../lib/crmApi.ts';
+import { crmUrl, authHeaders, crmFetch } from '../../lib/crmApi.ts';
 import { useForm } from 'react-hook-form@7.55.0';
 import { crm } from "@/lib/crmClient.ts";
 import { Button } from '../ui/button';
@@ -59,6 +59,7 @@ export function CreateDealDialog({ onSuccess, isOpen, onOpenChange, trigger, tri
   const [selectedCompany, setSelectedCompany] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [dealItems, setDealItems] = useState<DealItem[]>([]);
+  const [dealers, setDealers] = useState<{ id: string; name: string }[]>([]);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
   // Auto-calculate amount from items
@@ -166,6 +167,14 @@ export function CreateDealDialog({ onSuccess, isOpen, onOpenChange, trigger, tri
     }
     
     setValue('status', 'open');
+    setValue('dealer_id', 'none');
+
+    try {
+      const dealersRes = await crmFetch('/qr/dealers');
+      if (dealersRes.ok) setDealers(await dealersRes.json());
+    } catch {
+      setDealers([]);
+    }
   };
 
   const onSubmit = async (data: any) => {
@@ -228,6 +237,7 @@ export function CreateDealDialog({ onSuccess, isOpen, onOpenChange, trigger, tri
         {
           title: finalTitle,
           company_id: finalCompanyId,
+          dealer_id: data.dealer_id && data.dealer_id !== 'none' ? data.dealer_id : null,
           amount: cleanAmount(data.amount),
           stage_id: stageData?.id,
           status: data.status || 'open',
@@ -417,6 +427,28 @@ export function CreateDealDialog({ onSuccess, isOpen, onOpenChange, trigger, tri
                 </Tabs>
             </div>
           </div>
+
+          {dealers.length > 0 && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Дилер</Label>
+              <div className="col-span-3">
+                <Select onValueChange={(val) => setValue('dealer_id', val)} defaultValue="none">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Не указан" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Без дилера (прямая продажа)</SelectItem>
+                    {dealers.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Дилер, через которого идёт продажа. Используется для отчётов и привязки QR-клиентов.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Basic Deal Info */}
           <div className="grid grid-cols-4 items-center gap-4">

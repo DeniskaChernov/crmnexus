@@ -49,3 +49,11 @@ export function isAdminRole(auth: RequestAuth): boolean {
 export function requireDealer(auth: RequestAuth | null): auth is RequestAuth {
   return Boolean(auth && isDealer(auth));
 }
+
+/** Любой авторизованный пользователь CRM, кроме дилера */
+export async function requireCrmStaff(c: Context) {
+  const auth = await getRequestAuth(c);
+  if (!auth) return { ok: false as const, response: c.json({ error: "Unauthorized" }, 401) };
+  if (isDealer(auth)) return { ok: false as const, response: c.json({ error: "Forbidden" }, 403) };
+  return { ok: true as const, auth };
+}

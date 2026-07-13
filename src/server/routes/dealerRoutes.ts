@@ -13,6 +13,7 @@ import {
   requireDealer,
 } from "../middleware/requestAuth.ts";
 import { getCoilsByShipment, listCoils } from "../qr/coilsService.ts";
+import { listDealerNotifications } from "../qr/notificationHelper.ts";
 
 async function requireAdminAuth(c: Parameters<typeof getRequestAuth>[0]) {
   const auth = await getRequestAuth(c);
@@ -133,6 +134,66 @@ export function registerDealerRoutes(app: Hono) {
       .slice(0, 15);
 
     return c.json({ items });
+  });
+
+  app.get("/api/dealer/reviews", async (c) => {
+    const auth = await getRequestAuth(c);
+    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const pool = getPool();
+    const { rows } = await pool.query(
+      `SELECT * FROM site_reviews WHERE dealer_id = $1 ORDER BY created_at DESC LIMIT 200`,
+      [auth.company_id],
+    );
+    return c.json(rows);
+  });
+
+  app.patch("/api/dealer/requests/:id", async (c) => {
+    const auth = await getRequestAuth(c);
+    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const body = await c.req.json();
+    const status = String(body.status || "").trim();
+    if (!["new", "in_progress", "done", "cancelled"].includes(status)) {
+      return c.json({ error: "Invalid status" }, 400);
+    }
+    const pool = getPool();
+    const { rows } = await pool.query(
+      `UPDATE site_requests SET status = $3
+       WHERE id = $1 AND dealer_id = $2
+       RETURNING *`,
+      [c.req.param("id"), auth.company_id, status],
+    );
+    if (!rows[0]) return c.json({ error: "Not found" }, 404);
+    return c.json(rows[0]);
+  });
+
+  app.get("/api/dealer/notifications", async (c) => {
+    const auth = await getRequestAuth(c);
+    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const items = await listDealerNotifications(auth.company_id!);
+    return c.json(items);
+  });
+
+  app.put("/api/dealer/notifications/:id/read", async (c) => {
+    const auth = await getRequestAuth(c);
+    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const id = c.req.param("id");
+    const notification = await kv.get(id);
+    if (!notification || notification.dealerId !== auth.company_id) {
+      return c.json({ error: "Not found" }, 404);
+    }
+    const updated = { ...notification, isRead: true };
+    await kv.set(id, updated);
+    return c.json({ success: true, notification: updated });
+  });
+
+  app.put("/api/dealer/notifications/read-all", async (c) => {
+    const auth = await getRequestAuth(c);
+    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const items = await listDealerNotifications(auth.company_id!, 200);
+    for (const n of items) {
+      if (!n.isRead) await kv.set(n.id, { ...n, isRead: true });
+    }
+    return c.json({ success: true, count: items.length });
   });
 
   app.get("/api/dealer/coils", async (c) => {
