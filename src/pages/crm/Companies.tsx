@@ -1,4 +1,5 @@
 import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useChunkedList } from '../../hooks/useChunkedList';
 import { crm } from "@/lib/crmClient.ts";
 import { Button } from '../../components/ui/button';
@@ -269,6 +270,15 @@ export default function Companies() {
               {!isMobile && 'Горячие'}
             </TabsTrigger>
           </TabsList>
+
+          {activeTab === 'dealers' && (
+            <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-2">
+              <span>Полное управление порталом дилеров — отдельный раздел в меню.</span>
+              <Button asChild variant="outline" size="sm" className="bg-white">
+                <Link to="/dealer-management">Управление дилерами →</Link>
+              </Button>
+            </div>
+          )}
 
           {/* Mobile Card View */}
           {isMobile ? (

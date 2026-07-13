@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { LogOut, Home, ClipboardList, Warehouse, Users, BarChart3, PieChart, Calendar, Settings, Phone, CheckSquare, Building2, QrCode } from 'lucide-react';
+import { LogOut, Home, ClipboardList, Warehouse, Users, BarChart3, PieChart, Calendar, Settings, Phone, CheckSquare, Building2, QrCode, Store } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 type NavItem = {
@@ -35,6 +35,7 @@ const REF_NAV: NavItem[] = [
 
 const EXTRA_NAV: NavItem[] = [
   { name: 'QR-коды', href: '/qr', icon: QrCode, roles: ['admin', 'director', 'manager', 'owner'] },
+  { name: 'Дилеры', href: '/dealer-management', icon: Store, roles: ['admin', 'director', 'manager', 'owner'] },
   { name: 'Лиды', href: '/leads', icon: Phone, roles: ['admin', 'director', 'manager', 'sales', 'owner'] },
   { name: 'Задачи', href: '/tasks', icon: CheckSquare, roles: ['admin', 'director', 'manager', 'sales', 'owner'] },
   { name: 'Клиенты', href: '/database', icon: Building2, roles: ['admin', 'director', 'manager', 'sales', 'owner'] },

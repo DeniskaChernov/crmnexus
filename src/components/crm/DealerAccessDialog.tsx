@@ -25,9 +25,10 @@ interface DealerAccessDialogProps {
   company: { id: string; name: string } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
-export function DealerAccessDialog({ company, open, onOpenChange }: DealerAccessDialogProps) {
+export function DealerAccessDialog({ company, open, onOpenChange, onSuccess }: DealerAccessDialogProps) {
   const [users, setUsers] = useState<DealerUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -74,6 +75,7 @@ export function DealerAccessDialog({ company, open, onOpenChange }: DealerAccess
       setPassword("");
       setName("");
       await load();
+      onSuccess?.();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Не удалось выдать доступ");
     } finally {
@@ -90,6 +92,7 @@ export function DealerAccessDialog({ company, open, onOpenChange }: DealerAccess
     if (res.ok) {
       toast.success("Доступ отозван");
       await load();
+      onSuccess?.();
     } else {
       toast.error("Не удалось отозвать доступ");
     }

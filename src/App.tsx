@@ -28,6 +28,7 @@ const loadLeads = () => import("./pages/crm/Leads");
 const loadSalesAnalytics = () => import("./pages/SalesAnalytics");
 const loadQrHub = () => import("./pages/qr/QrHub");
 const loadQrCoilDetail = () => import("./pages/qr/QrCoilDetail");
+const loadDealersManagement = () => import("./pages/crm/DealersManagement");
 const loadGlobalSearch = () => import("./components/GlobalSearch");
 
 const Layout = lazy(loadLayout);
@@ -49,6 +50,7 @@ const Leads = lazy(loadLeads);
 const SalesAnalytics = lazy(loadSalesAnalytics);
 const QrHub = lazy(loadQrHub);
 const QrCoilDetail = lazy(loadQrCoilDetail);
+const DealersManagement = lazy(loadDealersManagement);
 const GlobalSearch = lazy(loadGlobalSearch);
 const DealerLayout = lazy(() => import("./components/dealer/DealerLayout.tsx").then((m) => ({ default: m.DealerLayout })));
 const DealerDashboard = lazy(() => import("./pages/dealer/DealerDashboard.tsx"));
@@ -137,6 +139,7 @@ export default function App() {
               <Route path="qr" element={<QrHub />} />
               <Route path="qr/coils/:id" element={<QrCoilDetail />} />
               <Route path="qr/customers/:id" element={<SiteCustomerDetail />} />
+              <Route path="dealer-management" element={<DealersManagement />} />
             </Route>
 
             <Route

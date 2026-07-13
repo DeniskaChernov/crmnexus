@@ -10,6 +10,7 @@ import {
   getRequestAuth,
   isAdminRole,
   isDealer,
+  requireCrmStaff,
   requireDealer,
   requireDealerAccess,
 } from "../middleware/requestAuth.ts";
@@ -237,9 +238,62 @@ export function registerDealerRoutes(app: Hono) {
     return c.json(shipments);
   });
 
+  /** Admin CRM: обзор дилеров и портала */
+  app.get("/api/dealer-management", async (c) => {
+    const guard = await requireCrmStaff(c);
+    if (!guard.ok) return guard.response;
+    const pool = getPool();
+    const { rows } = await pool.query(
+      `SELECT c.id, c.name, c.country, c.city, c.phone, c.telegram, c.whatsapp,
+              c.customer_type, c.dealer_portal_enabled, c.created_at,
+              (SELECT count(*)::int FROM crm_users u WHERE u.company_id = c.id AND u.role = 'dealer') AS dealer_users_count
+       FROM companies c
+       WHERE c.dealer_portal_enabled = true OR c.customer_type = 'dealer'
+       ORDER BY c.name`,
+    );
+    return c.json(rows);
+  });
+
+  /** Admin CRM: включить портал дилера для компании (без создания логина) */
+  app.post("/api/dealer-management/:companyId/enable", async (c) => {
+    const guard = await requireAdminAuth(c);
+    if (!guard.ok) return guard.response;
+    const companyId = c.req.param("companyId");
+    const pool = getPool();
+    const { rows } = await pool.query(
+      `UPDATE companies SET customer_type = 'dealer', dealer_portal_enabled = true WHERE id = $1
+       RETURNING id, name, dealer_portal_enabled, customer_type`,
+      [companyId],
+    );
+    if (!rows[0]) return c.json({ error: "Company not found" }, 404);
+    return c.json(rows[0]);
+  });
+
+  /** Admin CRM: отключить портал (если нет активных аккаунтов) */
+  app.post("/api/dealer-management/:companyId/disable", async (c) => {
+    const guard = await requireAdminAuth(c);
+    if (!guard.ok) return guard.response;
+    const companyId = c.req.param("companyId");
+    const pool = getPool();
+    const { rows: users } = await pool.query(
+      `SELECT 1 FROM crm_users WHERE company_id = $1 AND role = 'dealer' LIMIT 1`,
+      [companyId],
+    );
+    if (users.length > 0) {
+      return c.json({ error: "Сначала отзовите доступ у всех аккаунтов дилера" }, 400);
+    }
+    const { rows } = await pool.query(
+      `UPDATE companies SET dealer_portal_enabled = false WHERE id = $1
+       RETURNING id, name, dealer_portal_enabled`,
+      [companyId],
+    );
+    if (!rows[0]) return c.json({ error: "Company not found" }, 404);
+    return c.json(rows[0]);
+  });
+
   /** Admin: список аккаунтов дилера для компании */
   app.get("/api/companies/:companyId/dealer-access", async (c) => {
-    const guard = await requireAdminAuth(c);
+    const guard = await requireCrmStaff(c);
     if (!guard.ok) return guard.response;
     const pool = getPool();
     const companyId = c.req.param("companyId");
