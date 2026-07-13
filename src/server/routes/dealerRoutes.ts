@@ -71,6 +71,81 @@ export function registerDealerRoutes(app: Hono) {
     return c.json({ company, stats: stats[0] });
   });
 
+  app.get("/api/dealer/analytics", async (c) => {
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const companyId = guard.auth.company_id!;
+    const pool = getPool();
+
+    const { rows: statsRows } = await pool.query<{
+      orders: number;
+      orders_in_progress: number;
+      customers: number;
+      requests: number;
+      reviews: number;
+      coils_total: number;
+      coils_scanned: number;
+      scan_total: number;
+    }>(
+      `SELECT
+        (SELECT COUNT(*)::int FROM deals WHERE dealer_id = $1) AS orders,
+        (SELECT COUNT(*)::int FROM deals WHERE dealer_id = $1 AND status = 'open') AS orders_in_progress,
+        (SELECT COUNT(*)::int FROM site_customers WHERE assigned_dealer_id = $1) AS customers,
+        (SELECT COUNT(*)::int FROM site_requests WHERE dealer_id = $1) AS requests,
+        (SELECT COUNT(*)::int FROM site_reviews WHERE dealer_id = $1) AS reviews,
+        (SELECT COUNT(*)::int FROM rattan_coils WHERE company_id = $1) AS coils_total,
+        (SELECT COUNT(*)::int FROM rattan_coils WHERE company_id = $1 AND scan_count > 0) AS coils_scanned,
+        (SELECT COALESCE(SUM(scan_count), 0)::int FROM rattan_coils WHERE company_id = $1) AS scan_total`,
+      [companyId],
+    );
+    const stats = statsRows[0];
+
+    const orders = await listDealerOrders(companyId);
+    const orders_by_stage: Record<string, number> = {};
+    for (const o of orders) {
+      const key = o.current_stage || "ordered";
+      orders_by_stage[key] = (orders_by_stage[key] || 0) + 1;
+    }
+
+    const { rows: reqStatus } = await pool.query<{ status: string; cnt: number }>(
+      `SELECT COALESCE(status, 'new') AS status, COUNT(*)::int AS cnt
+       FROM site_requests WHERE dealer_id = $1 GROUP BY status`,
+      [companyId],
+    );
+    const requests_by_status: Record<string, number> = {};
+    for (const r of reqStatus) requests_by_status[r.status] = r.cnt;
+
+    const { rows: ratingRows } = await pool.query<{ avg: string | null }>(
+      `SELECT AVG(rating)::numeric AS avg FROM site_reviews WHERE dealer_id = $1 AND rating IS NOT NULL`,
+      [companyId],
+    );
+    const avg_rating = ratingRows[0]?.avg != null ? Number(ratingRows[0].avg) : null;
+
+    const { rows: topArticles } = await pool.query<{ article: string; coils: number; scans: number }>(
+      `SELECT article,
+              COUNT(*)::int AS coils,
+              COALESCE(SUM(scan_count), 0)::int AS scans
+       FROM rattan_coils
+       WHERE company_id = $1
+       GROUP BY article
+       ORDER BY scans DESC, coils DESC
+       LIMIT 10`,
+      [companyId],
+    );
+
+    const scan_rate_pct =
+      stats.coils_total > 0 ? Math.round((stats.coils_scanned / stats.coils_total) * 100) : 0;
+
+    return c.json({
+      stats,
+      orders_by_stage,
+      requests_by_status,
+      avg_rating,
+      scan_rate_pct,
+      top_articles: topArticles,
+    });
+  });
+
   app.get("/api/dealer/customers", async (c) => {
     const guard = await requireDealerAccess(c);
     if (!guard.ok) return guard.response;

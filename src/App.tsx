@@ -61,6 +61,7 @@ const DealerCoils = lazy(() => import("./pages/dealer/DealerCoils.tsx"));
 const DealerShipments = lazy(() => import("./pages/dealer/DealerShipments.tsx"));
 const DealerOrders = lazy(() => import("./pages/dealer/DealerOrders.tsx"));
 const DealerOrderDetail = lazy(() => import("./pages/dealer/DealerOrderDetail.tsx"));
+const DealerAnalytics = lazy(() => import("./pages/dealer/DealerAnalytics.tsx"));
 const SiteCustomerDetail = lazy(() => import("./pages/qr/SiteCustomerDetail.tsx"));
 const GlobalHelp = lazy(() =>
   import("./components/GlobalHelp").then((m) => ({ default: m.GlobalHelp })),
@@ -113,6 +114,7 @@ export default function App() {
               <Route path="reviews" element={<DealerReviews />} />
               <Route path="coils" element={<DealerCoils />} />
               <Route path="shipments" element={<DealerShipments />} />
+              <Route path="analytics" element={<DealerAnalytics />} />
             </Route>
 
             <Route path="/" element={<AuthGuard><Layout /></AuthGuard>}>

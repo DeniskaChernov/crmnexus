@@ -1,22 +1,17 @@
 import React from "react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, MessageSquare, Package, LogOut, Truck, Star, ClipboardList } from "lucide-react";
+import { Link, Outlet, useNavigate } from "react-router-dom";
+import { LogOut } from "lucide-react";
 import { Button } from "../ui/button";
 import { crm } from "../../lib/crmClient.ts";
 import { DealerNotifications } from "./DealerNotifications.tsx";
-
-const nav = [
-  { to: "/dealer", label: "Показатели", icon: LayoutDashboard, end: true },
-  { to: "/dealer/orders", label: "Заказы", icon: ClipboardList },
-  { to: "/dealer/shipments", label: "Отгрузки", icon: Truck },
-  { to: "/dealer/customers", label: "Клиенты", icon: Users },
-  { to: "/dealer/requests", label: "Заявки", icon: MessageSquare },
-  { to: "/dealer/reviews", label: "Отзывы", icon: Star },
-  { to: "/dealer/coils", label: "Мотки / QR", icon: Package },
-];
+import {
+  DealerBottomNav,
+  DealerMobileMenu,
+  DealerPrimaryNav,
+  DealerSubNavBar,
+} from "./DealerNav.tsx";
 
 export function DealerLayout() {
-  const location = useLocation();
   const navigate = useNavigate();
 
   const logout = async () => {
@@ -25,44 +20,44 @@ export function DealerLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f6f4] text-[#1a1f1c]">
-      <header className="border-b bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">BTT Nexus</div>
-            <div className="font-bold text-lg">Портал дилера</div>
+    <div className="min-h-screen bg-[#f4f6f4] text-[#1a1f1c] pb-20 lg:pb-0">
+      <header className="sticky top-0 z-30 border-b bg-white shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <DealerMobileMenu />
+            <Link to="/dealer" className="min-w-0">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">BTT Nexus</div>
+              <div className="font-bold text-base leading-tight truncate">Портал дилера</div>
+            </Link>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <DealerNotifications />
-            <Button variant="outline" size="sm" onClick={() => void logout()}>
+            <Button variant="outline" size="sm" onClick={() => void logout()} className="hidden sm:flex">
               <LogOut className="h-4 w-4 mr-1" /> Выйти
             </Button>
+            <Button variant="outline" size="icon" onClick={() => void logout()} className="sm:hidden shrink-0">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Главная навигация — десктоп */}
+        <div className="hidden lg:block border-t bg-neutral-50/80">
+          <div className="max-w-6xl mx-auto px-4 py-2 flex gap-1">
+            <DealerPrimaryNav />
           </div>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 grid lg:grid-cols-[220px_1fr] gap-6">
-        <nav className="space-y-1">
-          {nav.map(({ to, label, icon: Icon, end }) => {
-            const active = end ? location.pathname === to : location.pathname.startsWith(to);
-            return (
-              <Link
-                key={to}
-                to={to}
-                className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                  active ? "bg-emerald-700 text-white" : "bg-white border hover:bg-emerald-50"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
+      <DealerSubNavBar />
+
+      <div className="max-w-6xl mx-auto px-4 py-5">
         <main>
           <Outlet />
         </main>
       </div>
+
+      <DealerBottomNav />
     </div>
   );
 }
