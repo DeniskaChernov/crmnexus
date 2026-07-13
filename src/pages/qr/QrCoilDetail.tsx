@@ -72,8 +72,18 @@ export default function QrCoilDetail() {
             <a className="text-emerald-700 underline break-all" href={urls.catalog} target="_blank" rel="noreferrer">{urls.catalog}</a>
           </div>
           <div><span className="text-neutral-500">Отгрузка:</span> {coil.shipment_id || '—'}</div>
-          <div><span className="text-neutral-500">Заказ:</span> {coil.deal_id || '—'}</div>
-          <div><span className="text-neutral-500">Дилер ID:</span> {coil.company_id || '—'}</div>
+          <div>
+            <span className="text-neutral-500">Заказ:</span>{' '}
+            {coil.deal_id ? (
+              <Link to="/deals" className="text-emerald-700 hover:underline">
+                {coil.deal_title || coil.deal_id}
+              </Link>
+            ) : '—'}
+          </div>
+          <div>
+            <span className="text-neutral-500">Дилер:</span>{' '}
+            {coil.company_id ? (coil.dealer_name || coil.company_id) : '—'}
+          </div>
           <div><span className="text-neutral-500">Страна:</span> {coil.destination_country || '—'}</div>
           <div><span className="text-neutral-500">Отгружен:</span> {coil.shipped_at ? new Date(coil.shipped_at).toLocaleString('ru') : '—'}</div>
           <div><span className="text-neutral-500">Первое сканирование:</span> {coil.first_scanned_at ? new Date(coil.first_scanned_at).toLocaleString('ru') : '—'}</div>

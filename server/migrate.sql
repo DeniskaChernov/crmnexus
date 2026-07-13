@@ -281,6 +281,8 @@ CREATE INDEX IF NOT EXISTS idx_rattan_coils_company ON rattan_coils(company_id);
 CREATE INDEX IF NOT EXISTS idx_rattan_coils_deal ON rattan_coils(deal_id);
 CREATE INDEX IF NOT EXISTS idx_rattan_coils_created ON rattan_coils(created_at);
 ALTER TABLE site_customers ADD COLUMN IF NOT EXISTS crm_contact_id UUID REFERENCES contacts(id) ON DELETE SET NULL;
+ALTER TABLE site_customers ADD COLUMN IF NOT EXISTS deal_id UUID REFERENCES deals(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_site_customers_deal ON site_customers(deal_id);
 
 CREATE INDEX IF NOT EXISTS idx_site_customers_phone ON site_customers(phone_normalized);
 CREATE INDEX IF NOT EXISTS idx_site_customers_dealer ON site_customers(assigned_dealer_id);

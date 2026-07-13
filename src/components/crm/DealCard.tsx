@@ -96,6 +96,12 @@ export const DealCard = memo(function DealCard({
                             <div className="flex items-center gap-2 text-sm text-neutral-500 mt-2">
                                 <FileText className="h-3 w-3 shrink-0" />
                                 <span className="truncate max-w-[150px] md:max-w-xs font-medium text-neutral-700">{deal.companies?.name || 'Нет компании'}</span>
+                                {deal.dealer_name && (
+                                  <>
+                                    <span className="text-neutral-300">•</span>
+                                    <span className="text-xs text-emerald-700">🏪 {deal.dealer_name}</span>
+                                  </>
+                                )}
                                 <span className="text-neutral-300">•</span>
                                 <span className="text-xs">{format(parseISO(deal.created_at), 'dd MMM yyyy', { locale: ru })}</span>
                             </div>

@@ -11,7 +11,7 @@ export interface DealItem {
 }
 
 export const createShipmentsForDeal = async (
-  deal: { id: string; title: string },
+  deal: { id: string; title: string; dealer_id?: string | null },
   items: DealItem[],
   clientName: string = 'Не указан',
   silent: boolean = false
@@ -65,8 +65,9 @@ export const createShipmentsForDeal = async (
         note: `Сделка: ${deal.title} (Клиент: ${clientName})`,
         status: 'draft',
         warehouse: wh,
-        dealId: deal.id, // Link to deal for future reference
-        stickerClient: clientName, // Company name for sticker printing
+        dealId: deal.id,
+        companyId: deal.dealer_id || null,
+        stickerClient: clientName,
         items: warehouseItems.map(i => ({
           id: uuid(),
           article: i.article,

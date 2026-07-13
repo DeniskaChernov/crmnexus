@@ -46,7 +46,7 @@ export default function SiteCustomerDetail() {
       const res = await crmFetch(`/site-customers/${id}/convert-to-contact`, { method: "POST" });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Ошибка");
-      toast.success(body.created ? "Контакт создан в CRM" : "Контакт уже был создан ранее");
+      toast.success(body.created ? "Контакт и сделка созданы в CRM" : "Уже было создано ранее");
       await reload();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Не удалось создать контакт");
@@ -90,8 +90,15 @@ export default function SiteCustomerDetail() {
         )}
         {!isDealer && c.crm_contact_id && (
           <Button asChild variant="secondary" size="sm">
-            <Link to={`/contacts`}>
-              <ExternalLink className="h-4 w-4 mr-1" /> Открыть в контактах
+            <Link to="/database">
+              <ExternalLink className="h-4 w-4 mr-1" /> Открыть в базе
+            </Link>
+          </Button>
+        )}
+        {!isDealer && c.deal_id && (
+          <Button asChild variant="outline" size="sm">
+            <Link to="/deals">
+              <ExternalLink className="h-4 w-4 mr-1" /> Сделка в CRM
             </Link>
           </Button>
         )}

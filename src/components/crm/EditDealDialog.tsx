@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react';
-import { crmUrl, authHeaders } from '../../lib/crmApi.ts';
+import { crmUrl, authHeaders, crmFetch } from '../../lib/crmApi.ts';
 import { useForm } from 'react-hook-form@7.55.0';
 import { crm } from "@/lib/crmClient.ts";
 import { Button } from '../ui/button';
@@ -47,6 +47,7 @@ export function EditDealDialog({ deal, open, onOpenChange, onSuccess }: EditDeal
   const [selectedCompany, setSelectedCompany] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [dealItems, setDealItems] = useState<DealItem[]>([]);
+  const [dealers, setDealers] = useState<{ id: string; name: string }[]>([]);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const { register, handleSubmit, reset, setValue } = useForm();
   const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -95,6 +96,7 @@ export function EditDealDialog({ deal, open, onOpenChange, onSuccess }: EditDeal
       setValue('status', deal.status || 'open');
       setValue('contact_id', deal.contact_id || 'no_contact');
       setValue('stage_id', deal.stage_id || '');
+      setValue('dealer_id', deal.dealer_id || 'none');
 
       // Set selected company if exists
       if (deal.company_id && companies.length > 0) {
@@ -159,6 +161,13 @@ export function EditDealDialog({ deal, open, onOpenChange, onSuccess }: EditDeal
       .select('*')
       .order('order_index');
     setStages(stagesData || []);
+
+    try {
+      const res = await crmFetch('/qr/dealers');
+      if (res.ok) setDealers(await res.json());
+    } catch {
+      setDealers([]);
+    }
   };
 
   const fetchItems = async (dealId: string) => {
@@ -221,6 +230,7 @@ export function EditDealDialog({ deal, open, onOpenChange, onSuccess }: EditDeal
           contact_id: (data.contact_id && data.contact_id !== 'no_contact') ? data.contact_id : null,
           stage_id: data.stage_id,
           company_id: selectedCompany?.id || null,
+          dealer_id: data.dealer_id && data.dealer_id !== 'none' ? data.dealer_id : null,
       };
 
       const response = await fetch(`${crmUrl('/deals/update-with-automation')}`, {
@@ -417,6 +427,29 @@ export function EditDealDialog({ deal, open, onOpenChange, onSuccess }: EditDeal
               </Select>
             </div>
           </div>
+
+          {dealers.length > 0 && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Дилер</Label>
+              <div className="col-span-3">
+                <Select
+                  onValueChange={(val) => setValue('dealer_id', val)}
+                  defaultValue={deal?.dealer_id || 'none'}
+                  key={`dealer-${deal?.dealer_id}`}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Не указан" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Без дилера</SelectItem>
+                    {dealers.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="stage_id" className="text-right">

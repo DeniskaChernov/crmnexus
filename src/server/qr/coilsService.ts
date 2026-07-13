@@ -61,16 +61,18 @@ async function resolveDealerCompanyId(
 ): Promise<string | null> {
   if (shipment.companyId) return shipment.companyId;
   if (shipment.dealId) {
-    const { rows } = await pool.query<{ company_id: string | null }>(
-      `SELECT company_id FROM deals WHERE id = $1 LIMIT 1`,
+    const { rows } = await pool.query<{ dealer_id: string | null }>(
+      `SELECT dealer_id FROM deals WHERE id = $1 LIMIT 1`,
       [shipment.dealId],
     );
-    if (rows[0]?.company_id) return rows[0].company_id;
+    if (rows[0]?.dealer_id) return rows[0].dealer_id;
   }
   const name = shipment.stickerClient?.trim();
   if (name) {
     const { rows } = await pool.query<{ id: string }>(
-      `SELECT id FROM companies WHERE name ILIKE $1 LIMIT 1`,
+      `SELECT id FROM companies
+       WHERE (dealer_portal_enabled = true OR customer_type = 'dealer')
+         AND name ILIKE $1 LIMIT 1`,
       [name],
     );
     if (rows[0]?.id) return rows[0].id;

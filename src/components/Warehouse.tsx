@@ -570,6 +570,9 @@ export default function Warehouse() {
   const [dealerCompanies, setDealerCompanies] = useState<
     { id: string; name: string; dealer_portal_enabled?: boolean; customer_type?: string }[]
   >([]);
+  const [openDeals, setOpenDeals] = useState<
+    { id: string; title: string; dealer_id?: string | null; companies?: { name: string } | null }[]
+  >([]);
   const [loadingMovements, setLoadingMovements] = useState(false);
   const [loadingMonthlyStats, setLoadingMonthlyStats] = useState(false);
   
@@ -898,6 +901,17 @@ export default function Warehouse() {
         setDealerCompanies(list);
       });
   }, []);
+
+  useEffect(() => {
+    if (!isShipmentOpen) return;
+    void crm
+      .from("deals")
+      .select("id,title,dealer_id,companies(name)")
+      .in("status", ["open", "won"])
+      .order("created_at", { ascending: false })
+      .limit(80)
+      .then(({ data }) => setOpenDeals((data as typeof openDeals) || []));
+  }, [isShipmentOpen]);
 
   useEffect(() => {
     if (!loading && !stats && dbCounts && (dbCounts.shipments ?? 0) > 0) {
@@ -3163,6 +3177,41 @@ export default function Warehouse() {
                                         {co.dealer_portal_enabled || co.customer_type === "dealer"
                                           ? " · дилер"
                                           : ""}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                             </div>
+                            <div className="grid gap-2 w-full md:w-1/4">
+                                <Label>CRM-сделка</Label>
+                                <Select
+                                  value={currentShipment?.dealId || "__none__"}
+                                  onValueChange={(v) => {
+                                    const deal = openDeals.find((d) => d.id === v);
+                                    setCurrentShipment((prev) =>
+                                      prev
+                                        ? {
+                                            ...prev,
+                                            dealId: v === "__none__" ? undefined : v,
+                                            companyId:
+                                              v === "__none__"
+                                                ? prev.companyId
+                                                : deal?.dealer_id || prev.companyId,
+                                            stickerClient:
+                                              deal?.companies?.name || prev.stickerClient,
+                                          }
+                                        : null,
+                                    );
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Не привязана" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="__none__">Не привязана</SelectItem>
+                                    {openDeals.map((d) => (
+                                      <SelectItem key={d.id} value={d.id}>
+                                        {d.title}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>

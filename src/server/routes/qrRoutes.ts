@@ -185,7 +185,30 @@ export function registerQrRoutes(app: Hono) {
       if (denied) return denied;
       const coil = await getCoilById(c.req.param("id"));
       if (!coil) return c.json({ error: "Not found" }, 404);
-      return c.json({ ...coil, url: publicQrUrl(coil.qr_token), urls: publicQrUrls(coil.qr_token) });
+      const pool = getPool();
+      let dealer_name: string | null = null;
+      let deal_title: string | null = null;
+      if (coil.company_id) {
+        const { rows } = await pool.query<{ name: string }>(
+          `SELECT name FROM companies WHERE id = $1`,
+          [coil.company_id],
+        );
+        dealer_name = rows[0]?.name ?? null;
+      }
+      if (coil.deal_id) {
+        const { rows } = await pool.query<{ title: string }>(
+          `SELECT title FROM deals WHERE id = $1`,
+          [coil.deal_id],
+        );
+        deal_title = rows[0]?.title ?? null;
+      }
+      return c.json({
+        ...coil,
+        dealer_name,
+        deal_title,
+        url: publicQrUrl(coil.qr_token),
+        urls: publicQrUrls(coil.qr_token),
+      });
     } catch (e: unknown) {
       return c.json({ error: e instanceof Error ? e.message : "error" }, 500);
     }
@@ -317,6 +340,27 @@ export function registerQrRoutes(app: Hono) {
         params,
       );
       return c.json(rows);
+    } catch (e: unknown) {
+      return c.json({ error: e instanceof Error ? e.message : "error" }, 500);
+    }
+  });
+
+  app.patch("/api/site-requests/:id", async (c) => {
+    try {
+      const denied = await assertAdminQrAccess(c);
+      if (denied) return denied;
+      const body = await c.req.json();
+      const status = String(body.status || "").trim();
+      if (!["new", "in_progress", "done", "cancelled"].includes(status)) {
+        return c.json({ error: "Invalid status" }, 400);
+      }
+      const pool = getPool();
+      const { rows } = await pool.query(
+        `UPDATE site_requests SET status = $2 WHERE id = $1 RETURNING *`,
+        [c.req.param("id"), status],
+      );
+      if (!rows[0]) return c.json({ error: "Not found" }, 404);
+      return c.json(rows[0]);
     } catch (e: unknown) {
       return c.json({ error: e instanceof Error ? e.message : "error" }, 500);
     }

@@ -94,7 +94,20 @@ export default function Deals() {
       const metaData = metaRes.ok ? await metaRes.json() : { excludedIds: [] };
       setExcludedDealIds(new Set(metaData.excludedIds || []));
 
-      setDeals(dealsRes.data || []);
+      let dealerMap = new Map<string, string>();
+      try {
+        const dr = await fetch(`${crmUrl('/qr/dealers')}`, { headers: { ...authHeaders(false) } });
+        if (dr.ok) {
+          for (const row of await dr.json()) dealerMap.set(row.id, row.name);
+        }
+      } catch {
+        dealerMap = new Map();
+      }
+
+      setDeals((dealsRes.data || []).map((d: { dealer_id?: string | null }) => {
+        const dealer_name = d.dealer_id ? dealerMap.get(d.dealer_id) : null;
+        return { ...d, dealer_name };
+      }));
       setPayments(paymentsData || []);
 
     } catch (e) {

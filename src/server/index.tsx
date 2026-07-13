@@ -2915,7 +2915,7 @@ app.get("/api/shipments", async (c) => {
 app.post("/api/shipments", async (c) => {
   try {
     const body = await c.req.json();
-    const { date, note, items, status, warehouse, dealId, stickerClient } = body;
+    const { date, note, items, status, warehouse, dealId, stickerClient, companyId } = body;
     
     const id = `shipment:${Date.now()}`;
     const shipment = {
@@ -2926,6 +2926,7 @@ app.post("/api/shipments", async (c) => {
       warehouse: normalizeWarehouse(warehouse),
       items: items || [], // Array of { id, article, weight, date }
       dealId: dealId || null,
+      companyId: companyId || null,
       stickerClient: stickerClient || '',
       createdAt: new Date().toISOString()
     };

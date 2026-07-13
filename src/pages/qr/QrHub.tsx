@@ -50,9 +50,13 @@ export default function QrHub() {
   const load = useCallback(async () => {
     setLoading(true);
     const dealerQuery = dealerFilter !== 'all' ? `?dealer_id=${encodeURIComponent(dealerFilter)}` : '';
+    const coilsUrl =
+      dealerFilter !== 'all'
+        ? `/coils?limit=100&company_id=${encodeURIComponent(dealerFilter)}`
+        : '/coils?limit=100';
     try {
       const [coilsRes, sumRes, revRes, reqRes, custRes, dealersRes] = await Promise.all([
-        crmFetch('/coils?limit=100'),
+        crmFetch(coilsUrl),
         crmFetch('/qr-analytics/summary'),
         crmFetch(`/site-reviews${dealerQuery}`),
         crmFetch(`/site-requests${dealerQuery}`),
@@ -83,6 +87,24 @@ export default function QrHub() {
     });
     if (res.ok) {
       toast.success('Статус отзыва обновлён');
+      void load();
+    }
+  };
+
+  const REQUEST_STATUS: Record<string, string> = {
+    new: 'Новая',
+    in_progress: 'В работе',
+    done: 'Завершена',
+    cancelled: 'Отменена',
+  };
+
+  const updateRequestStatus = async (id: string, status: string) => {
+    const res = await crmFetch(`/site-requests/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    if (res.ok) {
+      toast.success('Статус заявки обновлён');
       void load();
     }
   };
@@ -232,11 +254,31 @@ export default function QrHub() {
         <TabsContent value="requests" className="mt-4 space-y-3">
           {requests.map((r) => (
             <div key={r.id} className="rounded-xl border p-3 bg-white text-sm">
-              <div className="font-medium">{r.first_name} {r.last_name} · {r.phone}</div>
+              <div className="flex flex-wrap justify-between gap-2">
+                <div className="font-medium">{r.first_name} {r.last_name} · {r.phone}</div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">{REQUEST_STATUS[r.status] || r.status}</Badge>
+                  <Select value={r.status || 'new'} onValueChange={(v) => void updateRequestStatus(r.id, v)}>
+                    <SelectTrigger className="h-8 w-[130px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(REQUEST_STATUS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="text-neutral-500">
                 {r.country} · {r.dealer_name ? `${r.dealer_name} · ` : ''}
                 {new Date(r.created_at).toLocaleString('ru')}
               </div>
+              {r.customer_id && (
+                <Link to={`/qr/customers/${r.customer_id}`} className="text-emerald-700 text-xs hover:underline">
+                  Карточка клиента →
+                </Link>
+              )}
               {r.comment && <p className="mt-2">{r.comment}</p>}
             </div>
           ))}

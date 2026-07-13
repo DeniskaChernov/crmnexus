@@ -1,6 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { getPool } from "./dbPool.ts";
-import * as kv from "./kv_store.ts";
 import { processSiteEvent } from "./qr/siteServices.ts";
 
 function hexDigest(secret: string, raw: string) {
@@ -66,25 +65,35 @@ export async function handleSiteWebhook(opts: {
     if (!phone) {
       return { ok: false, status: 400, body: { error: "phone required" } };
     }
-    const id = `lead:${Date.now()}`;
-    const lead = {
-      id,
-      name,
-      phone,
-      info: String(payload["message"] ?? payload["info"] ?? ""),
-      status: "new",
-      country: String(payload["country"] ?? "Uzbekistan"),
-      source: "btt-site",
-      createdAt: new Date().toISOString(),
-    };
-    await kv.set(id, lead);
-    return { ok: true, status: 200, body: { received: true, leadId: id } };
+    const result = await processSiteEvent(
+      "order_request_created",
+      {
+        phone,
+        first_name: name.split(" ")[0] || name,
+        last_name: name.split(" ").slice(1).join(" ") || undefined,
+        country: payload["country"],
+        comment: payload["message"] ?? payload["info"],
+        source: "btt-site-lead",
+        qr_token: payload["qr_token"],
+      },
+      { event_id: idempotencyKey },
+    );
+    return { ok: true, status: 200, body: { received: true, ...result } };
   }
 
   if (event === "order.created") {
-    const id = `site-order:${Date.now()}`;
-    await kv.set(id, { ...payload, receivedAt: new Date().toISOString() });
-    return { ok: true, status: 200, body: { received: true, key: id } };
+    const phone = String(payload["phone"] ?? payload["tel"] ?? "").trim();
+    const result = await processSiteEvent(
+      "order_request_created",
+      {
+        ...payload,
+        phone: phone || undefined,
+        items: payload["items"] ?? payload["products"] ?? [],
+        source: "btt-site-order",
+      },
+      { event_id: idempotencyKey },
+    );
+    return { ok: true, status: 200, body: { received: true, ...result } };
   }
 
   const SITE_EVENTS = new Set([

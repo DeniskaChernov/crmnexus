@@ -12,6 +12,45 @@ function ipHash(ip: string | undefined): string | null {
   return createHash("sha256").update(`${salt}:${ip}`).digest("hex").slice(0, 32);
 }
 
+async function resolveCustomerIdFromPayload(
+  pool: ReturnType<typeof getPool>,
+  payload: SiteEventPayload,
+): Promise<string | null> {
+  const phoneRaw = typeof payload["phone"] === "string" ? payload["phone"] : "";
+  if (phoneRaw) {
+    const phone_normalized = normalizePhone(phoneRaw);
+    if (phone_normalized) {
+      const { rows } = await pool.query<{ id: string }>(
+        `SELECT id FROM site_customers WHERE phone_normalized = $1`,
+        [phone_normalized],
+      );
+      if (rows[0]) return rows[0].id;
+    }
+  }
+  const uid =
+    typeof payload["user_id"] === "string"
+      ? payload["user_id"]
+      : typeof payload["website_user_id"] === "string"
+        ? payload["website_user_id"]
+        : null;
+  if (uid) {
+    const { rows } = await pool.query<{ id: string }>(
+      `SELECT id FROM site_customers WHERE website_user_id = $1`,
+      [uid],
+    );
+    if (rows[0]) return rows[0].id;
+  }
+  return null;
+}
+
+export async function attachCustomerToSiteEvent(eventId: string, customerId: string) {
+  const pool = getPool();
+  await pool.query(
+    `UPDATE site_events SET customer_id = $2 WHERE id = $1 AND (customer_id IS NULL OR customer_id = $2)`,
+    [eventId, customerId],
+  );
+}
+
 export async function insertSiteEvent(opts: {
   event_id?: string;
   event_type: string;
@@ -40,12 +79,14 @@ export async function insertSiteEvent(opts: {
     if (dup.rows.length > 0) return { duplicate: true };
   }
 
+  const customer_id = await resolveCustomerIdFromPayload(pool, p);
+
   const { rows } = await pool.query<{ id: string }>(
     `INSERT INTO site_events (
-      event_id, event_type, qr_token, coil_id, dealer_id, deal_id,
+      event_id, event_type, qr_token, coil_id, dealer_id, deal_id, customer_id,
       website_user_id, session_id, country, phone, product_ref, color_ref, profile_ref,
       page_url, event_data, ip_hash, user_agent
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
     RETURNING id`,
     [
       opts.event_id || null,
@@ -54,6 +95,7 @@ export async function insertSiteEvent(opts: {
       coil_id,
       dealer_id,
       deal_id,
+      customer_id,
       typeof p["user_id"] === "string" ? p["user_id"] : (p["website_user_id"] as string) || null,
       typeof p["session_id"] === "string" ? p["session_id"] : null,
       typeof p["country"] === "string" ? p["country"] : null,
@@ -118,6 +160,7 @@ export async function upsertSiteCustomer(opts: {
         now,
       ],
     );
+    await linkCustomerDealFromCoil(existing[0].id, opts.qr_token);
     return { customer: rows[0], created: false, existing_dealer_id: existing[0].assigned_dealer_id };
   }
 
@@ -142,7 +185,19 @@ export async function upsertSiteCustomer(opts: {
       now,
     ],
   );
+  await linkCustomerDealFromCoil(rows[0].id, opts.qr_token);
   return { customer: rows[0], created: true, existing_dealer_id: null };
+}
+
+async function linkCustomerDealFromCoil(customerId: string, qr_token?: string) {
+  if (!qr_token) return;
+  const coil = await getCoilByToken(qr_token);
+  if (!coil?.deal_id) return;
+  const pool = getPool();
+  await pool.query(
+    `UPDATE site_customers SET deal_id = COALESCE(deal_id, $2), updated_at = now() WHERE id = $1`,
+    [customerId, coil.deal_id],
+  );
 }
 
 export async function tryAssignDealerFromQr(customerId: string, qr_token: string) {
@@ -240,6 +295,7 @@ export async function createSiteRequest(payload: SiteEventPayload) {
   let customer_id: string | null = null;
   let dealer_id: string | null = null;
   let coil_id: string | null = null;
+  let deal_id: string | null = null;
   const qr_token = typeof payload["qr_token"] === "string" ? payload["qr_token"] : null;
 
   if (phone) {
@@ -265,6 +321,7 @@ export async function createSiteRequest(payload: SiteEventPayload) {
     if (coil) {
       coil_id = coil.id;
       dealer_id = dealer_id || coil.company_id;
+      deal_id = coil.deal_id;
     }
   }
 
@@ -293,10 +350,17 @@ export async function createSiteRequest(payload: SiteEventPayload) {
     title: "Новая заявка с сайта",
     message: [payload["first_name"], payload["last_name"], phone].filter(Boolean).join(" ") || "Заявка без имени",
     entityType: "client",
-    entityId: rows[0]?.customer_id || null,
-    actionUrl: "/qr",
+    entityId: customer_id,
+    actionUrl: customer_id ? `/qr/customers/${customer_id}` : "/qr",
     dealerId: dealer_id,
   });
+
+  if (customer_id && deal_id) {
+    await pool.query(
+      `UPDATE site_customers SET deal_id = COALESCE(deal_id, $2), updated_at = now() WHERE id = $1`,
+      [customer_id, deal_id],
+    );
+  }
 
   return rows[0];
 }
@@ -310,12 +374,14 @@ export async function createSiteReview(payload: SiteEventPayload) {
   let color_name: string | null = null;
   let profile_name: string | null = null;
   let customer_id: string | null = null;
+  let deal_id: string | null = null;
 
   if (qr_token) {
     const coil = await getCoilByToken(qr_token);
     if (coil) {
       coil_id = coil.id;
       dealer_id = coil.company_id;
+      deal_id = coil.deal_id;
       article = coil.article;
       color_name = coil.color_name;
       profile_name = coil.profile_name;
@@ -361,9 +427,16 @@ export async function createSiteReview(payload: SiteEventPayload) {
     message: `Оценка ${payload["rating"] ?? payload["score"] ?? "—"}: ${String(payload["text"] || payload["review"] || "").slice(0, 80)}`,
     entityType: "client",
     entityId: customer_id,
-    actionUrl: "/qr",
+    actionUrl: customer_id ? `/qr/customers/${customer_id}` : "/qr",
     dealerId: dealer_id,
   });
+
+  if (customer_id && deal_id) {
+    await pool.query(
+      `UPDATE site_customers SET deal_id = COALESCE(deal_id, $2), updated_at = now() WHERE id = $1`,
+      [customer_id, deal_id],
+    );
+  }
 
   return rows[0];
 }
@@ -382,6 +455,7 @@ export async function processSiteEvent(
   });
   if (inserted.duplicate) return { handled: true, duplicate: true };
 
+  const eventRowId = inserted.id;
   const qr_token = typeof payload["qr_token"] === "string" ? payload["qr_token"] : undefined;
 
   switch (event) {
@@ -402,7 +476,8 @@ export async function processSiteEvent(
         registration_source: payload["registration_source"] as string,
         qr_token,
       });
-      if (qr_token && event === "registration_completed") {
+      if (eventRowId) await attachCustomerToSiteEvent(eventRowId, customer.id);
+      if (qr_token) {
         await tryAssignDealerFromQr(customer.id, qr_token);
       }
       if (created && qr_token) {
@@ -426,13 +501,17 @@ export async function processSiteEvent(
       return { handled: true, customerId: customer.id };
     }
 
-    case "order_request_created":
-      await createSiteRequest(payload);
-      return { handled: true };
+    case "order_request_created": {
+      const req = await createSiteRequest(payload);
+      if (eventRowId && req?.customer_id) await attachCustomerToSiteEvent(eventRowId, req.customer_id);
+      return { handled: true, requestId: req?.id };
+    }
 
-    case "review_submitted":
-      await createSiteReview(payload);
-      return { handled: true };
+    case "review_submitted": {
+      const review = await createSiteReview(payload);
+      if (eventRowId && review?.customer_id) await attachCustomerToSiteEvent(eventRowId, review.customer_id);
+      return { handled: true, reviewId: review?.id };
+    }
 
     default:
       return { handled: true, logged: true };
