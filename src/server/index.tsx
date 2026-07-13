@@ -16,6 +16,7 @@ import { registerAuthMiddleware } from "./middleware/authMiddleware.ts";
 import { registerCrmRunRoute } from "./routes/crmRunRoute.ts";
 import { registerPublicRoutes } from "./routes/publicRoutes.ts";
 import { registerQrRoutes } from "./routes/qrRoutes.ts";
+import { registerDealerRoutes } from "./routes/dealerRoutes.ts";
 
 const env = (k: string) => process.env[k];
 
@@ -83,6 +84,7 @@ registerPublicRoutes(app, env);
 registerAuthRoutes(app);
 registerAuthMiddleware(app);
 registerQrRoutes(app);
+registerDealerRoutes(app);
 registerCrmRunRoute(app);
 
 // Company settings endpoints
@@ -135,7 +137,7 @@ app.post("/api/users", async (c) => {
   if (!guard.ok) return guard.response;
   try {
     const body = await c.req.json();
-    const { name, email, role, password } = body;
+    const { name, email, role, password, company_id } = body;
     
     if (!name || !email || !role || !password) {
       return c.json({ error: "Missing required fields" }, 400);
@@ -151,7 +153,7 @@ app.post("/api/users", async (c) => {
     const { data, error } = await db.auth.admin.createUser({
       email,
       password,
-      user_metadata: { name, role },
+      user_metadata: { name, role, company_id: company_id || null },
       email_confirm: true
     });
 
@@ -167,6 +169,7 @@ app.post("/api/users", async (c) => {
       name,
       email,
       role,
+      company_id: company_id || null,
       createdAt
     };
 

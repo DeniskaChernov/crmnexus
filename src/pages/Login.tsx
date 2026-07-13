@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner@2.0.3';
+import { loginRedirectPath } from '../lib/userRole.ts';
 import { ArrowRight, CheckCircle2, Eye, EyeOff, Sparkles } from 'lucide-react';
 
 export default function Login() {
@@ -22,10 +23,17 @@ export default function Login() {
       ? (location.state as { from: { pathname: string } }).from.pathname
       : '/';
 
+  const resolveRedirect = (session: { user?: { user_metadata?: Record<string, unknown> } } | null) => {
+    if (fromPath.startsWith('/dealer') && !loginRedirectPath(session).startsWith('/dealer')) {
+      return fromPath;
+    }
+    return loginRedirectPath(session);
+  };
+
   useEffect(() => {
     let cancelled = false;
     crm.auth.getSession().then(({ data: { session } }) => {
-      if (!cancelled && session) navigate(fromPath, { replace: true });
+      if (!cancelled && session) navigate(resolveRedirect(session), { replace: true });
     });
     return () => {
       cancelled = true;
@@ -82,14 +90,16 @@ export default function Login() {
           password: password.trim(),
         });
         if (signInError) throw signInError;
-        navigate(fromPath, { replace: true });
+        const { data: { session: s1 } } = await crm.auth.getSession();
+        navigate(resolveRedirect(s1), { replace: true });
       } else {
         const { error } = await crm.auth.signInWithPassword({
           email: email.trim(),
           password: password.trim(),
         });
         if (error) throw error;
-        navigate(fromPath, { replace: true });
+        const { data: { session: s2 } } = await crm.auth.getSession();
+        navigate(resolveRedirect(s2), { replace: true });
       }
     } catch (error: unknown) {
       const msg =

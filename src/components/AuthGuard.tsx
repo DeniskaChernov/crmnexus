@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { crm } from "../lib/crmClient.ts";
 import { ensureAuthToken } from "../lib/crmApi.ts";
+import { isDealerSession } from "../lib/userRole.ts";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -59,6 +60,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (!session) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (isDealerSession(session)) {
+    return <Navigate to="/dealer" replace />;
   }
 
   return <>{children}</>;

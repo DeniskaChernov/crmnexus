@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import { Toaster } from "sonner@2.0.3";
 import AuthGuard from "./components/AuthGuard";
+import DealerAuthGuard from "./components/DealerAuthGuard";
 
 const loadLayout = () => import("./components/Layout");
 const loadLogin = () => import("./pages/Login");
@@ -49,6 +50,11 @@ const SalesAnalytics = lazy(loadSalesAnalytics);
 const QrHub = lazy(loadQrHub);
 const QrCoilDetail = lazy(loadQrCoilDetail);
 const GlobalSearch = lazy(loadGlobalSearch);
+const DealerLayout = lazy(() => import("./components/dealer/DealerLayout.tsx").then((m) => ({ default: m.DealerLayout })));
+const DealerDashboard = lazy(() => import("./pages/dealer/DealerDashboard.tsx"));
+const DealerCustomers = lazy(() => import("./pages/dealer/DealerCustomers.tsx"));
+const DealerRequests = lazy(() => import("./pages/dealer/DealerRequests.tsx"));
+const DealerCoils = lazy(() => import("./pages/dealer/DealerCoils.tsx"));
 const GlobalHelp = lazy(() =>
   import("./components/GlobalHelp").then((m) => ({ default: m.GlobalHelp })),
 );
@@ -89,6 +95,13 @@ export default function App() {
         <Suspense fallback={<AppFallback />}>
           <Routes>
             <Route path="/login" element={<Login />} />
+
+            <Route path="/dealer" element={<DealerAuthGuard><DealerLayout /></DealerAuthGuard>}>
+              <Route index element={<DealerDashboard />} />
+              <Route path="customers" element={<DealerCustomers />} />
+              <Route path="requests" element={<DealerRequests />} />
+              <Route path="coils" element={<DealerCoils />} />
+            </Route>
 
             <Route path="/" element={<AuthGuard><Layout /></AuthGuard>}>
               <Route index element={<Dashboard />} />

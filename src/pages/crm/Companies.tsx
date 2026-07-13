@@ -18,7 +18,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../components/ui/alert-dialog';
-import { AlertCircle, RefreshCcw, Search, User, Trash2, Flame, Snowflake, Sun, Pencil, Download, Loader2 } from 'lucide-react';
+import { AlertCircle, RefreshCcw, Search, User, Trash2, Flame, Snowflake, Sun, Pencil, Download, Loader2, KeyRound } from 'lucide-react';
+import { DealerAccessDialog } from '../../components/crm/DealerAccessDialog';
 import { toast } from 'sonner@2.0.3';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { downloadCSV, formatDateForExport } from '../../utils/exportUtils';
@@ -48,6 +49,7 @@ export default function Companies() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [deletingLead, setDeletingLead] = useState(false);
+  const [dealerAccessCompany, setDealerAccessCompany] = useState<Lead | null>(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -288,6 +290,15 @@ export default function Companies() {
                           <Button 
                             variant="ghost" 
                             size="sm" 
+                            onClick={() => setDealerAccessCompany(lead)} 
+                            className="text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 h-8 w-8 p-0"
+                            title="Доступ в портал дилера"
+                          >
+                            <KeyRound className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
                             onClick={() => handleEditLead(lead)} 
                             className="text-neutral-900 hover:text-neutral-800 hover:bg-neutral-100 h-8 w-8 p-0"
                           >
@@ -369,6 +380,15 @@ export default function Companies() {
                             <Button 
                               variant="ghost" 
                               size="sm" 
+                              onClick={() => setDealerAccessCompany(lead)} 
+                              className="text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                              title="Доступ в портал дилера"
+                            >
+                              <KeyRound className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
                               onClick={() => handleEditLead(lead)} 
                               className="text-neutral-900 hover:text-neutral-800 hover:bg-neutral-100"
                             >
@@ -440,6 +460,12 @@ export default function Companies() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DealerAccessDialog
+        company={dealerAccessCompany}
+        open={Boolean(dealerAccessCompany)}
+        onOpenChange={(open) => !open && setDealerAccessCompany(null)}
+      />
     </div>
   );
 }

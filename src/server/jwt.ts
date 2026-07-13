@@ -13,11 +13,13 @@ export async function signUserToken(user: {
   email: string;
   name?: string | null;
   role: string;
+  company_id?: string | null;
 }): Promise<string> {
   return new SignJWT({
     email: user.email,
     name: user.name ?? "",
     role: user.role,
+    company_id: user.company_id ?? null,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.id)
@@ -33,5 +35,6 @@ export async function verifyBearer(token: string) {
     email?: string;
     name?: string;
     role?: string;
+    company_id?: string | null;
   };
 }

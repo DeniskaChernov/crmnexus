@@ -13,6 +13,12 @@ import {
   recordCoilScan,
 } from "../qr/coilsService.ts";
 import { createSiteReview, insertSiteEvent } from "../qr/siteServices.ts";
+import { getRequestAuth, isDealer } from "../middleware/requestAuth.ts";
+
+function dealerForbidden(c: { json: (body: unknown, status?: number) => Response }, auth: Awaited<ReturnType<typeof getRequestAuth>>) {
+  if (auth && isDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+  return null;
+}
 
 /** Публичный resolve QR для сайта bententrade.uz/r/{token} */
 export function registerQrPublicRoutes(app: Hono) {
@@ -142,6 +148,9 @@ export function registerQrPublicRoutes(app: Hono) {
 export function registerQrRoutes(app: Hono) {
   app.get("/api/coils", async (c) => {
     try {
+      const auth = await getRequestAuth(c);
+      const denied = dealerForbidden(c, auth);
+      if (denied) return denied;
       const shipment_id = c.req.query("shipment_id") || undefined;
       const company_id = c.req.query("company_id") || undefined;
       const coils = await listCoils({ shipment_id, company_id });

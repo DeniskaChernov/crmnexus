@@ -12,6 +12,7 @@ function decodeJwtPayload(token: string): {
   email?: string;
   name?: string;
   role?: string;
+  company_id?: string | null;
   exp?: number;
 } | null {
   try {
@@ -39,6 +40,7 @@ function sessionFromToken(token: string): { user: SessionUser } | null {
       user_metadata: {
         name: payload.name ?? "",
         role: payload.role ?? "",
+        company_id: payload.company_id ?? null,
       },
     },
   };

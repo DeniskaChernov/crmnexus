@@ -59,7 +59,8 @@ interface Shipment {
   stickerClient?: string;
   warehouse?: string;
   dealId?: string;
-  totalBags?: number; // Total number of bags for the shipment
+  companyId?: string;
+  totalBags?: number;
 }
 
 interface ProductionLog {
@@ -566,6 +567,7 @@ export default function Warehouse() {
   const [movements, setMovements] = useState<any[]>([]);
   const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
   const [availableArticles, setAvailableArticles] = useState<string[]>([]);
+  const [dealerCompanies, setDealerCompanies] = useState<{ id: string; name: string }[]>([]);
   const [loadingMovements, setLoadingMovements] = useState(false);
   const [loadingMonthlyStats, setLoadingMonthlyStats] = useState(false);
   
@@ -877,6 +879,14 @@ export default function Warehouse() {
   // Fetch available articles on mount
   useEffect(() => {
     fetchAvailableArticles();
+  }, []);
+
+  useEffect(() => {
+    void crm
+      .from("companies")
+      .select("id,name")
+      .order("name", { ascending: true })
+      .then(({ data }) => setDealerCompanies((data as { id: string; name: string }[]) || []));
   }, []);
 
   useEffect(() => {
@@ -3114,6 +3124,29 @@ export default function Warehouse() {
                                 <Label>Склад отгрузки</Label>
                                 <div className="h-10 flex items-center px-3 rounded-md border bg-neutral-50 text-sm font-medium text-neutral-700">BTT Nexus</div>
                             </div>
+                            <div className="grid gap-2 w-full md:w-1/4">
+                                <Label>Дилер</Label>
+                                <Select
+                                  value={currentShipment?.companyId || "__none__"}
+                                  onValueChange={(v) =>
+                                    setCurrentShipment((prev) =>
+                                      prev ? { ...prev, companyId: v === "__none__" ? undefined : v } : null,
+                                    )
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Выберите дилера" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="__none__">Не выбран</SelectItem>
+                                    {dealerCompanies.map((co) => (
+                                      <SelectItem key={co.id} value={co.id}>
+                                        {co.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                             </div>
                             <div className="grid gap-2 w-full md:w-1/4">
                                 <Label>Направление</Label>
                                 <Input 

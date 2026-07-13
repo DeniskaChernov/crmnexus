@@ -11,7 +11,8 @@ async function issueTokenForEmail(email: string) {
     email: string;
     name: string | null;
     role: string;
-  }>(`SELECT id, email, name, role FROM crm_users WHERE lower(email) = lower($1)`, [email]);
+    company_id: string | null;
+  }>(`SELECT id, email, name, role, company_id FROM crm_users WHERE lower(email) = lower($1)`, [email]);
   const user = rows[0];
   if (!user) return null;
   const token = await signUserToken(user);
@@ -70,7 +71,11 @@ export function registerAuthRoutes(app: Hono) {
         user: {
           id: issued.user.id,
           email: issued.user.email,
-          user_metadata: { name: issued.user.name, role: issued.user.role },
+          user_metadata: {
+            name: issued.user.name,
+            role: issued.user.role,
+            company_id: issued.user.company_id,
+          },
         },
       });
     } catch (e: any) {
@@ -101,7 +106,7 @@ export function registerAuthRoutes(app: Hono) {
         user: {
           id: user.id,
           email: user.email,
-          user_metadata: { name: user.name, role: user.role },
+          user_metadata: { name: user.name, role: user.role, company_id: user.company_id },
         },
       });
     } catch (e: any) {
@@ -114,11 +119,22 @@ export function registerAuthRoutes(app: Hono) {
       const auth = c.req.header("authorization");
       if (!auth?.startsWith("Bearer ")) return c.json({ error: "Unauthorized" }, 401);
       const payload = await verifyBearer(auth.slice(7));
+      const pool = (await import("../dbPool.ts")).getPool();
+      const { rows } = await pool.query<{
+        name: string | null;
+        role: string;
+        company_id: string | null;
+      }>(`SELECT name, role, company_id FROM crm_users WHERE id = $1`, [payload.sub]);
+      const dbUser = rows[0];
       return c.json({
         user: {
           id: payload.sub,
           email: payload.email,
-          user_metadata: { name: payload.name, role: payload.role },
+          user_metadata: {
+            name: dbUser?.name ?? payload.name,
+            role: dbUser?.role ?? payload.role,
+            company_id: dbUser?.company_id ?? payload.company_id ?? null,
+          },
         },
       });
     } catch {

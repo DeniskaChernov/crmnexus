@@ -57,8 +57,9 @@ async function recipeMeta(article: string) {
 
 async function resolveDealerCompanyId(
   pool: pg.Pool,
-  shipment: { dealId?: string | null; stickerClient?: string },
+  shipment: { dealId?: string | null; stickerClient?: string; companyId?: string | null },
 ): Promise<string | null> {
+  if (shipment.companyId) return shipment.companyId;
   if (shipment.dealId) {
     const { rows } = await pool.query<{ company_id: string | null }>(
       `SELECT company_id FROM deals WHERE id = $1 LIMIT 1`,
