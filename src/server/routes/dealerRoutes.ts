@@ -14,8 +14,13 @@ import {
   requireDealer,
   requireDealerAccess,
 } from "../middleware/requestAuth.ts";
-import { getCoilsByShipment, listCoils } from "../qr/coilsService.ts";
+import { listCoils } from "../qr/coilsService.ts";
 import { listDealerNotifications } from "../qr/notificationHelper.ts";
+import {
+  getDealerOrder,
+  listDealerOrders,
+  listDealerShipmentsEnriched,
+} from "../qr/dealerOrdersService.ts";
 
 async function requireAdminAuth(c: Parameters<typeof getRequestAuth>[0]) {
   const auth = await getRequestAuth(c);
@@ -48,6 +53,8 @@ export function registerDealerRoutes(app: Hono) {
       customers: number;
       requests: number;
       reviews: number;
+      orders: number;
+      orders_in_progress: number;
     }>(
       `SELECT
         (SELECT COUNT(*)::int FROM rattan_coils WHERE company_id = $1) AS coils_total,
@@ -55,7 +62,9 @@ export function registerDealerRoutes(app: Hono) {
         (SELECT COALESCE(SUM(scan_count), 0)::int FROM rattan_coils WHERE company_id = $1) AS scan_total,
         (SELECT COUNT(*)::int FROM site_customers WHERE assigned_dealer_id = $1) AS customers,
         (SELECT COUNT(*)::int FROM site_requests WHERE dealer_id = $1) AS requests,
-        (SELECT COUNT(*)::int FROM site_reviews WHERE dealer_id = $1) AS reviews`,
+        (SELECT COUNT(*)::int FROM site_reviews WHERE dealer_id = $1) AS reviews,
+        (SELECT COUNT(*)::int FROM deals WHERE dealer_id = $1) AS orders,
+        (SELECT COUNT(*)::int FROM deals WHERE dealer_id = $1 AND status = 'open') AS orders_in_progress`,
       [companyId],
     );
 
@@ -210,6 +219,21 @@ export function registerDealerRoutes(app: Hono) {
     return c.json({ success: true, count: items.length });
   });
 
+  app.get("/api/dealer/orders", async (c) => {
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const orders = await listDealerOrders(guard.auth.company_id!);
+    return c.json(orders);
+  });
+
+  app.get("/api/dealer/orders/:id", async (c) => {
+    const guard = await requireDealerAccess(c);
+    if (!guard.ok) return guard.response;
+    const order = await getDealerOrder(guard.auth.company_id!, c.req.param("id"));
+    if (!order) return c.json({ error: "Not found" }, 404);
+    return c.json(order);
+  });
+
   app.get("/api/dealer/coils", async (c) => {
     const guard = await requireDealerAccess(c);
     if (!guard.ok) return guard.response;
@@ -221,20 +245,7 @@ export function registerDealerRoutes(app: Hono) {
   app.get("/api/dealer/shipments", async (c) => {
     const guard = await requireDealerAccess(c);
     if (!guard.ok) return guard.response;
-    const auth = guard.auth;
-    const pool = getPool();
-    const { rows: coilRows } = await pool.query<{ shipment_id: string }>(
-      `SELECT DISTINCT shipment_id FROM rattan_coils
-       WHERE company_id = $1 AND shipment_id IS NOT NULL
-       ORDER BY shipment_id DESC LIMIT 100`,
-      [auth.company_id],
-    );
-    const shipments = [];
-    for (const row of coilRows) {
-      if (!row.shipment_id) continue;
-      const sh = await kv.get(row.shipment_id);
-      if (sh) shipments.push(sh);
-    }
+    const shipments = await listDealerShipmentsEnriched(guard.auth.company_id!);
     return c.json(shipments);
   });
 

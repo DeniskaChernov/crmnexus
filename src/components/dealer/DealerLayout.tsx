@@ -1,17 +1,18 @@
 import React from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, MessageSquare, Package, LogOut, Truck, Star } from "lucide-react";
+import { LayoutDashboard, Users, MessageSquare, Package, LogOut, Truck, Star, ClipboardList } from "lucide-react";
 import { Button } from "../ui/button";
 import { crm } from "../../lib/crmClient.ts";
 import { DealerNotifications } from "./DealerNotifications.tsx";
 
 const nav = [
   { to: "/dealer", label: "Показатели", icon: LayoutDashboard, end: true },
+  { to: "/dealer/orders", label: "Заказы", icon: ClipboardList },
+  { to: "/dealer/shipments", label: "Отгрузки", icon: Truck },
   { to: "/dealer/customers", label: "Клиенты", icon: Users },
   { to: "/dealer/requests", label: "Заявки", icon: MessageSquare },
   { to: "/dealer/reviews", label: "Отзывы", icon: Star },
   { to: "/dealer/coils", label: "Мотки / QR", icon: Package },
-  { to: "/dealer/shipments", label: "Отгрузки", icon: Truck },
 ];
 
 export function DealerLayout() {
