@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { BttCrmModuleShell } from '../../components/btt-ref/BttCrmModuleShell.tsx';
 import { crmFetch } from '../../lib/crmApi.ts';
@@ -7,8 +7,11 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { ExternalLink, QrCode } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+
+type DealerOption = { id: string; name: string };
 
 type Coil = {
   id: string;
@@ -40,33 +43,38 @@ export default function QrHub() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [dealers, setDealers] = useState<DealerOption[]>([]);
+  const [dealerFilter, setDealerFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
+    const dealerQuery = dealerFilter !== 'all' ? `?dealer_id=${encodeURIComponent(dealerFilter)}` : '';
     try {
-      const [coilsRes, sumRes, revRes, reqRes, custRes] = await Promise.all([
+      const [coilsRes, sumRes, revRes, reqRes, custRes, dealersRes] = await Promise.all([
         crmFetch('/coils?limit=100'),
         crmFetch('/qr-analytics/summary'),
-        crmFetch('/site-reviews'),
-        crmFetch('/site-requests'),
-        crmFetch('/site-customers'),
+        crmFetch(`/site-reviews${dealerQuery}`),
+        crmFetch(`/site-requests${dealerQuery}`),
+        crmFetch(`/site-customers${dealerQuery}`),
+        crmFetch('/qr/dealers'),
       ]);
       if (coilsRes.ok) setCoils(await coilsRes.json());
       if (sumRes.ok) setSummary(await sumRes.json());
       if (revRes.ok) setReviews(await revRes.json());
       if (reqRes.ok) setRequests(await reqRes.json());
       if (custRes.ok) setCustomers(await custRes.json());
+      if (dealersRes.ok) setDealers(await dealersRes.json());
     } catch {
       toast.error('Не удалось загрузить QR-данные');
     } finally {
       setLoading(false);
     }
-  };
+  }, [dealerFilter]);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   const moderateReview = async (id: string, status: string) => {
     const res = await crmFetch(`/site-reviews/${id}`, {
@@ -98,6 +106,23 @@ export default function QrHub() {
               <div className="text-2xl font-bold mt-1">{value}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {dealers.length > 0 && (
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-sm text-neutral-500">Дилер:</span>
+          <Select value={dealerFilter} onValueChange={setDealerFilter}>
+            <SelectTrigger className="w-[240px]">
+              <SelectValue placeholder="Все дилеры" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все дилеры</SelectItem>
+              {dealers.map((d) => (
+                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
 
@@ -208,7 +233,10 @@ export default function QrHub() {
           {requests.map((r) => (
             <div key={r.id} className="rounded-xl border p-3 bg-white text-sm">
               <div className="font-medium">{r.first_name} {r.last_name} · {r.phone}</div>
-              <div className="text-neutral-500">{r.country} · {new Date(r.created_at).toLocaleString('ru')}</div>
+              <div className="text-neutral-500">
+                {r.country} · {r.dealer_name ? `${r.dealer_name} · ` : ''}
+                {new Date(r.created_at).toLocaleString('ru')}
+              </div>
               {r.comment && <p className="mt-2">{r.comment}</p>}
             </div>
           ))}
@@ -218,7 +246,7 @@ export default function QrHub() {
           {reviews.map((r) => (
             <div key={r.id} className="rounded-xl border p-3 bg-white text-sm">
               <div className="flex justify-between gap-2">
-                <span>★ {r.rating}</span>
+                <span>★ {r.rating}{r.dealer_name ? ` · ${r.dealer_name}` : ''}</span>
                 <Badge>{r.moderation_status}</Badge>
               </div>
               <p className="mt-2">{r.text}</p>

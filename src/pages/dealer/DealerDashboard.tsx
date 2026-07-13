@@ -1,6 +1,21 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { crmFetch } from "../../lib/crmApi.ts";
 import { Users, Scan, Package, MessageSquare, Star } from "lucide-react";
+
+type FeedItem = {
+  id: string;
+  kind: "request" | "review" | "customer";
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  comment?: string;
+  rating?: number;
+  text?: string;
+  moderation_status?: string;
+  assignment_status?: string;
+  created_at: string;
+};
 
 type DashboardData = {
   company: { name: string; country?: string; city?: string };
@@ -16,14 +31,21 @@ type DashboardData = {
 
 export default function DealerDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    crmFetch("/dealer/dashboard")
-      .then(async (res) => {
+    Promise.all([
+      crmFetch("/dealer/dashboard").then(async (res) => {
         if (res.ok) setData(await res.json());
-      })
-      .finally(() => setLoading(false));
+      }),
+      crmFetch("/dealer/feed").then(async (res) => {
+        if (res.ok) {
+          const json = await res.json();
+          setFeed(json.items || []);
+        }
+      }),
+    ]).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <p className="text-sm text-neutral-500">Загрузка…</p>;
@@ -66,6 +88,42 @@ export default function DealerDashboard() {
         Уникальных мотков со сканами: <strong>{data.stats.coils_scanned}</strong> из{" "}
         <strong>{data.stats.coils_total}</strong>
       </div>
+
+      {feed.length > 0 && (
+        <div className="rounded-2xl border bg-white p-4">
+          <h2 className="font-semibold mb-3">Последняя активность</h2>
+          <ul className="space-y-2 text-sm">
+            {feed.map((item) => (
+              <li key={`${item.kind}-${item.id}`} className="border-b pb-2 last:border-0">
+                {item.kind === "request" && (
+                  <div>
+                    <span className="font-medium">Заявка:</span>{" "}
+                    {[item.first_name, item.last_name].filter(Boolean).join(" ") || item.phone}
+                    {item.comment && <span className="text-neutral-500"> — {item.comment.slice(0, 60)}</span>}
+                  </div>
+                )}
+                {item.kind === "review" && (
+                  <div>
+                    <span className="font-medium">Отзыв ★{item.rating}:</span>{" "}
+                    {(item.text || "").slice(0, 80)}
+                  </div>
+                )}
+                {item.kind === "customer" && (
+                  <div>
+                    <span className="font-medium">Новый клиент:</span>{" "}
+                    <Link to={`/dealer/customers/${item.id}`} className="text-emerald-700 hover:underline">
+                      {[item.first_name, item.last_name].filter(Boolean).join(" ") || item.phone}
+                    </Link>
+                  </div>
+                )}
+                <div className="text-xs text-neutral-500 mt-0.5">
+                  {new Date(item.created_at).toLocaleString("ru")}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

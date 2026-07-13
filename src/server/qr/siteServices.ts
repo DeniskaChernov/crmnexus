@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { getPool } from "../dbPool.ts";
 import { normalizePhone } from "./phone.ts";
 import { getCoilByToken, recordCoilScan } from "./coilsService.ts";
-import * as kv from "../kv_store.ts";
+import { pushSiteNotification } from "./notificationHelper.ts";
 
 export type SiteEventPayload = Record<string, unknown>;
 
@@ -173,13 +173,15 @@ export async function tryAssignDealerFromQr(customerId: string, qr_token: string
       `UPDATE site_customers SET assignment_status = 'conflict', updated_at = now() WHERE id = $1`,
       [customerId],
     );
-    await kv.set(`notification:${Date.now()}`, {
-      type: "dealer_assignment_conflict",
-      customerId,
-      existingDealerId: customer.assigned_dealer_id,
-      attemptedDealerId: coil.company_id,
-      qr_token,
-      createdAt: new Date().toISOString(),
+    await pushSiteNotification({
+      kind: "dealer_assignment_conflict",
+      title: "Конфликт закрепления дилера",
+      message: `Клиент уже закреплён за другим дилером (QR: ${qr_token.slice(0, 8)}…)`,
+      priority: "high",
+      entityType: "client",
+      entityId: customerId,
+      actionUrl: `/qr/customers/${customerId}`,
+      dealerId: coil.company_id,
     });
     return { assigned: false, conflict: true, countryMatch };
   }
@@ -201,12 +203,29 @@ export async function tryAssignDealerFromQr(customerId: string, qr_token: string
       [customerId, coil.company_id, qr_token, customer.country, dealerCountry, countryMatch],
     );
     if (!countryMatch) {
-      await kv.set(`notification:${Date.now() + 1}`, {
-        type: "dealer_country_mismatch",
-        customerId,
+      await pushSiteNotification({
+        kind: "dealer_country_mismatch",
+        title: "Несовпадение страны дилера",
+        message: `Клиент из ${customer.country || "—"} закреплён за дилером из другой страны`,
+        priority: "high",
+        entityType: "client",
+        entityId: customerId,
+        actionUrl: `/qr/customers/${customerId}`,
         dealerId: coil.company_id,
-        qr_token,
-        createdAt: new Date().toISOString(),
+      });
+    } else {
+      const { rows: dealerName } = await pool.query<{ name: string }>(
+        `SELECT name FROM companies WHERE id = $1`,
+        [coil.company_id],
+      );
+      await pushSiteNotification({
+        kind: "dealer_assigned",
+        title: "Новый клиент с QR",
+        message: `Клиент закреплён за дилером ${dealerName[0]?.name || "—"}`,
+        entityType: "client",
+        entityId: customerId,
+        actionUrl: `/qr/customers/${customerId}`,
+        dealerId: coil.company_id,
       });
     }
     return { assigned: true, conflict: false, countryMatch };
@@ -269,11 +288,14 @@ export async function createSiteRequest(payload: SiteEventPayload) {
     ],
   );
 
-  await kv.set(`notification:${Date.now()}`, {
-    type: "site_request",
-    requestId: rows[0]?.id,
+  await pushSiteNotification({
+    kind: "site_request",
+    title: "Новая заявка с сайта",
+    message: [payload["first_name"], payload["last_name"], phone].filter(Boolean).join(" ") || "Заявка без имени",
+    entityType: "client",
+    entityId: rows[0]?.customer_id || null,
+    actionUrl: "/qr",
     dealerId: dealer_id,
-    createdAt: new Date().toISOString(),
   });
 
   return rows[0];
@@ -333,11 +355,14 @@ export async function createSiteReview(payload: SiteEventPayload) {
     ],
   );
 
-  await kv.set(`notification:${Date.now()}`, {
-    type: "site_review",
-    reviewId: rows[0]?.id,
+  await pushSiteNotification({
+    kind: "site_review",
+    title: "Новый отзыв с QR",
+    message: `Оценка ${payload["rating"] ?? payload["score"] ?? "—"}: ${String(payload["text"] || payload["review"] || "").slice(0, 80)}`,
+    entityType: "client",
+    entityId: customer_id,
+    actionUrl: "/qr",
     dealerId: dealer_id,
-    createdAt: new Date().toISOString(),
   });
 
   return rows[0];
@@ -381,11 +406,21 @@ export async function processSiteEvent(
         await tryAssignDealerFromQr(customer.id, qr_token);
       }
       if (created && qr_token) {
-        await kv.set(`notification:${Date.now()}`, {
-          type: "qr_registration",
-          customerId: customer.id,
-          qr_token,
-          createdAt: new Date().toISOString(),
+        const name = [payload["first_name"], payload["last_name"]].filter(Boolean).join(" ") || phone;
+        const pool = getPool();
+        const { rows: fresh } = await pool.query<{
+          assigned_dealer_id: string | null;
+          source_dealer_id: string | null;
+        }>(`SELECT assigned_dealer_id, source_dealer_id FROM site_customers WHERE id = $1`, [customer.id]);
+        const dealerId = fresh[0]?.assigned_dealer_id || fresh[0]?.source_dealer_id || null;
+        await pushSiteNotification({
+          kind: "qr_registration",
+          title: "Регистрация через QR",
+          message: `${name} зарегистрировался на сайте`,
+          entityType: "client",
+          entityId: customer.id,
+          actionUrl: `/qr/customers/${customer.id}`,
+          dealerId,
         });
       }
       return { handled: true, customerId: customer.id };

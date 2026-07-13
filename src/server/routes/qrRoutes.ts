@@ -13,7 +13,8 @@ import {
   recordCoilScan,
 } from "../qr/coilsService.ts";
 import { createSiteReview, insertSiteEvent } from "../qr/siteServices.ts";
-import { getRequestAuth, isDealer } from "../middleware/requestAuth.ts";
+import { convertSiteCustomerToContact } from "../qr/siteCustomerConvert.ts";
+import { getRequestAuth, isAdminRole, isDealer } from "../middleware/requestAuth.ts";
 
 function dealerForbidden(c: { json: (body: unknown, status?: number) => Response }, auth: Awaited<ReturnType<typeof getRequestAuth>>) {
   if (auth && isDealer(auth)) return c.json({ error: "Forbidden" }, 403);
@@ -247,14 +248,24 @@ export function registerQrRoutes(app: Hono) {
       if (denied) return denied;
       const pool = getPool();
       const status = c.req.query("status");
+      const dealerId = c.req.query("dealer_id");
       const params: unknown[] = [];
-      let where = "";
+      const clauses: string[] = [];
       if (status) {
         params.push(status);
-        where = `WHERE moderation_status = $1`;
+        clauses.push(`sr.moderation_status = $${params.length}`);
       }
+      if (dealerId) {
+        params.push(dealerId);
+        clauses.push(`sr.dealer_id = $${params.length}`);
+      }
+      const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
       const { rows } = await pool.query(
-        `SELECT * FROM site_reviews ${where} ORDER BY created_at DESC LIMIT 200`,
+        `SELECT sr.*, co.name AS dealer_name
+         FROM site_reviews sr
+         LEFT JOIN companies co ON co.id = sr.dealer_id
+         ${where}
+         ORDER BY sr.created_at DESC LIMIT 200`,
         params,
       );
       return c.json(rows);
@@ -285,7 +296,37 @@ export function registerQrRoutes(app: Hono) {
       const denied = await assertAdminQrAccess(c);
       if (denied) return denied;
       const pool = getPool();
-      const { rows } = await pool.query(`SELECT * FROM site_requests ORDER BY created_at DESC LIMIT 200`);
+      const dealerId = c.req.query("dealer_id");
+      const params: unknown[] = [];
+      let where = "";
+      if (dealerId) {
+        params.push(dealerId);
+        where = `WHERE sr.dealer_id = $1`;
+      }
+      const { rows } = await pool.query(
+        `SELECT sr.*, co.name AS dealer_name
+         FROM site_requests sr
+         LEFT JOIN companies co ON co.id = sr.dealer_id
+         ${where}
+         ORDER BY sr.created_at DESC LIMIT 200`,
+        params,
+      );
+      return c.json(rows);
+    } catch (e: unknown) {
+      return c.json({ error: e instanceof Error ? e.message : "error" }, 500);
+    }
+  });
+
+  app.get("/api/qr/dealers", async (c) => {
+    try {
+      const denied = await assertAdminQrAccess(c);
+      if (denied) return denied;
+      const pool = getPool();
+      const { rows } = await pool.query(
+        `SELECT id, name FROM companies
+         WHERE dealer_portal_enabled = true OR customer_type = 'dealer'
+         ORDER BY name`,
+      );
       return c.json(rows);
     } catch (e: unknown) {
       return c.json({ error: e instanceof Error ? e.message : "error" }, 500);
@@ -328,7 +369,16 @@ export function registerQrRoutes(app: Hono) {
       if (denied) return denied;
       const pool = getPool();
       const id = c.req.param("id");
-      const { rows: cust } = await pool.query(`SELECT * FROM site_customers WHERE id = $1`, [id]);
+      const { rows: cust } = await pool.query(
+        `SELECT sc.*,
+          ad.name AS assigned_dealer_name,
+          sd.name AS source_dealer_name
+         FROM site_customers sc
+         LEFT JOIN companies ad ON ad.id = sc.assigned_dealer_id
+         LEFT JOIN companies sd ON sd.id = sc.source_dealer_id
+         WHERE sc.id = $1`,
+        [id],
+      );
       if (!cust[0]) return c.json({ error: "Not found" }, 404);
       const { rows: events } = await pool.query(
         `SELECT * FROM site_events WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 100`,
@@ -343,6 +393,19 @@ export function registerQrRoutes(app: Hono) {
         [id],
       );
       return c.json({ customer: cust[0], events, assignments });
+    } catch (e: unknown) {
+      return c.json({ error: e instanceof Error ? e.message : "error" }, 500);
+    }
+  });
+
+  app.post("/api/site-customers/:id/convert-to-contact", async (c) => {
+    try {
+      const auth = await getRequestAuth(c);
+      if (!auth) return c.json({ error: "Unauthorized" }, 401);
+      if (!isAdminRole(auth)) return c.json({ error: "Forbidden" }, 403);
+      const id = c.req.param("id");
+      const result = await convertSiteCustomerToContact(id);
+      return c.json(result);
     } catch (e: unknown) {
       return c.json({ error: e instanceof Error ? e.message : "error" }, 500);
     }

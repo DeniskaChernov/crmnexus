@@ -101,6 +101,40 @@ export function registerDealerRoutes(app: Hono) {
     return c.json(rows);
   });
 
+  /** Лента активности дилера: заявки, отзывы, новые клиенты */
+  app.get("/api/dealer/feed", async (c) => {
+    const auth = await getRequestAuth(c);
+    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const pool = getPool();
+    const companyId = auth.company_id!;
+
+    const { rows: requests } = await pool.query(
+      `SELECT id, 'request' AS kind, first_name, last_name, phone, comment, status, created_at
+       FROM site_requests WHERE dealer_id = $1
+       ORDER BY created_at DESC LIMIT 10`,
+      [companyId],
+    );
+    const { rows: reviews } = await pool.query(
+      `SELECT id, 'review' AS kind, rating, text, moderation_status, created_at
+       FROM site_reviews WHERE dealer_id = $1
+       ORDER BY created_at DESC LIMIT 10`,
+      [companyId],
+    );
+    const { rows: customers } = await pool.query(
+      `SELECT id, 'customer' AS kind, first_name, last_name, phone_normalized AS phone, assignment_status, created_at
+       FROM site_customers
+       WHERE assigned_dealer_id = $1
+       ORDER BY created_at DESC LIMIT 10`,
+      [companyId],
+    );
+
+    const items = [...requests, ...reviews, ...customers]
+      .sort((a, b) => new Date(String(b.created_at)).getTime() - new Date(String(a.created_at)).getTime())
+      .slice(0, 15);
+
+    return c.json({ items });
+  });
+
   app.get("/api/dealer/coils", async (c) => {
     const auth = await getRequestAuth(c);
     if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);

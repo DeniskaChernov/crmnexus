@@ -4,7 +4,7 @@ import { crmFetch } from "../../lib/crmApi.ts";
 import { BttCrmModuleShell } from "../../components/btt-ref/BttCrmModuleShell.tsx";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, UserPlus, ExternalLink } from "lucide-react";
 import { toast } from "sonner@2.0.3";
 
 type CustomerDetail = {
@@ -18,6 +18,15 @@ export default function SiteCustomerDetail() {
   const location = useLocation();
   const isDealer = location.pathname.startsWith("/dealer");
   const [data, setData] = useState<CustomerDetail | null>(null);
+  const [converting, setConverting] = useState(false);
+
+  const reload = () => {
+    if (!id) return;
+    const path = isDealer ? `/dealer/customers/${id}` : `/site-customers/${id}`;
+    return crmFetch(path).then(async (res) => {
+      if (res.ok) setData(await res.json());
+    });
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -29,6 +38,22 @@ export default function SiteCustomerDetail() {
       })
       .catch(() => toast.error("Ошибка загрузки"));
   }, [id, isDealer]);
+
+  const convertToContact = async () => {
+    if (!id) return;
+    setConverting(true);
+    try {
+      const res = await crmFetch(`/site-customers/${id}/convert-to-contact`, { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Ошибка");
+      toast.success(body.created ? "Контакт создан в CRM" : "Контакт уже был создан ранее");
+      await reload();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Не удалось создать контакт");
+    } finally {
+      setConverting(false);
+    }
+  };
 
   const c = data?.customer;
   const backTo = isDealer ? "/dealer/customers" : "/qr";
@@ -51,12 +76,25 @@ export default function SiteCustomerDetail() {
 
   return shell(
     <>
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 flex-wrap">
         <Button asChild variant="outline" size="sm">
           <Link to={backTo}>
             <ArrowLeft className="h-4 w-4 mr-1" /> {backLabel}
           </Link>
         </Button>
+        {!isDealer && !c.crm_contact_id && (
+          <Button size="sm" onClick={() => void convertToContact()} disabled={converting}>
+            <UserPlus className="h-4 w-4 mr-1" />
+            {converting ? "Создание…" : "Создать контакт в CRM"}
+          </Button>
+        )}
+        {!isDealer && c.crm_contact_id && (
+          <Button asChild variant="secondary" size="sm">
+            <Link to={`/contacts`}>
+              <ExternalLink className="h-4 w-4 mr-1" /> Открыть в контактах
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-4 text-sm">
