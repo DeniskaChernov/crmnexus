@@ -55,6 +55,8 @@ const DealerDashboard = lazy(() => import("./pages/dealer/DealerDashboard.tsx"))
 const DealerCustomers = lazy(() => import("./pages/dealer/DealerCustomers.tsx"));
 const DealerRequests = lazy(() => import("./pages/dealer/DealerRequests.tsx"));
 const DealerCoils = lazy(() => import("./pages/dealer/DealerCoils.tsx"));
+const DealerShipments = lazy(() => import("./pages/dealer/DealerShipments.tsx"));
+const SiteCustomerDetail = lazy(() => import("./pages/qr/SiteCustomerDetail.tsx"));
 const GlobalHelp = lazy(() =>
   import("./components/GlobalHelp").then((m) => ({ default: m.GlobalHelp })),
 );
@@ -99,8 +101,10 @@ export default function App() {
             <Route path="/dealer" element={<DealerAuthGuard><DealerLayout /></DealerAuthGuard>}>
               <Route index element={<DealerDashboard />} />
               <Route path="customers" element={<DealerCustomers />} />
+              <Route path="customers/:id" element={<SiteCustomerDetail />} />
               <Route path="requests" element={<DealerRequests />} />
               <Route path="coils" element={<DealerCoils />} />
+              <Route path="shipments" element={<DealerShipments />} />
             </Route>
 
             <Route path="/" element={<AuthGuard><Layout /></AuthGuard>}>
@@ -130,6 +134,7 @@ export default function App() {
               />
               <Route path="qr" element={<QrHub />} />
               <Route path="qr/coils/:id" element={<QrCoilDetail />} />
+              <Route path="qr/customers/:id" element={<SiteCustomerDetail />} />
             </Route>
 
             <Route

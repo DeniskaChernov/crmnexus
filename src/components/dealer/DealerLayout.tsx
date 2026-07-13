@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, MessageSquare, Package, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, MessageSquare, Package, LogOut, Truck } from "lucide-react";
 import { Button } from "../ui/button";
 import { crm } from "../../lib/crmClient.ts";
 
@@ -9,6 +9,7 @@ const nav = [
   { to: "/dealer/customers", label: "Клиенты", icon: Users },
   { to: "/dealer/requests", label: "Заявки", icon: MessageSquare },
   { to: "/dealer/coils", label: "Мотки / QR", icon: Package },
+  { to: "/dealer/shipments", label: "Отгрузки", icon: Truck },
 ];
 
 export function DealerLayout() {

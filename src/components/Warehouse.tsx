@@ -567,7 +567,9 @@ export default function Warehouse() {
   const [movements, setMovements] = useState<any[]>([]);
   const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
   const [availableArticles, setAvailableArticles] = useState<string[]>([]);
-  const [dealerCompanies, setDealerCompanies] = useState<{ id: string; name: string }[]>([]);
+  const [dealerCompanies, setDealerCompanies] = useState<
+    { id: string; name: string; dealer_portal_enabled?: boolean; customer_type?: string }[]
+  >([]);
   const [loadingMovements, setLoadingMovements] = useState(false);
   const [loadingMonthlyStats, setLoadingMonthlyStats] = useState(false);
   
@@ -884,9 +886,17 @@ export default function Warehouse() {
   useEffect(() => {
     void crm
       .from("companies")
-      .select("id,name")
+      .select("id,name,dealer_portal_enabled,customer_type")
       .order("name", { ascending: true })
-      .then(({ data }) => setDealerCompanies((data as { id: string; name: string }[]) || []));
+      .then(({ data }) => {
+        const list = (data as typeof dealerCompanies) || [];
+        list.sort((a, b) => {
+          const aDealer = a.dealer_portal_enabled || a.customer_type === "dealer" ? 1 : 0;
+          const bDealer = b.dealer_portal_enabled || b.customer_type === "dealer" ? 1 : 0;
+          return bDealer - aDealer || a.name.localeCompare(b.name, "ru");
+        });
+        setDealerCompanies(list);
+      });
   }, []);
 
   useEffect(() => {
@@ -3128,11 +3138,19 @@ export default function Warehouse() {
                                 <Label>Дилер</Label>
                                 <Select
                                   value={currentShipment?.companyId || "__none__"}
-                                  onValueChange={(v) =>
+                                  onValueChange={(v) => {
+                                    const company = dealerCompanies.find((co) => co.id === v);
                                     setCurrentShipment((prev) =>
-                                      prev ? { ...prev, companyId: v === "__none__" ? undefined : v } : null,
-                                    )
-                                  }
+                                      prev
+                                        ? {
+                                            ...prev,
+                                            companyId: v === "__none__" ? undefined : v,
+                                            stickerClient:
+                                              company?.name ?? prev.stickerClient,
+                                          }
+                                        : null,
+                                    );
+                                  }}
                                 >
                                   <SelectTrigger>
                                     <SelectValue placeholder="Выберите дилера" />
@@ -3142,6 +3160,9 @@ export default function Warehouse() {
                                     {dealerCompanies.map((co) => (
                                       <SelectItem key={co.id} value={co.id}>
                                         {co.name}
+                                        {co.dealer_portal_enabled || co.customer_type === "dealer"
+                                          ? " · дилер"
+                                          : ""}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>

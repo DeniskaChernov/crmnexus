@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { crmFetch } from "../../lib/crmApi.ts";
 import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 
 export default function DealerCustomers() {
@@ -39,25 +41,30 @@ export default function DealerCustomers() {
                 <TableHead>Телефон</TableHead>
                 <TableHead>Страна</TableHead>
                 <TableHead>Статус</TableHead>
-                <TableHead>Активность</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell>
-                    {[c.first_name, c.last_name].filter(Boolean).join(" ") || "—"}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{c.phone_normalized || "—"}</TableCell>
-                  <TableCell>{c.country || "—"}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{c.assignment_status || "—"}</Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-neutral-500">
-                    {c.last_activity_at ? new Date(c.last_activity_at).toLocaleString("ru") : "—"}
-                  </TableCell>
+                  <TableHead />
                 </TableRow>
-              ))}
+              </TableHeader>
+              <TableBody>
+                {rows.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell>
+                      {[c.first_name, c.last_name].filter(Boolean).join(" ") || "—"}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{c.phone_normalized || "—"}</TableCell>
+                    <TableCell>{c.country || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{c.assignment_status || "—"}</Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-neutral-500">
+                      {c.last_activity_at ? new Date(c.last_activity_at).toLocaleString("ru") : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link to={`/dealer/customers/${c.id}`}>Открыть</Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
         </div>

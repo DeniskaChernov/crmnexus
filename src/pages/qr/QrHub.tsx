@@ -39,21 +39,24 @@ export default function QrHub() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [reviews, setReviews] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [coilsRes, sumRes, revRes, reqRes] = await Promise.all([
+      const [coilsRes, sumRes, revRes, reqRes, custRes] = await Promise.all([
         crmFetch('/coils?limit=100'),
         crmFetch('/qr-analytics/summary'),
         crmFetch('/site-reviews'),
         crmFetch('/site-requests'),
+        crmFetch('/site-customers'),
       ]);
       if (coilsRes.ok) setCoils(await coilsRes.json());
       if (sumRes.ok) setSummary(await sumRes.json());
       if (revRes.ok) setReviews(await revRes.json());
       if (reqRes.ok) setRequests(await reqRes.json());
+      if (custRes.ok) setCustomers(await custRes.json());
     } catch {
       toast.error('Не удалось загрузить QR-данные');
     } finally {
@@ -101,6 +104,7 @@ export default function QrHub() {
       <Tabs defaultValue="coils">
         <TabsList>
           <TabsTrigger value="coils">Мотки</TabsTrigger>
+          <TabsTrigger value="customers">Клиенты ({customers.length})</TabsTrigger>
           <TabsTrigger value="requests">Заявки ({requests.length})</TabsTrigger>
           <TabsTrigger value="reviews">Отзывы ({reviews.length})</TabsTrigger>
         </TabsList>
@@ -153,6 +157,45 @@ export default function QrHub() {
                           </>
                         );
                       })()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </TabsContent>
+
+        <TabsContent value="customers" className="mt-4">
+          {loading ? (
+            <p className="text-sm text-neutral-500">Загрузка…</p>
+          ) : customers.length === 0 ? (
+            <p className="text-sm text-neutral-500">Клиентов с QR пока нет</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Имя</TableHead>
+                  <TableHead>Телефон</TableHead>
+                  <TableHead>Дилер</TableHead>
+                  <TableHead>Статус</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {customers.map((cust) => (
+                  <TableRow key={cust.id}>
+                    <TableCell>
+                      {[cust.first_name, cust.last_name].filter(Boolean).join(' ') || '—'}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{cust.phone_normalized || '—'}</TableCell>
+                    <TableCell className="text-sm">{cust.assigned_dealer_name || '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{cust.assignment_status}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link to={`/qr/customers/${cust.id}`}>Карточка</Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

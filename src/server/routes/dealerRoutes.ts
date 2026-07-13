@@ -72,6 +72,24 @@ export function registerDealerRoutes(app: Hono) {
     return c.json(rows);
   });
 
+  app.get("/api/dealer/customers/:id", async (c) => {
+    const auth = await getRequestAuth(c);
+    if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);
+    const pool = getPool();
+    const id = c.req.param("id");
+    const { rows: cust } = await pool.query(
+      `SELECT * FROM site_customers
+       WHERE id = $1 AND (assigned_dealer_id = $2 OR source_dealer_id = $2)`,
+      [id, auth.company_id],
+    );
+    if (!cust[0]) return c.json({ error: "Not found" }, 404);
+    const { rows: events } = await pool.query(
+      `SELECT * FROM site_events WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 100`,
+      [id],
+    );
+    return c.json({ customer: cust[0], events });
+  });
+
   app.get("/api/dealer/requests", async (c) => {
     const auth = await getRequestAuth(c);
     if (!requireDealer(auth)) return c.json({ error: "Forbidden" }, 403);

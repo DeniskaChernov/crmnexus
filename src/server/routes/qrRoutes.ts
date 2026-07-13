@@ -20,6 +20,14 @@ function dealerForbidden(c: { json: (body: unknown, status?: number) => Response
   return null;
 }
 
+async function assertAdminQrAccess(c: Parameters<typeof getRequestAuth>[0]) {
+  const auth = await getRequestAuth(c);
+  if (!auth) return c.json({ error: "Unauthorized" }, 401);
+  const denied = dealerForbidden(c, auth);
+  if (denied) return denied;
+  return null;
+}
+
 /** Публичный resolve QR для сайта bententrade.uz/r/{token} */
 export function registerQrPublicRoutes(app: Hono) {
   app.get("/api/public/qr/:token", async (c) => {
@@ -162,6 +170,8 @@ export function registerQrRoutes(app: Hono) {
 
   app.get("/api/coils/shipment/:shipmentId", async (c) => {
     try {
+      const denied = await assertAdminQrAccess(c);
+      if (denied) return denied;
       const coils = await getCoilsByShipment(c.req.param("shipmentId"));
       return c.json(coils.map((co) => ({ ...co, url: publicQrUrl(co.qr_token), urls: publicQrUrls(co.qr_token) })));
     } catch (e: unknown) {
@@ -171,6 +181,8 @@ export function registerQrRoutes(app: Hono) {
 
   app.get("/api/coils/:id", async (c) => {
     try {
+      const denied = await assertAdminQrAccess(c);
+      if (denied) return denied;
       const coil = await getCoilById(c.req.param("id"));
       if (!coil) return c.json({ error: "Not found" }, 404);
       return c.json({ ...coil, url: publicQrUrl(coil.qr_token), urls: publicQrUrls(coil.qr_token) });
@@ -181,6 +193,8 @@ export function registerQrRoutes(app: Hono) {
 
   app.post("/api/coils/generate", async (c) => {
     try {
+      const denied = await assertAdminQrAccess(c);
+      if (denied) return denied;
       const body = await c.req.json();
       const shipmentId = String(body.shipmentId || body.shipment_id || "");
       const itemId = body.itemId || body.item_id;
@@ -218,6 +232,8 @@ export function registerQrRoutes(app: Hono) {
 
   app.get("/api/qr-analytics/summary", async (c) => {
     try {
+      const denied = await assertAdminQrAccess(c);
+      if (denied) return denied;
       const summary = await qrAnalyticsSummary();
       return c.json(summary);
     } catch (e: unknown) {
@@ -227,6 +243,8 @@ export function registerQrRoutes(app: Hono) {
 
   app.get("/api/site-reviews", async (c) => {
     try {
+      const denied = await assertAdminQrAccess(c);
+      if (denied) return denied;
       const pool = getPool();
       const status = c.req.query("status");
       const params: unknown[] = [];
@@ -264,6 +282,8 @@ export function registerQrRoutes(app: Hono) {
 
   app.get("/api/site-requests", async (c) => {
     try {
+      const denied = await assertAdminQrAccess(c);
+      if (denied) return denied;
       const pool = getPool();
       const { rows } = await pool.query(`SELECT * FROM site_requests ORDER BY created_at DESC LIMIT 200`);
       return c.json(rows);
@@ -272,8 +292,40 @@ export function registerQrRoutes(app: Hono) {
     }
   });
 
+  app.get("/api/site-customers", async (c) => {
+    try {
+      const denied = await assertAdminQrAccess(c);
+      if (denied) return denied;
+      const pool = getPool();
+      const dealerId = c.req.query("dealer_id");
+      const params: unknown[] = [];
+      let where = "";
+      if (dealerId) {
+        params.push(dealerId);
+        where = `WHERE sc.assigned_dealer_id = $1 OR sc.source_dealer_id = $1`;
+      }
+      const { rows } = await pool.query(
+        `SELECT sc.*,
+          ad.name AS assigned_dealer_name,
+          sd.name AS source_dealer_name
+         FROM site_customers sc
+         LEFT JOIN companies ad ON ad.id = sc.assigned_dealer_id
+         LEFT JOIN companies sd ON sd.id = sc.source_dealer_id
+         ${where}
+         ORDER BY sc.last_activity_at DESC NULLS LAST, sc.created_at DESC
+         LIMIT 300`,
+        params,
+      );
+      return c.json(rows);
+    } catch (e: unknown) {
+      return c.json({ error: e instanceof Error ? e.message : "error" }, 500);
+    }
+  });
+
   app.get("/api/site-customers/:id", async (c) => {
     try {
+      const denied = await assertAdminQrAccess(c);
+      if (denied) return denied;
       const pool = getPool();
       const id = c.req.param("id");
       const { rows: cust } = await pool.query(`SELECT * FROM site_customers WHERE id = $1`, [id]);
@@ -282,7 +334,15 @@ export function registerQrRoutes(app: Hono) {
         `SELECT * FROM site_events WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 100`,
         [id],
       );
-      return c.json({ customer: cust[0], events });
+      const { rows: assignments } = await pool.query(
+        `SELECT cda.*, co.name AS dealer_name
+         FROM customer_dealer_assignments cda
+         LEFT JOIN companies co ON co.id = cda.dealer_id
+         WHERE cda.customer_id = $1
+         ORDER BY cda.assigned_at DESC`,
+        [id],
+      );
+      return c.json({ customer: cust[0], events, assignments });
     } catch (e: unknown) {
       return c.json({ error: e instanceof Error ? e.message : "error" }, 500);
     }

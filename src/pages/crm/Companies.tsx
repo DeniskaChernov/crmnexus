@@ -22,6 +22,7 @@ import { AlertCircle, RefreshCcw, Search, User, Trash2, Flame, Snowflake, Sun, P
 import { DealerAccessDialog } from '../../components/crm/DealerAccessDialog';
 import { toast } from 'sonner@2.0.3';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Badge } from '../../components/ui/badge';
 import { downloadCSV, formatDateForExport } from '../../utils/exportUtils';
 import { useIsMobile } from '../../components/ui/use-mobile';
 import { useCrmAiClient } from '../../context/CrmAiClientContext.tsx';
@@ -34,6 +35,8 @@ interface Lead {
   status: string;
   phone?: string;
   created_at: string;
+  customer_type?: string;
+  dealer_portal_enabled?: boolean;
 }
 
 export default function Companies() {
@@ -120,7 +123,12 @@ export default function Companies() {
         (lead.phone && lead.phone.toLowerCase().includes(q)) ||
         (lead.type && lead.type.toLowerCase().includes(q));
 
-      const matchesTab = activeTab === 'all' || lead.status === activeTab;
+      const matchesTab =
+        activeTab === 'all'
+          ? true
+          : activeTab === 'dealers'
+            ? Boolean(lead.dealer_portal_enabled || lead.customer_type === 'dealer')
+            : lead.status === activeTab;
 
       return matchesSearch && matchesTab;
     });
@@ -239,6 +247,9 @@ export default function Companies() {
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="flex w-full flex-wrap gap-1 h-auto justify-stretch p-1">
             <TabsTrigger value="all" className="flex-1 min-w-[4.5rem]">Все</TabsTrigger>
+            <TabsTrigger value="dealers" className="flex-1 min-w-[4.5rem]">
+              Дилеры
+            </TabsTrigger>
             <TabsTrigger
               value="active"
               className="flex-1 min-w-[4.5rem] data-[state=active]:bg-green-100 data-[state=active]:text-green-800"
@@ -283,7 +294,12 @@ export default function Companies() {
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex-1">
-                          <h3 className="font-semibold text-base mb-1">{lead.name}</h3>
+                          <h3 className="font-semibold text-base mb-1 flex items-center gap-2 flex-wrap">
+                            {lead.name}
+                            {(lead.dealer_portal_enabled || lead.customer_type === 'dealer') && (
+                              <Badge variant="secondary" className="text-[10px]">Портал</Badge>
+                            )}
+                          </h3>
                           {getStatusBadge(lead.status)}
                         </div>
                         <div className="flex gap-1">
@@ -370,7 +386,14 @@ export default function Companies() {
                   ) : (
                     visibleLeads.map((lead) => (
                       <TableRow key={lead.id}>
-                        <TableCell className="font-medium">{lead.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <span className="inline-flex items-center gap-2">
+                            {lead.name}
+                            {(lead.dealer_portal_enabled || lead.customer_type === 'dealer') && (
+                              <Badge variant="secondary" className="text-[10px]">Портал</Badge>
+                            )}
+                          </span>
+                        </TableCell>
                         <TableCell>{lead.phone || '-'}</TableCell>
                         <TableCell>{getStatusBadge(lead.status)}</TableCell>
                         <TableCell>{lead.type || '-'}</TableCell>
